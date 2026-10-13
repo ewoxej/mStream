@@ -9,6 +9,38 @@ function escHtml(s) {
   }[c]));
 }
 
+// A boolean setting's switch (it used to be an "[edit]" link). It
+// shows the state it's given and asks for a flip; the handler saves
+// and updates that state. A flip is the confirmation: handlers that
+// open a "Disable X? / Go back" question get it answered at once
+// (the question's first button is the action).
+Vue.component('z-switch', {
+  props: { on: Boolean, disabled: Boolean },
+  template: `<label class="switch z-switch"><input type="checkbox" :checked="on" :disabled="disabled" v-on:click.prevent="flip"/><span class="lever"></span></label>`,
+  methods: {
+    flip() {
+      const ask = iziToast.question;
+      iziToast.question = (opts) => {
+        const act = opts && opts.buttons && opts.buttons[0] && opts.buttons[0][1];
+        if (act) { act({ hide() {} }, null); }
+      };
+      try { this.$emit('flip'); } finally { iziToast.question = ask; }
+    },
+  },
+});
+
+// A choice between a few values (it used to be a "[change]" link that
+// cycled them). `options`: values, or { value, label }.
+Vue.component('z-seg', {
+  props: { value: null, options: Array, disabled: Boolean },
+  template: `<span class="z-seg" role="radiogroup"><button v-for="o in opts" :key="o.value" type="button" role="radio"
+    :aria-checked="o.value === value ? 'true' : 'false'" :class="{ on: o.value === value }" :disabled="disabled"
+    v-on:click="o.value !== value && $emit('pick', o.value)">{{ o.label }}</button></span>`,
+  computed: {
+    opts() { return (this.options || []).map((o) => (typeof o === 'object' ? o : { value: o, label: o })); },
+  },
+});
+
 const ADMINDATA = (() => {
   const module = {};
 
@@ -550,8 +582,11 @@ ADMINDATA.getBackupDestinations();
 ADMINDATA.getBackupPlatform();
 ADMINDATA.getBackupStatus();
 
-// initialize modal
+// initialize modal: a dialog in the middle of the screen (zenelo.css
+// pulls it up by half its height), easing in from a little below.
 M.Modal.init(document.querySelectorAll('.modal'), {
+  startingTop: '52%',
+  endingTop: '50%',
   onCloseEnd: () => {
     // reset modal on every close
     modVM.currentViewModal = 'null-modal';
@@ -730,8 +765,8 @@ const foldersView = Vue.component('folders-view', {
                           <a v-else v-on:click="browseTo(crumb.target)">{{ crumb.label }}</a>
                         </span>
                       </span>
-                      <span style="margin-left: auto; white-space: nowrap;">[<a v-on:click="browseTo('~')">{{ t('admin.fileExplorer.home') }}</a>]
-                        [<a v-on:click="browseTo(browse.path)">{{ t('admin.fileExplorer.refresh') }}</a>]</span>
+                      <span style="margin-left: auto; white-space: nowrap;"><a class="z-btn" v-on:click="browseTo('~')">{{ t('admin.fileExplorer.home') }}</a>
+                        <a class="z-btn" v-on:click="browseTo(browse.path)">{{ t('admin.fileExplorer.refresh') }}</a></span>
                     </div>
                     <div v-if="browse.path === null || browse.pending" style="padding: 30px; text-align: center;">
                       <svg class="spinner" width="40px" height="40px" viewBox="0 0 66 66" xmlns="http://www.w3.org/2000/svg"><circle class="spinner-path" fill="none" stroke-width="6" stroke-linecap="round" cx="33" cy="33" r="30"></circle></svg>
@@ -753,7 +788,7 @@ const foldersView = Vue.component('folders-view', {
                     </div>
                     <div style="padding: 7px 14px; border-top: 1px solid var(--z-line); font-size: 0.8em; color: var(--z-muted); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 8px; margin-top: auto;">
                       <span>{{ browse.dirs.length }} folder{{ browse.dirs.length === 1 ? '' : 's' }} · double click to open</span>
-                      <span style="white-space: nowrap;">[<a v-on:click="selectCurrent()">select this folder</a>]</span>
+                      <span style="white-space: nowrap;"><a class="z-btn" v-on:click="selectCurrent()">select this folder</a></span>
                     </div>
                   </div>
                   <div style="flex: 1 1 240px; min-width: 0; min-height: 400px; padding: 16px 18px; display: flex; flex-direction: column; gap: 18px; background: var(--z-inset); box-sizing: border-box;">
@@ -826,7 +861,7 @@ const foldersView = Vue.component('folders-view', {
                     <option value="true">on</option>
                   </select>
                 </td>
-                <td>[<a v-on:click="removeFolder(k, v.root)">{{ t('admin.folders.remove') }}</a>]</td>
+                <td><a class="z-btn" v-on:click="removeFolder(k, v.root)">{{ t('admin.folders.remove') }}</a></td>
               </tr>
             </tbody>
           </table>
@@ -1116,14 +1151,14 @@ const usersView = Vue.component('users-view', {
                           <b style="display: block; font-size: 16px; overflow: hidden; text-overflow: ellipsis;">{{ selectedUser }}</b>
                           <span v-if="users[selectedUser].admin === true" style="font-size: 12px; color: var(--z-celadon); font-weight: 600;">admin</span>
                         </span>
-                        <span style="margin-left: auto; font-size: 12px; white-space: nowrap;">[<a v-on:click="changePassword(selectedUser)">{{ t('admin.users.changePass') }}</a>]</span>
+                        <span style="margin-left: auto; font-size: 12px; white-space: nowrap;"><a class="z-btn" v-on:click="changePassword(selectedUser)">{{ t('admin.users.changePass') }}</a></span>
                       </div>
                       <div>
                         <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 8px;">
                           <span style="font-size: 11px; letter-spacing: 0.8px; color: var(--z-muted);">LIBRARIES</span>
                           <span style="font-size: 12px;">
-                            <span v-if="!libsUnlocked">[<a v-on:click="unlockLibs()">{{ t('admin.settings.edit') }}</a>]</span>
-                            <span v-else>[<a v-on:click="saveLibs()">{{ libsSaving ? 'saving…' : 'save' }}</a>]</span>
+                            <span v-if="!libsUnlocked"><a class="z-btn" v-on:click="unlockLibs()">{{ t('admin.settings.edit') }}</a></span>
+                            <span v-else><a class="z-btn" v-on:click="saveLibs()">{{ libsSaving ? 'saving…' : 'save' }}</a></span>
                           </span>
                         </div>
                         <div v-if="Object.keys(directories).length === 0" style="font-size: 12px; color: var(--z-muted);">{{ t('admin.users.noDirsWarning') }}</div>
@@ -1157,7 +1192,7 @@ const usersView = Vue.component('users-view', {
                         </div>
                       </div>
                       <div style="margin-top: auto; border-top: 1px solid var(--z-line); padding-top: 12px; font-size: 12px;">
-                        [<a v-on:click="deleteUser(selectedUser)" style="color: var(--z-danger);">delete user</a>]
+                        <a class="z-btn danger" v-on:click="deleteUser(selectedUser)">delete user</a>
                       </div>
                     </template>
                     <template v-else>
@@ -1489,27 +1524,27 @@ const advancedView = Vue.component('advanced-view', {
                 <table>
                   <tbody>
                     <tr>
-                      <td><b>{{ t('admin.settings.fileUploading') }}</b> {{ params.noUpload === false ? t('admin.settings.enabled') : t('admin.settings.disabled') }}</td>
+                      <td><b>{{ t('admin.settings.fileUploading') }}</b></td>
                       <td>
-                        [<a v-on:click="toggleFileUpload()">{{ t('admin.settings.edit') }}</a>]
+                        <z-switch :on="!!(params.noUpload === false)" v-on:flip="toggleFileUpload()"></z-switch>
                       </td>
                     </tr>
                     <tr>
-                      <td><b>{{ t('admin.settings.createFolder') }}</b> {{ params.noMkdir === false ? t('admin.settings.enabled') : t('admin.settings.disabled') }}</td>
+                      <td><b>{{ t('admin.settings.createFolder') }}</b></td>
                       <td>
-                        [<a v-on:click="toggleMkdir()">{{ t('admin.settings.edit') }}</a>]
+                        <z-switch :on="!!(params.noMkdir === false)" v-on:flip="toggleMkdir()"></z-switch>
                       </td>
                     </tr>
                     <tr>
-                      <td><b>{{ t('admin.settings.fileModification') }}</b> {{ params.noFileModify === false ? t('admin.settings.enabled') : t('admin.settings.disabled') }}</td>
+                      <td><b>{{ t('admin.settings.fileModification') }}</b></td>
                       <td>
-                        [<a v-on:click="toggleFileModify()">{{ t('admin.settings.edit') }}</a>]
+                        <z-switch :on="!!(params.noFileModify === false)" v-on:flip="toggleFileModify()"></z-switch>
                       </td>
                     </tr>
                     <tr>
                       <td><b>{{ t('admin.settings.authKey') }}</b> ****************{{params.secret}}</td>
                       <td>
-                        [<a v-on:click="generateNewKey()">{{ t('admin.settings.edit') }}</a>]
+                        <a class="z-btn" v-on:click="generateNewKey()">{{ t('admin.settings.edit') }}</a>
                       </td>
                     </tr>
                   </tbody>
@@ -1526,31 +1561,31 @@ const advancedView = Vue.component('advanced-view', {
                     <tr>
                       <td><b>{{ t('admin.settings.port') }}</b> {{params.port}}</td>
                       <td>
-                        [<a v-on:click="openModal('edit-port-modal')">{{ t('admin.settings.edit') }}</a>]
+                        <a class="z-btn" v-on:click="openModal('edit-port-modal')">{{ t('admin.settings.edit') }}</a>
                       </td>
                     </tr>
                     <tr>
                       <td><b>{{ t('admin.settings.maxRequestSize') }}</b> {{params.maxRequestSize}}</td>
                       <td>
-                        [<a v-on:click="openModal('edit-request-size-modal')">{{ t('admin.settings.edit') }}</a>]
+                        <a class="z-btn" v-on:click="openModal('edit-request-size-modal')">{{ t('admin.settings.edit') }}</a>
                       </td>
                     </tr>
                     <tr>
                       <td><b>{{ t('admin.settings.downloadSizeLimit') }}</b> {{ params.downloadSizeLimit === '0' ? t('admin.settings.unlimited') : params.downloadSizeLimit }}</td>
                       <td>
-                        [<a v-on:click="openModal('edit-download-size-limit-modal')">{{ t('admin.settings.edit') }}</a>]
+                        <a class="z-btn" v-on:click="openModal('edit-download-size-limit-modal')">{{ t('admin.settings.edit') }}</a>
                       </td>
                     </tr>
                     <tr>
                       <td><b>{{ t('admin.settings.address') }}</b> {{params.address}}</td>
                       <td>
-                        [<a v-on:click="openModal('edit-address-modal')">{{ t('admin.settings.edit') }}</a>]
+                        <a class="z-btn" v-on:click="openModal('edit-address-modal')">{{ t('admin.settings.edit') }}</a>
                       </td>
                     </tr>
                     <tr>
-                      <td><b>{{ t('admin.settings.trustProxy') }}</b> {{ params.trustProxy === true ? t('admin.settings.enabled') : t('admin.settings.disabled') }}</td>
+                      <td><b>{{ t('admin.settings.trustProxy') }}</b></td>
                       <td>
-                        [<a v-on:click="toggleTrustProxy()">{{ t('admin.settings.edit') }}</a>]
+                        <z-switch :on="!!(params.trustProxy === true)" v-on:flip="toggleTrustProxy()"></z-switch>
                       </td>
                     </tr>
                   </tbody>
@@ -1565,21 +1600,21 @@ const advancedView = Vue.component('advanced-view', {
                 <table>
                   <tbody>
                     <tr>
-                      <td><b>{{ t('admin.settings.autoBoot') }}</b> {{ params.autoBootServerAudio ? t('admin.settings.enabled') : t('admin.settings.disabled') }}</td>
+                      <td><b>{{ t('admin.settings.autoBoot') }}</b></td>
                       <td>
-                        [<a v-on:click="toggleAutoBootServerAudio()">{{ t('admin.settings.edit') }}</a>]
+                        <z-switch :on="!!(params.autoBootServerAudio)" v-on:flip="toggleAutoBootServerAudio()"></z-switch>
                       </td>
                     </tr>
                     <tr>
                       <td><b>{{ t('admin.settings.rustPlayerPort') }}</b> {{params.rustPlayerPort}}</td>
                       <td>
-                        [<a v-on:click="openModal('edit-rust-player-port-modal')">{{ t('admin.settings.edit') }}</a>]
+                        <a class="z-btn" v-on:click="openModal('edit-rust-player-port-modal')">{{ t('admin.settings.edit') }}</a>
                       </td>
                     </tr>
                     <tr>
                       <td><b>Active player:</b> {{ activePlayerLabel }}</td>
                       <td>
-                        [<a v-on:click="refreshServerAudioInfo()">refresh</a>]
+                        <a class="z-btn" v-on:click="refreshServerAudioInfo()">refresh</a>
                       </td>
                     </tr>
                   </tbody>
@@ -1594,25 +1629,22 @@ const advancedView = Vue.component('advanced-view', {
                 <table>
                   <tbody>
                     <tr>
-                      <td><b title="SQLite write durability for the main connection. FULL fsyncs every commit, so no scrobble, rating, or playlist edit is lost on a power cut. NORMAL skips the per-commit fsync for faster writes — still crash-safe under WAL (never corrupts), but a hard power loss can lose the last few committed actions. Applied live, no restart.">Write Durability (synchronous):</b> {{params.dbSynchronous || 'FULL'}}</td>
+                      <td><b title="SQLite write durability for the main connection. FULL fsyncs every commit, so no scrobble, rating, or playlist edit is lost on a power cut. NORMAL skips the per-commit fsync for faster writes — still crash-safe under WAL (never corrupts), but a hard power loss can lose the last few committed actions. Applied live, no restart.">Write Durability (synchronous):</b></td>
                       <td>
-                        [<a v-on:click="toggleDbSynchronous()">switch to {{ (params.dbSynchronous === 'NORMAL') ? 'FULL' : 'NORMAL' }}</a>]
+                        <z-seg :value="params.dbSynchronous || 'FULL'" :options="['FULL', 'NORMAL']" v-on:pick="toggleDbSynchronous()"></z-seg>
                       </td>
                     </tr>
                     <tr>
                       <td><b title="SQLite page-cache size for the main connection, in MB (applied as a negative cache_size). A larger cache keeps more of the DB + indexes hot in RAM, cutting disk reads on big libraries under heavy browse/search load, at the cost of that much process memory. Applied live, no restart.">Page cache (MB):</b> {{params.dbCacheSizeMb || 64}}</td>
                       <td>
                         <input type="number" min="1" max="2048" v-model.number="dbCacheSizeDraft" :placeholder="params.dbCacheSizeMb || 64" style="width:90px" />
-                        [<a v-on:click="saveDbCacheSize()">save</a>]
+                        <a class="z-btn" v-on:click="saveDbCacheSize()">save</a>
                       </td>
                     </tr>
                     <tr>
-                      <td><b title="HTTP response compression for text payloads (API JSON, HTML, JS, CSS). brotli = best ratio; gzip = widest compatibility; none = off. Audio and range/seek streams are never compressed. Applied live, no restart.">Compression:</b> {{params.compression || 'none'}}</td>
+                      <td><b title="HTTP response compression for text payloads (API JSON, HTML, JS, CSS). brotli = best ratio; gzip = widest compatibility; none = off. Audio and range/seek streams are never compressed. Applied live, no restart.">Compression:</b></td>
                       <td>
-                        <span v-for="m in ['none','gzip','brotli']" :key="m" style="margin-right:6px">
-                          <b v-if="(params.compression || 'none') === m">[{{m}}]</b>
-                          <span v-else>[<a v-on:click="setCompression(m)">{{m}}</a>]</span>
-                        </span>
+                        <z-seg :value="params.compression || 'none'" :options="['none', 'gzip', 'brotli']" v-on:pick="setCompression($event)"></z-seg>
                       </td>
                     </tr>
                   </tbody>
@@ -2063,68 +2095,68 @@ const dbView = Vue.component('db-view', {
                     <tr>
                       <td><b>{{ t('admin.db.scanInterval') }}</b> {{dbParams.scanInterval}} hours</td>
                       <td>
-                        [<a v-on:click="openModal('edit-scan-interval-modal')">{{ t('admin.settings.edit') }}</a>]
+                        <a class="z-btn" v-on:click="openModal('edit-scan-interval-modal')">{{ t('admin.settings.edit') }}</a>
                       </td>
                     </tr>
                     <tr>
                       <td><b>{{ t('admin.db.bootScanDelay') }}</b> {{dbParams.bootScanDelay}} seconds</td>
                       <td>
-                        [<a v-on:click="openModal('edit-boot-scan-delay-modal')">{{ t('admin.settings.edit') }}</a>]
+                        <a class="z-btn" v-on:click="openModal('edit-boot-scan-delay-modal')">{{ t('admin.settings.edit') }}</a>
                       </td>
                     </tr>
                     <tr>
-                      <td><b>{{ t('admin.db.skipImageMeta') }}</b> {{dbParams.skipImg}}</td>
+                      <td><b>{{ t('admin.db.skipImageMeta') }}</b></td>
                       <td>
-                        [<a v-on:click="toggleSkipImg()">{{ t('admin.settings.edit') }}</a>]
+                        <z-switch :on="!!(dbParams.skipImg)" v-on:flip="toggleSkipImg()"></z-switch>
                       </td>
                     </tr>
                     <tr>
-                      <td><b>{{ t('admin.db.compressImages') }}</b> {{dbParams.compressImage}}</td>
+                      <td><b>{{ t('admin.db.compressImages') }}</b></td>
                       <td>
-                        [<a v-on:click="recompressImages()">{{ t('admin.db.recompress') }}</a>]
-                        [<a v-on:click="toggleCompressImage()">{{ t('admin.settings.edit') }}</a>]
+                        <a class="z-btn" v-on:click="recompressImages()">{{ t('admin.db.recompress') }}</a>
+                        <z-switch :on="!!(dbParams.compressImage)" v-on:flip="toggleCompressImage()"></z-switch>
                       </td>
                     </tr>
                     <tr>
                       <td><b>BPM/key tracks analysed per pass:</b> {{dbParams.analyzeBpmPerRun}}</td>
                       <td>
-                        [<a v-on:click="openModal('edit-analyze-bpm-per-run-modal')">{{ t('admin.settings.edit') }}</a>]
+                        <a class="z-btn" v-on:click="openModal('edit-analyze-bpm-per-run-modal')">{{ t('admin.settings.edit') }}</a>
                       </td>
                     </tr>
                     <tr>
                       <td><b>BPM estimation method:</b> {{dbParams.analyzeBpmMethod}}</td>
                       <td>
-                        [<a v-on:click="openModal('edit-analyze-bpm-method-modal')">{{ t('admin.settings.edit') }}</a>]
+                        <a class="z-btn" v-on:click="openModal('edit-analyze-bpm-method-modal')">{{ t('admin.settings.edit') }}</a>
                       </td>
                     </tr>
                     <tr>
                       <td><b>BPM/key analysis window (seconds, 0 = whole file):</b> {{dbParams.analyzeBpmWindowSec}}</td>
                       <td>
-                        [<a v-on:click="openModal('edit-analyze-bpm-window-sec-modal')">{{ t('admin.settings.edit') }}</a>]
+                        <a class="z-btn" v-on:click="openModal('edit-analyze-bpm-window-sec-modal')">{{ t('admin.settings.edit') }}</a>
                       </td>
                     </tr>
                     <tr>
-                      <td><b>Ignore dot-hidden files (.name.mp3) when scanning:</b> {{dbParams.ignoreDotFiles}}</td>
+                      <td><b>Ignore dot-hidden files (.name.mp3) when scanning:</b></td>
                       <td>
-                        [<a v-on:click="toggleIgnoreDotFiles()">{{ t('admin.settings.edit') }}</a>]
+                        <z-switch :on="!!(dbParams.ignoreDotFiles)" v-on:flip="toggleIgnoreDotFiles()"></z-switch>
                       </td>
                     </tr>
                     <tr>
-                      <td><b>Ignore dot-hidden folders (.name/) when scanning:</b> {{dbParams.ignoreDotFolders}}</td>
+                      <td><b>Ignore dot-hidden folders (.name/) when scanning:</b></td>
                       <td>
-                        [<a v-on:click="toggleIgnoreDotFolders()">{{ t('admin.settings.edit') }}</a>]
+                        <z-switch :on="!!(dbParams.ignoreDotFolders)" v-on:flip="toggleIgnoreDotFolders()"></z-switch>
                       </td>
                     </tr>
                     <tr>
-                      <td><b>Watch libraries for changes (instant scans, local disks):</b> {{dbParams.watcherEnabled}}</td>
+                      <td><b>Watch libraries for changes (instant scans, local disks):</b></td>
                       <td>
-                        [<a v-on:click="toggleWatcherEnabled()">{{ t('admin.settings.edit') }}</a>]
+                        <z-switch :on="!!(dbParams.watcherEnabled)" v-on:flip="toggleWatcherEnabled()"></z-switch>
                       </td>
                     </tr>
                     <tr>
                       <td><b>Tracks identified per AcoustID pass:</b> {{dbParams.acoustidPerRun}}</td>
                       <td>
-                        [<a v-on:click="openModal('edit-acoustid-per-run-modal')">{{ t('admin.settings.edit') }}</a>]
+                        <a class="z-btn" v-on:click="openModal('edit-acoustid-per-run-modal')">{{ t('admin.settings.edit') }}</a>
                       </td>
                     </tr>
                     <tr>
@@ -2133,13 +2165,13 @@ const dbView = Vue.component('db-view', {
                         <span v-if="dbParams.discoveryModel === 'effnet-discogs'"> — Discogs-EffNet by MTG-UPF (CC BY-NC-SA 4.0, non-commercial)</span>
                       </td>
                       <td>
-                        [<a v-on:click="exportDiscoveryData()">Export</a>]
+                        <a class="z-btn" v-on:click="exportDiscoveryData()">Export</a>
                       </td>
                     </tr>
                     <tr>
                       <td><b>Discovery tracks embedded per pass:</b> {{dbParams.discoveryPerRun}}</td>
                       <td>
-                        [<a v-on:click="openModal('edit-discovery-per-run-modal')">{{ t('admin.settings.edit') }}</a>]
+                        <a class="z-btn" v-on:click="openModal('edit-discovery-per-run-modal')">{{ t('admin.settings.edit') }}</a>
                       </td>
                     </tr>
                   </tbody>
@@ -2154,45 +2186,45 @@ const dbView = Vue.component('db-view', {
                 <table>
                   <tbody>
                     <tr>
-                      <td><b>{{ t('admin.db.autoArtMode') }}</b> {{ dbParams.autoAlbumArtMode === 'all' ? t('admin.db.autoArtModeAll') : t('admin.db.autoArtModeMissing') }}</td>
+                      <td><b>{{ t('admin.db.autoArtMode') }}</b></td>
                       <td>
-                        [<a v-on:click="toggleAutoAlbumArtMode()">{{ t('admin.settings.edit') }}</a>]
+                        <z-seg :value="dbParams.autoAlbumArtMode === 'all' ? 'all' : 'missing'" :options="[{ value: 'missing', label: t('admin.db.autoArtModeMissing') }, { value: 'all', label: t('admin.db.autoArtModeAll') }]" v-on:pick="toggleAutoAlbumArtMode()"></z-seg>
                       </td>
                     </tr>
                     <tr>
                       <td><b>{{ t('admin.db.autoArtPerRun') }}</b> {{ dbParams.autoAlbumArtPerRun }}</td>
                       <td>
-                        [<a v-on:click="openModal('edit-auto-album-art-per-run-modal')">{{ t('admin.settings.edit') }}</a>]
+                        <a class="z-btn" v-on:click="openModal('edit-auto-album-art-per-run-modal')">{{ t('admin.settings.edit') }}</a>
                       </td>
                     </tr>
                     <tr>
-                      <td><b>{{ t('admin.db.autoWriteToFolder') }}</b> {{ dbParams.autoAlbumArtWriteToFolder ? t('admin.settings.enabled') : t('admin.settings.disabled') }}</td>
+                      <td><b>{{ t('admin.db.autoWriteToFolder') }}</b></td>
                       <td>
-                        [<a v-on:click="toggleAutoAlbumArtWriteToFolder()">{{ t('admin.settings.edit') }}</a>]
+                        <z-switch :on="!!(dbParams.autoAlbumArtWriteToFolder)" v-on:flip="toggleAutoAlbumArtWriteToFolder()"></z-switch>
                       </td>
                     </tr>
                     <tr>
-                      <td><b>{{ t('admin.db.writeToFolder') }}</b> {{ dbParams.albumArtWriteToFolder ? t('admin.settings.enabled') : t('admin.settings.disabled') }}</td>
+                      <td><b>{{ t('admin.db.writeToFolder') }}</b></td>
                       <td>
-                        [<a v-on:click="toggleAlbumArtWriteToFolder()">{{ t('admin.settings.edit') }}</a>]
+                        <z-switch :on="!!(dbParams.albumArtWriteToFolder)" v-on:flip="toggleAlbumArtWriteToFolder()"></z-switch>
                       </td>
                     </tr>
                     <tr>
-                      <td><b>{{ t('admin.db.embedInFile') }}</b> {{ dbParams.albumArtWriteToFile ? t('admin.settings.enabled') : t('admin.settings.disabled') }}</td>
+                      <td><b>{{ t('admin.db.embedInFile') }}</b></td>
                       <td>
-                        [<a v-on:click="toggleAlbumArtWriteToFile()">{{ t('admin.settings.edit') }}</a>]
+                        <z-switch :on="!!(dbParams.albumArtWriteToFile)" v-on:flip="toggleAlbumArtWriteToFile()"></z-switch>
                       </td>
                     </tr>
                     <tr>
                       <td><b>{{ t('admin.db.serviceOrder') }}</b> {{dbParams.albumArtServices ? dbParams.albumArtServices.join(', ') : 'musicbrainz, itunes, deezer'}}</td>
                       <td>
-                        [<a v-on:click="openModal('edit-album-art-services-modal')">{{ t('admin.settings.edit') }}</a>]
+                        <a class="z-btn" v-on:click="openModal('edit-album-art-services-modal')">{{ t('admin.settings.edit') }}</a>
                       </td>
                     </tr>
                     <tr>
                       <td><b>{{ t('admin.db.artistSplitExceptions') }}</b> {{ dbParams.artistSplitExceptions && dbParams.artistSplitExceptions.length ? dbParams.artistSplitExceptions.join(', ') : t('admin.db.artistSplitExceptionsNone') }}</td>
                       <td>
-                        [<a v-on:click="openModal('edit-artist-split-exceptions-modal')">{{ t('admin.settings.edit') }}</a>]
+                        <a class="z-btn" v-on:click="openModal('edit-artist-split-exceptions-modal')">{{ t('admin.settings.edit') }}</a>
                       </td>
                     </tr>
                   </tbody>
@@ -2308,11 +2340,11 @@ const dbView = Vue.component('db-view', {
                     </tr>
                     <tr>
                       <td><b>Keep the log for:</b> {{ retentionLabel }}<span v-if="statsParams.retention && statsParams.retention.floor" class="enrich-muted"> — plays before {{ fmtStatsDate(statsParams.retention.floor) }} are pruned</span></td>
-                      <td>[<a v-on:click="openModal('edit-stats-retention-modal')">{{ t('admin.settings.edit') }}</a>]</td>
+                      <td><a class="z-btn" v-on:click="openModal('edit-stats-retention-modal')">{{ t('admin.settings.edit') }}</a></td>
                     </tr>
                     <tr>
                       <td><b>A play counts after:</b> {{ thresholdLabel }}</td>
-                      <td>[<a v-on:click="openModal('edit-stats-thresholds-modal')">{{ t('admin.settings.edit') }}</a>]</td>
+                      <td><a class="z-btn" v-on:click="openModal('edit-stats-thresholds-modal')">{{ t('admin.settings.edit') }}</a></td>
                     </tr>
                     <tr>
                       <td><b>Last prune:</b>
@@ -2351,9 +2383,9 @@ const dbView = Vue.component('db-view', {
                   <svg class="spinner" width="65px" height="65px" viewBox="0 0 66 66" xmlns="http://www.w3.org/2000/svg"><circle class="spinner-path" fill="none" stroke-width="6" stroke-linecap="round" cx="33" cy="33" r="30"></circle></svg>
                 </div>
                 <div v-else-if="sharedPlaylistsTS.ts !== 0 && sharedPlaylists.length > 0">
-                  [<a v-on:click="deleteUnxpShared">{{ t('admin.db.deleteNoExpiry') }}</a>]
+                  <a class="z-btn" v-on:click="deleteUnxpShared">{{ t('admin.db.deleteNoExpiry') }}</a>
                   <br>
-                  [<a v-on:click="deleteExpiredShared">{{ t('admin.db.deleteExpired') }}</a>]
+                  <a class="z-btn" v-on:click="deleteExpiredShared">{{ t('admin.db.deleteExpired') }}</a>
                   <br>
                   <table>
                     <thead>
@@ -2369,7 +2401,7 @@ const dbView = Vue.component('db-view', {
                         <th><a target="_blank" v-bind:href="'/shared/'+ v.playlistId">{{v.playlistId}}</a></th>
                         <th>{{v.user}}</th>
                         <th>{{ v.expires ? new Date(v.expires * 1000).toLocaleString() : t('admin.db.never') }}</th>
-                        <th>[<a v-on:click="deletePlaylist(v)">{{ t('admin.db.deleteLower') }}</a>]</th>
+                        <th><a class="z-btn" v-on:click="deletePlaylist(v)">{{ t('admin.db.deleteLower') }}</a></th>
                       </tr>
                     </tbody>
                   </table>
@@ -3251,9 +3283,9 @@ const lyricsView = Vue.component('lyrics-view', {
                 <table v-if="loaded">
                   <tbody>
                     <tr>
-                      <td><b>Write fetched lyrics to sidecar files (.lrc next to each track):</b> {{ writeSidecar ? 'Enabled' : 'Disabled' }}</td>
+                      <td><b>Write fetched lyrics to sidecar files (.lrc next to each track):</b></td>
                       <td>
-                        [<a v-on:click="toggleWriteSidecar()">edit</a>]
+                        <z-switch :on="!!(writeSidecar)" v-on:flip="toggleWriteSidecar()"></z-switch>
                       </td>
                     </tr>
                   </tbody>
@@ -3552,28 +3584,28 @@ const infoView = Vue.component('info-view', {
                 <tbody>
                   <tr>
                     <td><b>Installed:</b> v{{update.s.current}}<span v-if="!update.s.available && update.s.lastCheckAt"> &mdash; up to date</span></td>
-                    <td>[<a v-on:click="updCheckNow()">check now</a>]</td>
+                    <td><a class="z-btn" v-on:click="updCheckNow()">check now</a></td>
                   </tr>
                   <tr v-if="update.s.available">
                     <td><b>Available:</b> v{{update.s.latest}} &mdash; {{updLine()}}</td>
                     <td>
-                      <span v-if="updAction()">[<a v-on:click="updDoAction()">{{updAction()}}</a>] </span>
-                      <a v-else-if="!update.s.skipped && !update.s.held && update.s.downloadUrl" v-bind:href="update.s.downloadUrl" target="_blank" rel="noopener">[downloads page] </a>
-                      <span v-if="update.s.held" title="This version was rolled back after it failed to start. Clearing the hold lets the next check download and try it again.">[<a v-on:click="updClearHold()">clear hold &amp; retry</a>]</span>
-                      <span v-else-if="update.s.skipped">[<a v-on:click="updSetSkip('')">unskip</a>]</span>
-                      <span v-else title="Hold this version back: never download or restart into it (e.g. after rolling back). Cleared by unskip or the next release.">[<a v-on:click="updSetSkip(update.s.latest)">skip</a>]</span>
+                      <span v-if="updAction()"><a class="z-btn" v-on:click="updDoAction()">{{updAction()}}</a> </span>
+                      <a v-else-if="!update.s.skipped && !update.s.held && update.s.downloadUrl" class="z-btn" v-bind:href="update.s.downloadUrl" target="_blank" rel="noopener">Downloads page</a>
+                      <span v-if="update.s.held" title="This version was rolled back after it failed to start. Clearing the hold lets the next check download and try it again."><a class="z-btn" v-on:click="updClearHold()">clear hold &amp; retry</a></span>
+                      <span v-else-if="update.s.skipped"><a class="z-btn" v-on:click="updSetSkip('')">unskip</a></span>
+                      <span v-else title="Hold this version back: never download or restart into it (e.g. after rolling back). Cleared by unskip or the next release."><a class="z-btn" v-on:click="updSetSkip(update.s.latest)">skip</a></span>
                     </td>
                   </tr>
                   <tr v-if="update.s.error">
                     <td colspan="2" style="color:var(--z-danger);">{{update.s.error}}</td>
                   </tr>
                   <tr>
-                    <td><b title="notify: report only. stage: download updates in the background; applying still takes a restart or a click. auto (default): additionally restart into the update once the server is idle - nothing streaming, no scan, and a quiet stretch since the last request. Headless installs self-apply only when a supervisor that restarts mStream is detected; otherwise auto downloads and waits for the next restart.">Mode:</b> {{update.s.mode}}</td>
-                    <td>[<a v-on:click="updCycleMode()">change</a>]</td>
+                    <td><b title="notify: report only. stage: download updates in the background; applying still takes a restart or a click. auto (default): additionally restart into the update once the server is idle - nothing streaming, no scan, and a quiet stretch since the last request. Headless installs self-apply only when a supervisor that restarts mStream is detected; otherwise auto downloads and waits for the next restart.">Mode:</b></td>
+                    <td><z-seg :value="update.s.mode" :options="['notify', 'stage', 'auto']" v-on:pick="updSetMode($event)"></z-seg></td>
                   </tr>
                   <tr>
-                    <td><b title="One request a day to the release feed on GitHub. Off = never phones home; 'check now' still works.">Daily check:</b> {{update.s.check ? 'on' : 'off'}}</td>
-                    <td>[<a v-on:click="updToggleCheck()">{{update.s.check ? 'disable' : 'enable'}}</a>]</td>
+                    <td><b title="One request a day to the release feed on GitHub. Off = never phones home; 'check now' still works.">Daily check:</b></td>
+                    <td><z-switch :on="!!(update.s.check)" v-on:flip="updToggleCheck()"></z-switch></td>
                   </tr>
                 </tbody>
               </table>
@@ -3696,9 +3728,11 @@ const infoView = Vue.component('info-view', {
         iziToast.error({ title: 'Failed to clear the hold', position: 'topCenter', timeout: 3500 });
       }
     },
-    updCycleMode: async function() {
+    updCycleMode: function() {
       const order = ['notify', 'stage', 'auto'];
-      const next = order[(order.indexOf(this.update.s.mode) + 1) % order.length];
+      return this.updSetMode(order[(order.indexOf(this.update.s.mode) + 1) % order.length]);
+    },
+    updSetMode: async function(next) {
       try {
         await API.axios({ method: 'POST', url: `${API.url()}/api/v1/admin/update/settings`, data: { mode: next } });
         Vue.set(ADMINDATA.updateStatus.s, 'mode', next);
@@ -3784,31 +3818,31 @@ const transcodeView = Vue.component('transcode-view', {
                   <tr>
                     <td><b>FFmpeg Directory:</b> {{params.ffmpegDirectory}}</td>
                     <td>
-                      [<a v-on:click="changeFolder()">{{ t('admin.settings.edit') }}</a>]
+                      <a class="z-btn" v-on:click="changeFolder()">{{ t('admin.settings.edit') }}</a>
                     </td>
                   </tr>
                   <tr>
                     <td><b>FFmpeg Downloaded:</b> {{downloadPending.val === true ? 'pending...' : params.downloaded}}</td>
                     <td>
-                      [<a v-on:click="downloadFFMpeg()">download</a>]
+                      <a class="z-btn" v-on:click="downloadFFMpeg()">download</a>
                     </td>
                   </tr>
                   <tr>
                     <td><b>Default Codec:</b> {{params.defaultCodec}}</td>
                     <td>
-                      [<a v-on:click="changeCodec()">{{ t('admin.settings.edit') }}</a>]
+                      <a class="z-btn" v-on:click="changeCodec()">{{ t('admin.settings.edit') }}</a>
                     </td>
                   </tr>
                   <tr>
                     <td><b>Default Bitrate:</b> {{params.defaultBitrate}}</td>
                     <td>
-                      [<a v-on:click="changeBitrate()">{{ t('admin.settings.edit') }}</a>]
+                      <a class="z-btn" v-on:click="changeBitrate()">{{ t('admin.settings.edit') }}</a>
                     </td>
                   </tr>
                   <tr>
-                    <td><b title="Automatically update the managed ffmpeg build on a weekly check. Disable to pin the current binary — useful if a rolling upstream build regresses, or for reproducible/air-gapped installs. No effect when running off system ffmpeg.">Auto-Update FFmpeg:</b> {{params.autoUpdate ? 'on' : 'off'}}</td>
+                    <td><b title="Automatically update the managed ffmpeg build on a weekly check. Disable to pin the current binary — useful if a rolling upstream build regresses, or for reproducible/air-gapped installs. No effect when running off system ffmpeg.">Auto-Update FFmpeg:</b></td>
                     <td>
-                      [<a v-on:click="toggleAutoUpdate()">{{ params.autoUpdate ? 'disable' : 'enable' }}</a>]
+                      <z-switch :on="!!(params.autoUpdate)" v-on:flip="toggleAutoUpdate()"></z-switch>
                     </td>
                   </tr>
                 </tbody>
@@ -4442,21 +4476,21 @@ const logsView = Vue.component('logs-view', {
                 <table>
                   <tbody>
                     <tr>
-                      <td><b>{{ t('admin.logs.writeLogs') }}</b> {{ params.writeLogs === true ? t('admin.settings.enabled') : t('admin.settings.disabled') }}</td>
+                      <td><b>{{ t('admin.logs.writeLogs') }}</b></td>
                       <td>
-                        [<a v-on:click="toggleWriteLogs">{{ t('admin.settings.edit') }}</a>]
+                        <z-switch :on="!!(params.writeLogs === true)" v-on:flip="toggleWriteLogs()"></z-switch>
                       </td>
                     </tr>
                     <tr>
                       <td><b>{{ t('admin.logs.logsDirectory') }}</b> {{params.storage.logsDirectory}}</td>
                       <td>
-                        [<a v-on:click="changeLogsDir()">{{ t('admin.settings.edit') }}</a>]
+                        <a class="z-btn" v-on:click="changeLogsDir()">{{ t('admin.settings.edit') }}</a>
                       </td>
                     </tr>
                     <tr>
                       <td><b>{{ t('admin.logs.bufferSize') }}</b> {{ params.logBufferSize === 0 ? t('admin.logs.bufferDisabled') : params.logBufferSize }}</td>
                       <td>
-                        [<a v-on:click="openModal('edit-log-buffer-size-modal')">{{ t('admin.settings.edit') }}</a>]
+                        <a class="z-btn" v-on:click="openModal('edit-log-buffer-size-modal')">{{ t('admin.settings.edit') }}</a>
                       </td>
                     </tr>
                   </tbody>
@@ -4704,7 +4738,7 @@ const securityView = Vue.component('security-view', {
                   <tbody>
                     <tr v-for="(entry, idx) in whitelistDraft" :key="idx">
                       <td>{{ entry }}</td>
-                      <td style="text-align:right">[<a v-on:click="removeEntry(idx)">{{ t('admin.security.remove') }}</a>]</td>
+                      <td style="text-align:right"><a class="z-btn" v-on:click="removeEntry(idx)">{{ t('admin.security.remove') }}</a></td>
                     </tr>
                     <tr v-if="whitelistDraft.length === 0">
                       <td colspan="2" class="grey-text">{{ t('admin.security.whitelistEmpty') }}</td>
@@ -4907,7 +4941,7 @@ const dlnaView = Vue.component('dlna-view', {
               <div class="input-field" style="max-width:420px">
                 <input id="dlna-uuid" type="text" v-model.trim="selectedUuid" />
                 <label for="dlna-uuid" class="active">UUID</label>
-                <span class="helper-text">[<a v-on:click="generateUuid()">generate a new UUID</a>] Changing the UUID makes existing clients re-discover the server as a new device.</span>
+                <span class="helper-text"><a class="z-btn" v-on:click="generateUuid()">generate a new UUID</a> Changing the UUID makes existing clients re-discover the server as a new device.</span>
               </div>
             </div>
             <div class="card-action flow-root">
@@ -7046,12 +7080,12 @@ const backupView = Vue.component('backup-view', {
                   </select>
                 </td>
                 <td>
-                  [<a v-on:click="showEditDestination(d)">Edit</a>]
+                  <a class="z-btn" v-on:click="showEditDestination(d)">Edit</a>
                   <!-- A disabled destination always 400s on /run — grey the
                        link out instead of offering a dead button. -->
-                  [<a v-if="d.enabled" v-on:click="runNow(d)">Run now</a><span v-else class="grey-text" style="cursor:default" title="Destination is disabled — set Enabled to 'on' to run it">Run now</span>]
-                  [<a v-on:click="showHistory(d)">History</a>]
-                  [<a v-on:click="removeDestination(d)" style="color:var(--z-danger)">Delete</a>]
+                  <a v-if="d.enabled" class="z-btn" v-on:click="runNow(d)">Run now</a><span v-else class="z-btn disabled" title="Destination is disabled — set Enabled to 'on' to run it">Run now</span>
+                  <a class="z-btn" v-on:click="showHistory(d)">History</a>
+                  <a class="z-btn danger" v-on:click="removeDestination(d)">Delete</a>
                 </td>
               </tr>
             </tbody>
@@ -7503,11 +7537,11 @@ const discoveryView = Vue.component('discovery-view', {
                             v-if="discoveryP2p.status.watchdog.restarts > 0" style="color: var(--z-accent);"> ({{ discoveryP2p.status.watchdog.restarts }} watchdog restart{{ discoveryP2p.status.watchdog.restarts === 1 ? '' : 's' }})</span>
                         </span>
                         <span>· announcing as <span style="color: var(--z-text); font-weight: 600;">{{ p2pIdentity.serverName }}</span>
-                          [<a v-on:click="openModal('edit-p2p-identity-modal')">{{ t('admin.settings.edit') }}</a>]</span>
+                          <a class="z-btn" v-on:click="openModal('edit-p2p-identity-modal')">{{ t('admin.settings.edit') }}</a></span>
                       </div>
                       <div style="display: flex; gap: 12px; font-size: 0.9em; flex-shrink: 0;">
-                        <span style="color: var(--z-muted);">[<a v-on:click="loadDiscoveryP2p()">Refresh</a>]</span>
-                        <span style="color: var(--z-muted);">[<a style="color: var(--z-danger);" v-on:click="disableP2p()">Disable</a>]</span>
+                        <span><a class="z-btn" v-on:click="loadDiscoveryP2p()">Refresh</a></span>
+                        <span><a class="z-btn danger" v-on:click="disableP2p()">Disable</a></span>
                       </div>
                     </div>
                     <div v-if="meshSearching" style="max-width: 520px; margin-top: 8px;">
@@ -7595,26 +7629,26 @@ const discoveryView = Vue.component('discovery-view', {
                         <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--z-line); font-size: 0.85em;">
                           <span style="color: var(--z-muted);">Snapshot storage cap</span>
                           <span style="color: var(--z-text); text-align: right;"><b>{{ discoveryP2p.status.maxPeerDbStorageMb }} MB</b>
-                            [<a v-on:click="openModal('edit-p2p-max-storage-modal')">{{ t('admin.settings.edit') }}</a>]</span>
+                            <a class="z-btn" v-on:click="openModal('edit-p2p-max-storage-modal')">{{ t('admin.settings.edit') }}</a></span>
                         </div>
                         <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--z-line); font-size: 0.85em;">
                           <span style="color: var(--z-muted);">Forget offline servers</span>
                           <span style="color: var(--z-text); text-align: right;"><b>{{ discoveryP2p.status.peerRetentionDays > 0
                             ? 'after ' + discoveryP2p.status.peerRetentionDays + ' days of silence' : 'never' }}</b>
-                            [<a v-on:click="openModal('edit-p2p-peer-retention-modal')">{{ t('admin.settings.edit') }}</a>]</span>
+                            <a class="z-btn" v-on:click="openModal('edit-p2p-peer-retention-modal')">{{ t('admin.settings.edit') }}</a></span>
                         </div>
                         <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--z-line); font-size: 0.85em;">
                           <span style="color: var(--z-muted);">Auto-fetch snapshots</span>
                           <span style="color: var(--z-text); text-align: right;"><b>{{ discoveryP2p.autoFetch === false ? 'off'
                             : discoveryP2p.status.autoFetchCount === 0 ? 'on — 0 servers (downloads paused)'
                             : 'up to ' + discoveryP2p.status.autoFetchCount + ' servers' }}</b>
-                            [<a v-on:click="openModal('edit-p2p-auto-fetch-count-modal')">{{ t('admin.settings.edit') }}</a>]</span>
+                            <a class="z-btn" v-on:click="openModal('edit-p2p-auto-fetch-count-modal')">{{ t('admin.settings.edit') }}</a></span>
                         </div>
                         <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--z-line); font-size: 0.85em;">
                           <span style="color: var(--z-muted);">Rotate downloads</span>
                           <span style="color: var(--z-text); text-align: right;"><b>{{ discoveryP2p.status.rotationDays > 0
                             ? 'after ' + discoveryP2p.status.rotationDays + ' days' : 'never' }}</b>
-                            [<a v-on:click="openModal('edit-p2p-rotation-modal')">{{ t('admin.settings.edit') }}</a>]</span>
+                            <a class="z-btn" v-on:click="openModal('edit-p2p-rotation-modal')">{{ t('admin.settings.edit') }}</a></span>
                         </div>
                         <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--z-line); font-size: 0.85em;">
                           <span style="color: var(--z-muted);">Community seeds</span>
@@ -7624,7 +7658,7 @@ const discoveryView = Vue.component('discovery-view', {
                           <span style="color: var(--z-muted);">Sidecar memory ceiling</span>
                           <span style="color: var(--z-text); text-align: right;"><b>{{ discoveryP2p.status.watchdog && discoveryP2p.status.watchdog.maxRssMb > 0
                             ? discoveryP2p.status.watchdog.maxRssMb + ' MB' : 'watchdog off' }}</b>
-                            [<a v-on:click="openModal('edit-p2p-sidecar-max-rss-modal')">{{ t('admin.settings.edit') }}</a>]</span>
+                            <a class="z-btn" v-on:click="openModal('edit-p2p-sidecar-max-rss-modal')">{{ t('admin.settings.edit') }}</a></span>
                         </div>
                       </div>
                     </div>
@@ -7667,13 +7701,13 @@ const discoveryView = Vue.component('discovery-view', {
                         <span v-else-if="fedReqStateFor(peer.from) === 'sent'" style="padding: 2px 8px; border-radius: 10px; font-size: 0.75em; font-weight: 600; background: var(--z-accent-tint); color: var(--z-accent);">request sent</span>
                       </div>
                       <div style="display: flex; gap: 10px; font-size: 0.85em; border-top: 1px solid var(--z-line); padding-top: 7px; flex-wrap: wrap;">
-                        <span>[<a v-on:click="discoveryFetchPeer(peer.from)">{{ peer.fetched ? 'Update' : 'Download' }}</a>]</span>
-                        <span v-if="fed.available !== false && fedReqStateFor(peer.from) === null">[<a v-on:click="openFederateModal(peer)">Federate…</a>]</span>
-                        <span v-if="fedReqStateFor(peer.from) === 'theirs'">[<a v-on:click="goToFederationTab()">Review their request</a>]</span>
-                        <span v-if="peer.fetched">[<a v-on:click="discoveryRemovePeer(peer.from)">Remove</a>]</span>
-                        <span v-if="peer.fetched">[<a v-on:click="discoveryPinPeer(peer.from, !peer.fetched.pinned)">{{ peer.fetched.pinned ? 'Unpin' : 'Pin' }}</a>]</span>
-                        <span v-if="!peer.online && !peer.fetched">[<a v-on:click="discoveryForgetPeer(peer.from)">Forget</a>]</span>
-                        <span>[<a v-on:click="discoveryBlockPeer(peer.from)" style="color: var(--z-danger);">Block</a>]</span>
+                        <span><a class="z-btn" v-on:click="discoveryFetchPeer(peer.from)">{{ peer.fetched ? 'Update' : 'Download' }}</a></span>
+                        <span v-if="fed.available !== false && fedReqStateFor(peer.from) === null"><a class="z-btn" v-on:click="openFederateModal(peer)">Federate…</a></span>
+                        <span v-if="fedReqStateFor(peer.from) === 'theirs'"><a class="z-btn" v-on:click="goToFederationTab()">Review their request</a></span>
+                        <span v-if="peer.fetched"><a class="z-btn" v-on:click="discoveryRemovePeer(peer.from)">Remove</a></span>
+                        <span v-if="peer.fetched"><a class="z-btn" v-on:click="discoveryPinPeer(peer.from, !peer.fetched.pinned)">{{ peer.fetched.pinned ? 'Unpin' : 'Pin' }}</a></span>
+                        <span v-if="!peer.online && !peer.fetched"><a class="z-btn" v-on:click="discoveryForgetPeer(peer.from)">Forget</a></span>
+                        <span><a class="z-btn danger" v-on:click="discoveryBlockPeer(peer.from)">Block</a></span>
                       </div>
                     </div>
                   </div>
@@ -7695,37 +7729,37 @@ const discoveryView = Vue.component('discovery-view', {
                             v-if="peer.fetched && peer.fetched.pinned"> · pinned</span>
                         </td>
                         <td>
-                          [<a v-on:click="discoveryFetchPeer(peer.from)">{{ peer.fetched ? 'Update' : 'Download' }}</a>]
-                          <span v-if="fed.available !== false && fedReqStateFor(peer.from) === null">[<a v-on:click="openFederateModal(peer)">Federate…</a>]</span>
-                          <span v-if="fedReqStateFor(peer.from) === 'theirs'">[<a v-on:click="goToFederationTab()">Review their request</a>]</span>
+                          <a class="z-btn" v-on:click="discoveryFetchPeer(peer.from)">{{ peer.fetched ? 'Update' : 'Download' }}</a>
+                          <span v-if="fed.available !== false && fedReqStateFor(peer.from) === null"><a class="z-btn" v-on:click="openFederateModal(peer)">Federate…</a></span>
+                          <span v-if="fedReqStateFor(peer.from) === 'theirs'"><a class="z-btn" v-on:click="goToFederationTab()">Review their request</a></span>
                           <span v-else-if="fedReqStateFor(peer.from) === 'federated'" style="padding: 2px 8px; border-radius: 10px; font-size: 0.75em; font-weight: 600; background: var(--z-celadon-tint); color: var(--z-celadon);">federated</span>
                           <span v-else-if="fedReqStateFor(peer.from) === 'sent'" style="padding: 2px 8px; border-radius: 10px; font-size: 0.75em; font-weight: 600; background: var(--z-accent-tint); color: var(--z-accent);">request sent</span>
-                          <span v-if="peer.fetched">[<a v-on:click="discoveryRemovePeer(peer.from)">Remove</a>]</span>
-                          <span v-if="peer.fetched">[<a v-on:click="discoveryPinPeer(peer.from, !peer.fetched.pinned)">{{ peer.fetched.pinned ? 'Unpin' : 'Pin' }}</a>]</span>
-                          <span v-if="!peer.online && !peer.fetched">[<a v-on:click="discoveryForgetPeer(peer.from)">Forget</a>]</span>
-                          [<a v-on:click="discoveryBlockPeer(peer.from)" style="color: var(--z-danger);">Block</a>]
+                          <span v-if="peer.fetched"><a class="z-btn" v-on:click="discoveryRemovePeer(peer.from)">Remove</a></span>
+                          <span v-if="peer.fetched"><a class="z-btn" v-on:click="discoveryPinPeer(peer.from, !peer.fetched.pinned)">{{ peer.fetched.pinned ? 'Unpin' : 'Pin' }}</a></span>
+                          <span v-if="!peer.online && !peer.fetched"><a class="z-btn" v-on:click="discoveryForgetPeer(peer.from)">Forget</a></span>
+                          <a class="z-btn danger" v-on:click="discoveryBlockPeer(peer.from)">Block</a>
                         </td>
                       </tr>
                     </tbody>
                   </table>
                   </div>
                   <p v-else-if="discoveryP2p.peers.length > 0">No servers match
-                    &ldquo;{{ peerFilter }}&rdquo; — [<a v-on:click="peerFilter = ''">clear</a>]</p>
+                    &ldquo;{{ peerFilter }}&rdquo; — <a class="z-btn" v-on:click="peerFilter = ''">clear</a></p>
                   <p v-else-if="discoveryP2p.hiddenIncompatible === 0">No servers heard yet — paste a friend's ticket above and give gossip a minute.</p>
                   <p v-if="discoveryP2p.hiddenIncompatible > 0 || discoveryP2p.showIncompatible"
                     style="color: var(--z-muted); font-size: 0.9em;">
                     <span v-if="discoveryP2p.hiddenIncompatible > 0">{{ discoveryP2p.hiddenIncompatible }}
                       server{{ discoveryP2p.hiddenIncompatible === 1 ? '' : 's' }} hidden — incompatible embedding
                       model (their libraries can't power this server's similar-search)
-                      [<a v-on:click="discoveryToggleIncompatible()">show</a>]</span>
+                      <a class="z-btn" v-on:click="discoveryToggleIncompatible()">show</a></span>
                     <span v-else>showing incompatible servers
-                      [<a v-on:click="discoveryToggleIncompatible()">hide</a>]</span>
+                      <a class="z-btn" v-on:click="discoveryToggleIncompatible()">hide</a></span>
                   </p>
                   <p v-if="discoveryP2p.status.blockedPeers && discoveryP2p.status.blockedPeers.length > 0"
                     style="color: var(--z-muted); font-size: 0.9em;">
                     <b>Blocked servers</b> — announcements ignored, snapshots never fetched:<br>
                     <span v-for="id in discoveryP2p.status.blockedPeers" :key="id" style="margin-right: 12px; white-space: nowrap;">
-                      <code>{{ id.slice(0, 12) }}…</code> [<a v-on:click="discoveryUnblockPeer(id)">Unblock</a>]
+                      <code>{{ id.slice(0, 12) }}…</code> <a class="z-btn" v-on:click="discoveryUnblockPeer(id)">Unblock</a>
                     </span>
                   </p>
                 </div>
@@ -8270,7 +8304,7 @@ const discoveryPluginsView = Vue.component('discovery-plugins-view', {
                       <span>&middot; {{ t(dp.status.jobs.enabledFor === 'whitelist' ? 'admin.dplugins.header.jobsWhitelist' : 'admin.dplugins.header.jobsAll') }}</span>
                       <span v-if="liveCount > 0">&middot; {{ t('admin.dplugins.header.running', { count: liveCount }) }}</span>
                     </div>
-                    <div class="dp-box-act"><span class="dp-br">[<a v-on:click="load()">{{ t('admin.dplugins.refresh') }}</a>]</span></div>
+                    <div class="dp-box-act"><span class="dp-br"><a class="z-btn" v-on:click="load()">{{ t('admin.dplugins.refresh') }}</a></span></div>
                   </div>
                   <div class="dp-pills">
                     <div v-for="name in ['plugins', 'jobs', 'downloads', 'activity']" :key="name" class="dp-pill" :class="{ 'dp-pill-on': tab === name }" v-on:click="showTab(name)">{{ t('admin.dplugins.tab.' + name) }}<small v-if="name === 'activity' && liveCount > 0">{{ liveCount }}</small></div>
@@ -8297,8 +8331,8 @@ const discoveryPluginsView = Vue.component('discovery-plugins-view', {
                         </div>
                         <div class="dp-plugin-act">
                           <span class="dp-status"><span class="dp-dot" :class="'dp-dot-' + pluginState(p).dot"></span><span :class="'dp-' + pluginState(p).dot">{{ t('admin.dplugins.status.' + pluginState(p).word) }}</span></span>
-                          <span v-if="p.adminSettings.length > 0" class="dp-br">[<a v-on:click="openSettings(p)">{{ t('admin.dplugins.settings') }}</a>]</span>
-                          <span v-if="p.enabled && !p.available" class="dp-br">[<a v-on:click="checkAgain(p)">{{ t('admin.dplugins.checkAgain') }}</a>]</span>
+                          <span v-if="p.adminSettings.length > 0" class="dp-br"><a class="z-btn" v-on:click="openSettings(p)">{{ t('admin.dplugins.settings') }}</a></span>
+                          <span v-if="p.enabled && !p.available" class="dp-br"><a class="z-btn" v-on:click="checkAgain(p)">{{ t('admin.dplugins.checkAgain') }}</a></span>
                         </div>
                       </div>
                     </template>
@@ -8348,10 +8382,10 @@ const discoveryPluginsView = Vue.component('discovery-plugins-view', {
 
                     <table class="dp-rows" style="margin-top:18px">
                       <tbody>
-                        <tr><td><b>{{ t('admin.dplugins.jobs.atOnce') }}</b> {{ dp.status.jobs.maxConcurrent }}<span class="dp-note">{{ t('admin.dplugins.jobs.atOnceNote') }}</span></td><td>[<a v-on:click="editNumber('maxConcurrent')">{{ t('admin.settings.edit') }}</a>]</td></tr>
-                        <tr v-if="dp.status.jobs.maxQueuedPerUser != null"><td><b>{{ t('admin.dplugins.jobs.perUser') }}</b> {{ dp.status.jobs.maxQueuedPerUser }}<span class="dp-note">{{ t('admin.dplugins.jobs.perUserNote') }}</span></td><td>[<a v-on:click="editNumber('maxQueuedPerUser')">{{ t('admin.settings.edit') }}</a>]</td></tr>
-                        <tr v-if="dp.status.jobs.maxFolderSongs != null"><td><b>{{ t('admin.dplugins.jobs.folderMax') }}</b> {{ t('admin.dplugins.songs', { count: dp.status.jobs.maxFolderSongs }) }}<span class="dp-note">{{ t('admin.dplugins.jobs.folderMaxNote') }}</span></td><td>[<a v-on:click="editNumber('maxFolderSongs')">{{ t('admin.settings.edit') }}</a>]</td></tr>
-                        <tr><td><b>{{ t('admin.dplugins.jobs.history') }}</b> {{ t('admin.dplugins.days', { count: dp.status.jobs.retentionDays }) }}<span class="dp-note">{{ t('admin.dplugins.jobs.historyNote') }}</span></td><td>[<a v-on:click="editNumber('retentionDays')">{{ t('admin.settings.edit') }}</a>]</td></tr>
+                        <tr><td><b>{{ t('admin.dplugins.jobs.atOnce') }}</b> {{ dp.status.jobs.maxConcurrent }}<span class="dp-note">{{ t('admin.dplugins.jobs.atOnceNote') }}</span></td><td><a class="z-btn" v-on:click="editNumber('maxConcurrent')">{{ t('admin.settings.edit') }}</a></td></tr>
+                        <tr v-if="dp.status.jobs.maxQueuedPerUser != null"><td><b>{{ t('admin.dplugins.jobs.perUser') }}</b> {{ dp.status.jobs.maxQueuedPerUser }}<span class="dp-note">{{ t('admin.dplugins.jobs.perUserNote') }}</span></td><td><a class="z-btn" v-on:click="editNumber('maxQueuedPerUser')">{{ t('admin.settings.edit') }}</a></td></tr>
+                        <tr v-if="dp.status.jobs.maxFolderSongs != null"><td><b>{{ t('admin.dplugins.jobs.folderMax') }}</b> {{ t('admin.dplugins.songs', { count: dp.status.jobs.maxFolderSongs }) }}<span class="dp-note">{{ t('admin.dplugins.jobs.folderMaxNote') }}</span></td><td><a class="z-btn" v-on:click="editNumber('maxFolderSongs')">{{ t('admin.settings.edit') }}</a></td></tr>
+                        <tr><td><b>{{ t('admin.dplugins.jobs.history') }}</b> {{ t('admin.dplugins.days', { count: dp.status.jobs.retentionDays }) }}<span class="dp-note">{{ t('admin.dplugins.jobs.historyNote') }}</span></td><td><a class="z-btn" v-on:click="editNumber('retentionDays')">{{ t('admin.settings.edit') }}</a></td></tr>
                       </tbody>
                     </table>
 
@@ -8392,7 +8426,7 @@ const discoveryPluginsView = Vue.component('discovery-plugins-view', {
                           <td :data-label="t('admin.dplugins.dl.col.where')"><span class="dp-mono">{{ r.crumbs.join(' / ') }}</span><span v-if="r.state === 'missing'" class="dp-warn-soft"> &middot; {{ t('admin.dplugins.dl.missing') }}</span><span v-else-if="r.state === 'removed'" class="dp-muted"> &middot; {{ t('admin.dplugins.dl.removed', { when: ago(r.removedAt) }) }}</span></td>
                           <td class="dp-num" :data-label="t('admin.dplugins.dl.col.size')">{{ r.size || '—' }}</td>
                           <td class="dp-num">
-                            <span v-if="r.actions.indexOf('remove') !== -1 && downloads.removing[r.id] !== true" class="dp-br">[<a style="color:var(--z-danger)" v-on:click="removeDownload(r)">{{ t('admin.dplugins.dl.remove') }}</a>]</span>
+                            <span v-if="r.actions.indexOf('remove') !== -1 && downloads.removing[r.id] !== true" class="dp-br"><a class="z-btn danger" v-on:click="removeDownload(r)">{{ t('admin.dplugins.dl.remove') }}</a></span>
                           </td>
                         </tr>
                       </tbody>
@@ -8429,8 +8463,8 @@ const discoveryPluginsView = Vue.component('discovery-plugins-view', {
                                 <div v-if="a.row.progress !== null" class="progress" style="margin:5px 0 0 0"><div :class="a.row.progress === 'indeterminate' ? 'indeterminate' : 'determinate'" :style="a.row.progress === 'indeterminate' ? null : { width: a.row.progress + '%' }"></div></div>
                               </td>
                               <td class="dp-num">
-                                <span v-if="a.row.live && activity.cancelling[a.job.id] !== true" class="dp-br">[<a style="color:var(--z-danger)" v-on:click="cancelJob(a.job)">{{ t('admin.dplugins.act.cancel') }}</a>]</span>
-                                <span v-else-if="a.job.state === 'failed'" class="dp-br">[<a v-on:click="toggleWhy(a.job)">{{ t(activity.open[a.job.id] ? 'admin.dplugins.act.hide' : 'admin.dplugins.act.why') }}</a>]</span>
+                                <span v-if="a.row.live && activity.cancelling[a.job.id] !== true" class="dp-br"><a class="z-btn danger" v-on:click="cancelJob(a.job)">{{ t('admin.dplugins.act.cancel') }}</a></span>
+                                <span v-else-if="a.job.state === 'failed'" class="dp-br"><a class="z-btn" v-on:click="toggleWhy(a.job)">{{ t(activity.open[a.job.id] ? 'admin.dplugins.act.hide' : 'admin.dplugins.act.why') }}</a></span>
                               </td>
                             </tr>
                             <tr v-if="a.job.state === 'failed' && activity.open[a.job.id]" :key="a.job.id + '-why'" class="dp-detail">
@@ -9006,9 +9040,9 @@ const fileExplorerModal = Vue.component('file-explorer-modal', {
       <div class="row">
         <h5>{{ t('admin.fileExplorer.title') }}</h5>
         <span>
-          [<a v-on:click="goToDirectory(currentDirectory, '..')">{{ t('admin.fileExplorer.back') }}</a>]
-          [<a v-on:click="goToDirectory('~')">{{ t('admin.fileExplorer.home') }}</a>]
-          [<a v-on:click="goToDirectory(currentDirectory)">{{ t('admin.fileExplorer.refresh') }}</a>]
+          <a class="z-btn" v-on:click="goToDirectory(currentDirectory, '..')">{{ t('admin.fileExplorer.back') }}</a>
+          <a class="z-btn" v-on:click="goToDirectory('~')">{{ t('admin.fileExplorer.home') }}</a>
+          <a class="z-btn" v-on:click="goToDirectory(currentDirectory)">{{ t('admin.fileExplorer.refresh') }}</a>
         </span>
       </div>
       <div v-if="currentDirectory === null || pending === true" class="row">
@@ -9021,7 +9055,7 @@ const fileExplorerModal = Vue.component('file-explorer-modal', {
           </select>
           <h6>{{currentDirectory}}</h6>
         </div>
-        [<a v-on:click="selectDirectory(currentDirectory)">{{ t('admin.fileExplorer.selectCurrent') }}</a>]
+        <a class="z-btn" v-on:click="selectDirectory(currentDirectory)">{{ t('admin.fileExplorer.selectCurrent') }}</a>
         <ul class="collection">
           <li v-on:click="goToDirectory(currentDirectory, dir.name)" v-for="dir in contents" class="collection-item">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" height="32.4px"><path fill="#FFA000" d="M38 12H22l-4-4H8c-2.2 0-4 1.8-4 4v24c0 2.2 1.8 4 4 4h31c1.7 0 3-1.3 3-3V16c0-2.2-1.8-4-4-4z"/><path fill="#FFCA28" d="M42.2 18H15.3c-1.9 0-3.6 1.4-3.9 3.3L8 40h31.7c1.9 0 3.6-1.4 3.9-3.3l2.5-14c.5-2.4-1.4-4.7-3.9-4.7z"/></svg>

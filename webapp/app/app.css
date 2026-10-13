@@ -660,3 +660,89 @@ a.crumb:hover { color: var(--tx2); }
   .home .grid.g6 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .tr { grid-template-columns: 44px minmax(0, 2fr) minmax(0, 1.3fr) minmax(0, 1.2fr) 32px 84px 64px 44px 28px; }
 }
+
+/* ── Small windows ───────────────────────────────────────────────────────
+   Not phones (they have the app) but the player in a window narrower than
+   the 1360 design: the layout keeps its look and gives up the extras in
+   order — the queue column becomes a drawer, the sidebar an icon rail,
+   tables drop their secondary columns, the player bar its side panel. */
+
+.queue-scrim { display: none; }
+
+@media (max-width: 1180px) {
+  .app.with-queue { grid-template-columns: 236px minmax(0, 1fr); }
+  .queue { position: fixed; top: 0; right: 0; bottom: 84px; width: min(320px, calc(100vw - 72px)); z-index: 60;
+    box-shadow: -24px 0 48px -12px rgba(0, 0, 0, .6), inset 1px 0 0 var(--border); animation: drawer .18s var(--ease); }
+  .queue-scrim { display: block; position: fixed; inset: 0 0 84px 0; z-index: 55; background: rgba(5, 6, 4, .45); animation: fade .15s; }
+  .pb-fmt { display: none; }
+  .tr, .tr.th { grid-template-columns: 44px minmax(0, 2fr) minmax(0, 1.3fr) minmax(0, 1.3fr) 32px 52px 28px; }
+  .no-album .tr, .no-album .tr.th { grid-template-columns: 44px minmax(0, 2.4fr) minmax(0, 1.4fr) 32px 52px 28px; }
+  .tr > .c-f, .tr > .c-rg { display: none; }
+  .home .grid.g6 { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+  .st-tiles { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+}
+@keyframes drawer { from { transform: translateX(24px); opacity: 0; } }
+
+@media (max-width: 900px) {
+  /* Sidebar → icon rail (labels as tooltips). */
+  .app, .app.with-queue { grid-template-columns: 64px minmax(0, 1fr); }
+  .sidebar { overflow: hidden; }
+  .brand { padding: 0; justify-content: center; }
+  .brand > span { display: none; }
+  .nav { padding: 4px 8px 10px; gap: 6px; }
+  .nav-group + .nav-group { padding-top: 6px; box-shadow: inset 0 1px 0 var(--border); }
+  .nav-head, .nav-label, .nav-trail { display: none; }
+  .nav-item { justify-content: center; padding: 0; height: 40px; }
+  .server-card { display: none; }
+
+  .screen-head { height: auto; min-height: 64px; padding: 12px 18px; flex-wrap: wrap; row-gap: 8px; }
+  .screen-head .titles { flex: 1 1 180px; }
+  .screen-head .search-field { width: auto !important; flex: 1 1 160px; max-width: 280px; }
+  .scroll.pad, .set-body { padding: 16px 18px 24px; }
+  .home { padding: 0 18px 24px; }
+  .tt-scroll { padding: 8px 8px 20px 18px; }
+  .track-table:not(:has(.rail)) .tt-scroll { padding-right: 18px; }
+  .home-hero, .dj-grid { grid-template-columns: minmax(0, 1fr); }
+  .home-lists { grid-template-columns: minmax(0, 1fr); }
+  .alb-y, .alb-n { display: none; }
+
+  .playerbar { grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) auto; gap: 12px; padding: 0 12px; }
+  .volume .bar { display: none; }
+
+  .settings { flex-direction: column; }
+  .set-tabs { width: auto; flex-direction: row; padding: 10px 18px 0; overflow-x: auto; box-shadow: inset 0 -1px 0 var(--border); }
+  .set-tabs a { flex: none; }
+  .dl-row { grid-template-columns: 30px minmax(0, 1fr) 140px 36px; }
+  .dl-row .pill { display: none; }
+  .dl-add { flex-wrap: wrap; }
+  .dl-add .search-field { flex: 1 1 100%; }
+  .st-row { grid-template-columns: 28px 34px minmax(0, 1fr) 80px; }
+  .st-row > .st-share, .st-row > .st-n:last-child { display: none; }
+  .st-hist { grid-template-columns: 52px 34px minmax(0, 1fr) 130px 32px; }
+  .st-hist > .st-n { display: none; }
+  .ly-track { display: none; }
+  .ly-lines { padding-left: 18px; padding-right: 18px; }
+}
+
+@media (max-width: 760px) {
+  .tr, .tr.th, .no-album .tr, .no-album .tr.th { grid-template-columns: 36px minmax(0, 1.6fr) minmax(0, 1fr) 28px 46px 28px; gap: 10px; }
+  .tr > .c-al { display: none; }
+  .f-row { grid-template-columns: 34px minmax(0, 1fr) 32px; }
+  .f-row > :nth-child(3), .f-row > :nth-child(4) { display: none; }
+  .jb-live { flex-direction: column; }
+  .sp-actions .btn { padding: 0 10px; }
+
+  /* Player bar: cover + title, transport, the queue button. */
+  .playerbar { grid-template-columns: minmax(0, 1fr) auto auto; }
+  .pb-now .like, .pb-now > .icon-btn { display: none; }
+  .pb-center { min-width: 0; width: clamp(200px, 42vw, 320px); }
+  .pb-right > .pb-viz, .volume { display: none; }
+}
+
+@media (max-width: 560px) {
+  .tr, .tr.th, .no-album .tr, .no-album .tr.th { grid-template-columns: 30px minmax(0, 1fr) 44px 28px; }
+  .tr > .c-a, .tr > .c-like { display: none; }
+  .pb-text { display: none; }
+  .pb-center { width: auto; flex: 1; }
+  .screen-head .btn { padding: 0 10px; }
+}

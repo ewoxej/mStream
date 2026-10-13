@@ -12,7 +12,7 @@ import { fmtTime, fmtCount, trackTitle, trackArtist, trackAlbum, trackCover, for
 function NavItem({ id, label, icon, trail, trailTone, screen }) {
   const on = screen === id || (id === 'albums' && screen === 'album') || (id === 'artists' && screen === 'artist')
     || (id === 'genres' && screen === 'genre') || (id === 'pl' && screen === 'playlist');
-  return html`<a class=${`nav-item ${on ? 'on' : ''}`} href=${href(id)}>
+  return html`<a class=${`nav-item ${on ? 'on' : ''}`} href=${href(id)} title=${label}>
     <${Icon} name=${icon} size=${17} />
     <span class="nav-label">${label}</span>
     ${trail ? html`<span class=${'nav-trail ' + (trailTone || '')}>${trail}</span>` : null}
@@ -292,7 +292,7 @@ export function PlayerBar() {
       </div>
       <${IconBtn} icon="mic" title="Lyrics" active=${screen === 'lyrics'} size=${17}
         onClick=${() => (screen === 'lyrics' ? history.back() : go('lyrics'))} />
-      <${IconBtn} icon="equalizer" title="Visualizer" active=${screen === 'viz'} size=${17}
+      <${IconBtn} icon="equalizer" title="Visualizer" active=${screen === 'viz'} size=${17} class="pb-viz"
         onClick=${() => (screen === 'viz' ? history.back() : go('viz'))} />
       <${IconBtn} icon="queue_music" title=${queueOpen ? 'Hide queue' : 'Show queue'} active=${queueOpen} size=${17}
         onClick=${() => { app.set({ queueOpen: !queueOpen }); savePrefs(); }} />

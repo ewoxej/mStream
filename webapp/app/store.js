@@ -53,9 +53,17 @@ function loadPrefs() {
 }
 const prefs = loadPrefs();
 
+// Small windows (not phones — those have the app): below this width the
+// queue is a drawer over the page instead of a column, closed by default.
+// The wide-window choice (open / closed) is kept apart and comes back when
+// the window grows again.
+const narrowQuery = window.matchMedia('(max-width: 1180px)');
+let wideQueueOpen = prefs.queueOpen !== false;
+
 export const app = createStore({
   route: parseHash(),
-  queueOpen: prefs.queueOpen !== false,
+  narrow: narrowQuery.matches,
+  queueOpen: narrowQuery.matches ? false : prefs.queueOpen !== false,
   albumView: prefs.albumView || 'grid',
   albumSort: prefs.albumSort || { key: 'name', dir: 'asc' },
   // Library facts filled in after boot (server/ping + counts).
@@ -70,11 +78,17 @@ export const app = createStore({
   toasts: [],
 });
 
+narrowQuery.addEventListener('change', (e) => {
+  app.set({ narrow: e.matches, queueOpen: e.matches ? false : wideQueueOpen });
+});
+
 export function savePrefs() {
   const s = app.get();
+  // The drawer opening and closing in a small window isn't a preference.
+  if (!s.narrow) { wideQueueOpen = s.queueOpen; }
   try {
     localStorage.setItem(LS_KEY, JSON.stringify({
-      queueOpen: s.queueOpen, albumView: s.albumView, albumSort: s.albumSort,
+      queueOpen: wideQueueOpen, albumView: s.albumView, albumSort: s.albumSort,
     }));
   } catch (_) { /* private mode */ }
 }
@@ -104,5 +118,6 @@ export function href(screen, ...args) {
 export function go(screen, ...args) { location.hash = href(screen, ...args).slice(1); }
 
 window.addEventListener('hashchange', () => {
-  app.set({ route: parseHash(), menu: null });
+  // Going somewhere closes the queue drawer of a small window.
+  app.set({ route: parseHash(), menu: null, ...(app.get().narrow ? { queueOpen: false } : {}) });
 });

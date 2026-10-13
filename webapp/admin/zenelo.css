@@ -43,7 +43,9 @@ body, button, input, select, textarea, .btn, .btn-flat, .side-nav-item { font-fa
 h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -.01em; color: var(--z-text); }
 h4 { font-size: 22px; } h5 { font-size: 18px; } h6 { font-size: 15px; }
 a { color: var(--z-accent); }
-a:hover { color: var(--z-accent-2); }
+/* Plain links only: buttons are <a>s too, and this turned their text
+   the colour of the button. */
+a:not([class*="btn"]):not(.z-btn):hover { color: var(--z-accent-2); }
 b, strong { font-weight: 600; }
 code, pre, kbd, samp { font-family: var(--z-mono); }
 code { padding: 1px 5px; border-radius: 5px; background: var(--z-placeholder); color: var(--z-text-2); font-size: .92em; }
@@ -125,14 +127,16 @@ hr { border: 0; height: 1px; background: var(--z-line); }
   background: var(--z-accent); color: var(--z-on-accent); font-weight: 600; font-size: 13px; letter-spacing: 0; text-transform: none;
   transition: background .12s, color .12s;
 }
-.btn:hover, .btn-large:hover, .btn-small:hover, .btn:focus, .btn-small:focus { background: var(--z-accent-2); box-shadow: none; }
+.btn:hover, .btn-large:hover, .btn-small:hover, .btn:focus, .btn-small:focus { background: var(--z-accent-2); color: var(--z-on-accent); box-shadow: none; }
 .btn-small { height: 30px; line-height: 30px; padding: 0 12px; font-size: 12.5px; }
 .btn-large { height: 44px; line-height: 44px; }
 /* Materialize's colour classes carry !important. */
 .btn.green, .btn-small.green, .btn-large.green, .btn.blue, .btn-small.blue, .btn.teal, .btn.purple, .btn.indigo { background-color: var(--z-accent) !important; color: var(--z-on-accent); }
 .btn.green:hover, .btn-small.green:hover, .btn.blue:hover, .btn-small.blue:hover { background-color: var(--z-accent-2) !important; }
 .btn.red, .btn-small.red, .btn-large.red, .btn.red.darken-1 { background-color: var(--z-danger) !important; color: #1a0705; }
-.btn.red:hover, .btn-small.red:hover { background-color: #e9837b !important; }
+.btn.red:hover, .btn-small.red:hover { background-color: #e9837b !important; color: #1a0705; }
+.btn.orange:hover, .btn-small.orange:hover, .btn.amber:hover { background-color: rgba(212, 162, 76, .22) !important; color: var(--z-accent-2); }
+.btn.grey:hover, .btn-small.grey:hover { background-color: var(--z-raised) !important; color: var(--z-text); }
 .btn.orange, .btn-small.orange, .btn.amber { background-color: var(--z-accent-tint) !important; color: var(--z-accent); box-shadow: inset 0 0 0 1px rgba(212, 162, 76, .3); }
 .btn.grey, .btn-small.grey { background-color: var(--z-placeholder) !important; color: var(--z-text); }
 .btn.disabled, .btn:disabled, .btn-small:disabled, .btn-small.disabled, .btn-floating.disabled, .btn-large.disabled, .btn-flat:disabled, .btn-flat.disabled {
@@ -140,7 +144,7 @@ hr { border: 0; height: 1px; background: var(--z-line); }
 }
 .btn-flat { height: 36px; line-height: 36px; padding: 0 14px; border-radius: 9px; color: var(--z-text-2); font-weight: 500; text-transform: none; }
 .btn-flat:hover, .btn-flat:focus { background: var(--z-placeholder); color: var(--z-text); }
-.btn-floating { background: var(--z-accent); color: var(--z-on-accent); }
+.btn-floating, .btn-floating:hover { background: var(--z-accent); color: var(--z-on-accent); }
 .btn-floating.red { background: var(--z-danger); }
 .btn-floating i, .btn i { color: inherit; }
 .waves-effect .waves-ripple { background: rgba(244, 244, 238, .12); }
@@ -192,15 +196,30 @@ select option { background: var(--z-card); color: var(--z-text); }
 .dropdown-content li > a, .dropdown-content li > span { color: var(--z-text); font-size: 13px; padding: 9px 12px; line-height: 18px; }
 .dropdown-content li:hover, .dropdown-content li.active, .dropdown-content li.selected { background: var(--z-placeholder); }
 .dropdown-content li.disabled > span { color: var(--z-muted); }
-[type="checkbox"]:checked + span:not(.lever)::before { border-right-color: var(--z-accent); border-bottom-color: var(--z-accent); }
 
-/* Checkboxes: square, mustard when ticked. */
-[type="checkbox"] + span:not(.lever) { color: var(--z-text); font-size: 13.5px; padding-left: 30px; }
-[type="checkbox"]:not(.filled-in):not(:checked) + span:not(.lever)::before, [type="checkbox"].filled-in:not(:checked) + span:not(.lever)::after {
-  border: 1.5px solid var(--z-muted); border-radius: 5px; background: transparent;
+/* Checkboxes: always a square box (:not(#z) outweighs Materialize's
+   :not(.filled-in) / .filled-in rules) (Materialize's plain style turns the
+   box itself into a tick when checked), filled mustard with a dark tick
+   when on — the same for .filled-in and plain ones. ::after is the box,
+   ::before the tick. */
+[type="checkbox"]:not(#z) + span:not(.lever) { color: var(--z-text); font-size: 13.5px; padding-left: 30px; line-height: 22px; height: 22px; }
+[type="checkbox"]:not(#z) + span:not(.lever)::after {
+  content: ""; position: absolute; top: 2px; left: 0; z-index: 0; width: 18px; height: 18px; box-sizing: border-box;
+  border: 1.5px solid var(--z-muted); border-radius: 5px; background: transparent; transform: none; margin: 0;
+  transition: background .12s, border-color .12s;
 }
-[type="checkbox"].filled-in:checked + span:not(.lever)::after { border: 2px solid var(--z-accent); background: var(--z-accent); border-radius: 5px; }
-[type="checkbox"].filled-in:checked + span:not(.lever)::before { border-right-color: var(--z-on-accent); border-bottom-color: var(--z-on-accent); }
+[type="checkbox"]:not(#z) + span:not(.lever)::before {
+  content: ""; position: absolute; top: 5px; left: 6px; z-index: 1; width: 6px; height: 10px; box-sizing: border-box;
+  border: solid transparent; border-width: 0 2px 2px 0; border-radius: 0; background: transparent;
+  transform: rotate(40deg); transform-origin: center; margin: 0; backface-visibility: visible;
+}
+[type="checkbox"]:not(#z):checked + span:not(.lever)::after { border-color: var(--z-accent); background: var(--z-accent); }
+[type="checkbox"]:not(#z):checked + span:not(.lever)::before { border-right-color: var(--z-on-accent); border-bottom-color: var(--z-on-accent); top: 5px; left: 6px; width: 6px; height: 10px; }
+[type="checkbox"]:not(#z):indeterminate + span:not(.lever)::before { top: 10px; left: 4px; width: 10px; height: 0; border-width: 0 0 2px 0; border-bottom-color: var(--z-on-accent); transform: none; }
+[type="checkbox"]:not(#z):indeterminate + span:not(.lever)::after { border-color: var(--z-accent); background: var(--z-accent); }
+[type="checkbox"]:not(#z):not(:checked):not(:disabled) + span:not(.lever):hover::after { border-color: var(--z-text-2); }
+[type="checkbox"]:not(#z):disabled + span:not(.lever)::after { opacity: .45; }
+[type="checkbox"]:not(#z):focus-visible + span:not(.lever)::after { box-shadow: 0 0 0 2px rgba(212, 162, 76, .35); }
 [type="checkbox"]:disabled + span:not(.lever) { color: var(--z-muted); }
 [type="radio"]:not(:checked) + span::before { border-color: var(--z-muted); }
 [type="radio"]:checked + span::after, [type="radio"].with-gap:checked + span::after { background: var(--z-accent); border-color: var(--z-accent); }
@@ -253,6 +272,9 @@ span.badge.new { background: var(--z-accent); color: var(--z-on-accent); border-
 .modal { background: var(--z-card); color: var(--z-text); border-radius: 16px; box-shadow: 0 30px 70px -24px rgba(0, 0, 0, .7), inset 0 0 0 1px var(--z-line); }
 .modal.bottom-sheet { max-width: 860px; left: 0; right: 0; margin: 0 auto; border-radius: 16px 16px 0 0; max-height: 80%; }
 .modal .modal-content { padding: 22px 24px; }
+/* The edit dialogs: centred like an ordinary dialog. `translate` (not
+   `transform`, which Materialize animates) lifts it by half its height. */
+.modal.z-dialog { width: min(560px, calc(100% - 32px)); max-height: min(80vh, 760px); translate: 0 -50%; }
 .modal .modal-content h4, .modal .modal-content h5 { margin-top: 0; }
 .modal .modal-footer { background: var(--z-card); border-top: 1px solid var(--z-line); padding: 10px 16px; height: auto; display: flex; justify-content: flex-end; gap: 8px; }
 .modal .modal-footer .btn, .modal .modal-footer .btn-flat { float: none; margin: 0; }
@@ -279,3 +301,50 @@ span.badge.new { background: var(--z-accent); color: var(--z-on-accent); border-
 .status-chip.status-error, .status-chip.status-unconfirmed { background: var(--z-danger-tint); color: var(--z-danger); }
 tr.managed-row, tr.backup-row-active { background: var(--z-accent-tint); }
 tr.managed-row:hover, tr.backup-row-active:hover { background: rgba(212, 162, 76, .2); }
+
+/* ── Row actions, switches, choices ──────────────────────────────────────
+   What used to be "[edit]" links: a chip button for an action, a switch
+   for an on/off setting, a segmented control for a choice. */
+
+.z-btn {
+  display: inline-block; height: 28px; padding: 0 12px; line-height: 28px; margin: 2px 6px 2px 0; border-radius: 8px; vertical-align: middle;
+  background: var(--z-placeholder); box-shadow: inset 0 0 0 1px var(--z-line);
+  color: var(--z-text); font-size: 12.5px; font-weight: 500; white-space: nowrap;
+  cursor: pointer; user-select: none; transition: background .12s, color .12s, box-shadow .12s;
+}
+.z-btn::first-letter { text-transform: uppercase; }
+.z-btn:hover, .z-btn:focus-visible { background: var(--z-raised); color: var(--z-text); box-shadow: inset 0 0 0 1px rgba(212, 162, 76, .45); }
+.z-btn:active { transform: scale(.98); }
+.z-btn.danger { background: var(--z-danger-tint); box-shadow: inset 0 0 0 1px rgba(224, 104, 95, .3); color: var(--z-danger); }
+.z-btn.danger:hover { background: rgba(224, 104, 95, .24); color: #f08a82; box-shadow: inset 0 0 0 1px rgba(224, 104, 95, .5); }
+.z-btn.disabled { opacity: .45; cursor: default; pointer-events: none; }
+td > .z-btn:last-child, td > span:last-child > .z-btn:last-child { margin-right: 0; }
+.dp-br { color: inherit; }
+
+.z-switch { display: inline-flex; align-items: center; vertical-align: middle; }
+.switch.z-switch label, label.switch.z-switch { cursor: pointer; }
+label.z-switch .lever { margin: 0; }
+label.z-switch input[type=checkbox] { opacity: 0; width: 0; height: 0; position: absolute; }
+label.z-switch .lever { content: ""; display: inline-block; position: relative; width: 34px; height: 20px; border-radius: 99px; background: var(--z-raised); transition: background .15s; vertical-align: middle; }
+label.z-switch .lever::before, label.z-switch .lever::after { content: ""; position: absolute; display: inline-block; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; transition: left .15s var(--z-ease), background .15s; }
+label.z-switch .lever::before { background: transparent; }
+label.z-switch .lever::after { background: var(--z-muted); }
+label.z-switch input[type=checkbox]:checked + .lever { background: var(--z-accent); }
+label.z-switch input[type=checkbox]:checked + .lever::after { left: 16px; background: var(--z-on-accent); }
+label.z-switch:hover .lever::after { background: var(--z-text-2); }
+label.z-switch:hover input[type=checkbox]:checked + .lever::after { background: var(--z-on-accent); }
+label.z-switch input[type=checkbox]:focus-visible + .lever { box-shadow: 0 0 0 2px rgba(212, 162, 76, .35); }
+
+.z-seg { display: inline-flex; padding: 2px; gap: 2px; border-radius: 9px; background: var(--z-inset); box-shadow: inset 0 0 0 1px var(--z-line); vertical-align: middle; }
+.z-seg button {
+  height: 26px; padding: 0 11px; border: 0; border-radius: 7px; background: transparent; color: var(--z-text-2);
+  font: inherit; font-size: 12.5px; font-weight: 500; cursor: pointer; transition: background .12s, color .12s;
+}
+.z-seg button:hover { background: var(--z-placeholder); color: var(--z-text); }
+.z-seg button.on { background: var(--z-accent); color: var(--z-on-accent); cursor: default; }
+.z-seg button:focus { outline: 0; }
+.z-seg button:focus-visible { box-shadow: 0 0 0 2px rgba(212, 162, 76, .35); }
+/* A settings row's control cell: hugging the right edge, so switches and
+   buttons line up from card to card. */
+td:last-child:not(:first-child):has(> .z-switch, > .z-btn, > .z-seg, > span > .z-btn) { width: 1%; white-space: nowrap; text-align: right; }
+td:last-child:not(:first-child):has(> .z-switch, > .z-btn, > .z-seg) > .z-btn:last-child { margin-right: 0; }

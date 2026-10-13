@@ -40,6 +40,7 @@ function App() {
         : html`<div class="screen"><${Empty} icon="error_outline" title="Page not found" /></div>`}
     </main>
     ${showQueue ? html`<${Queue} />` : null}
+    ${showQueue ? html`<div class="queue-scrim" onClick=${() => app.set({ queueOpen: false })}></div>` : null}
     <${PlayerBar} />
     <${MenuLayer} />
     <${DialogLayer} />
