@@ -60,6 +60,8 @@ export const app = createStore({
   albumSort: prefs.albumSort || { key: 'name', dir: 'asc' },
   // Library facts filled in after boot (server/ping + counts).
   server: null,
+  // What the server offers (its ping): Discover, Sonic Path, Stats, …
+  features: {},
   counts: {},
   playlists: [],
   likes: {},            // filepath → true/false, overrides fetched metadata

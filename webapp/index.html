@@ -15,7 +15,8 @@
 
   <!-- The playback engine and its helpers are shared with the classic
        player (/classic/). They are classic scripts that define globals:
-       MSTREAMAPI, AUTODJ, MSTREAMPLAYSESSION, MSTREAMPLAYER. app/shims.js
+       MSTREAMAPI, AUTODJ, MSTREAMPLAYSESSION, MSTREAMPLAYER, JUKEBOX (and
+       qrcodegen, STATSVIEW from the /stats page for its charts). app/shims.js
        provides the globals the engine expects from a UI (iziToast,
        VUEPLAYERCORE); app/viz.js provides VIZ. -->
   <script src="app/shims.js"></script>
@@ -23,6 +24,9 @@
   <script src="alpha/auto-dj.js"></script>
   <script src="assets/js/mstream.play-session.js"></script>
   <script src="assets/js/mstream.player.js"></script>
+  <script src="assets/js/mstream.jukebox.js"></script>
+  <script src="assets/js/lib/qr.js"></script>
+  <script src="stats/stats-view.js"></script>
   <script src="app/viz.js"></script>
   <script type="module" src="app/main.js"></script>
 </head>

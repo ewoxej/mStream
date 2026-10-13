@@ -49,18 +49,18 @@ export function Playlists() {
   useEffect(() => { lib.refreshPlaylists().finally(() => setLoaded(true)); }, []);
   return html`<div class="screen">
     <${Header} title="Playlists" sub=${`${playlists.length} · STORED ON SERVER`}>
-      <${Btn} kind="primary" icon="plus" onClick=${newPlaylist}>New playlist</${Btn}>
+      <${Btn} kind="primary" icon="add" onClick=${newPlaylist}>New playlist</${Btn}>
     </${Header}>
     <div class="scroll pad">
       ${!loaded && !playlists.length ? html`<${Spinner} />`
         : playlists.length ? html`<div class="grid g5">${playlists.map((name) => html`<a class="tile" href=${href('playlist', name)}
             onContextMenu=${(e) => openMenu(e, [
-              { label: 'Rename…', icon: 'pencil', onClick: () => renamePlaylist(name) },
-              { label: 'Delete', icon: 'trash-2', danger: true, onClick: () => deletePlaylist(name) }])}>
+              { label: 'Rename…', icon: 'edit', onClick: () => renamePlaylist(name) },
+              { label: 'Delete', icon: 'delete_outline', danger: true, onClick: () => deletePlaylist(name) }])}>
             <${Mosaic} name=${name} />
             <span class="tile-t">${name}</span>
           </a>`)}</div>`
-        : html`<${Empty} icon="list-music" title="No playlists yet">Create one here, save the queue, or use “Add to playlist” on any track.</${Empty}>`}
+        : html`<${Empty} icon="queue_music" title="No playlists yet.">Create a playlist with New playlist, then add tracks from the ⋮ menu (Add to playlist…), or save the queue.</${Empty}>`}
     </div>
   </div>`;
 }
@@ -75,21 +75,21 @@ export function Playlist({ args }) {
     try { await lib.removeFromPlaylist(name, t.entry); setRev((n) => n + 1); } catch (_) { P.toast('Could not remove the track', 'error'); }
   };
   const more = (e) => openMenu(e, [
-    { label: 'Add all to queue', icon: 'list-end', onClick: () => P.addToQueue(tracks) },
-    { label: 'Rename…', icon: 'pencil', onClick: () => renamePlaylist(name) },
+    { label: 'Add all to queue', icon: 'queue_music', onClick: () => P.addToQueue(tracks) },
+    { label: 'Rename…', icon: 'edit', onClick: () => renamePlaylist(name) },
     'sep',
-    { label: 'Delete playlist', icon: 'trash-2', danger: true, onClick: () => deletePlaylist(name, () => go('pl')) },
+    { label: 'Delete playlist', icon: 'delete_outline', danger: true, onClick: () => deletePlaylist(name, () => go('pl')) },
   ]);
   return html`<div class="screen">
     <${Header} back title=${name}
       sub=${state.data ? `PLAYLIST · ${plural(tracks.length, 'track').toUpperCase()} · ${fmtTime(sumDuration(tracks))}` : 'PLAYLIST'}>
-      <${Btn} icon="share-2" onClick=${() => share(tracks)} disabled=${!tracks.length}>Share link</${Btn}>
+      <${Btn} icon="share" onClick=${() => share(tracks)} disabled=${!tracks.length}>Share link</${Btn}>
       <${Btn} icon="download" onClick=${() => lib.downloadTracks(tracks)} disabled=${!tracks.length}>.zip</${Btn}>
-      <${Btn} icon="ellipsis" onClick=${more} title="More" />
-      <${Btn} kind="primary" icon="play" iconSize=${14} onClick=${() => P.playTracks(tracks)} disabled=${!tracks.length}>Play all</${Btn}>
+      <${Btn} icon="more_vert" onClick=${more} title="More" />
+      <${Btn} kind="primary" icon="play_arrow" iconSize=${14} onClick=${() => P.playTracks(tracks)} disabled=${!tracks.length}>Play all</${Btn}>
     </${Header}>
     ${state.loading && !state.data ? html`<${Spinner} />` : html`<${TrackTable} groups=${[{ tracks }]}
-      rowMenu=${(t) => trackMenuItems([t], ['sep', { label: 'Remove from playlist', icon: 'x', danger: true, onClick: () => remove(t) }])}
-      empty=${html`<${Empty} icon="list-music" title="This playlist is empty">Use “Add to playlist” on any track or album.</${Empty}>`} />`}
+      rowMenu=${(t) => trackMenuItems([t], ['sep', { label: 'Remove from playlist', icon: 'remove_circle_outline', tone: 'danger', onClick: () => remove(t) }])}
+      empty=${html`<${Empty} icon="queue_music" title="Nothing here yet.">Add tracks from their ⋮ menu: Add to playlist….</${Empty}>`} />`}
   </div>`;
 }

@@ -19,7 +19,7 @@ const by = (f) => (a, b) => String(f(a) ?? '').localeCompare(String(f(b) ?? ''),
 
 function Loading({ state, children }) {
   if (state.loading && !state.data) { return html`<${Spinner} />`; }
-  if (state.error) { return html`<${Empty} icon="circle-alert" title="Could not load this">${String(state.error.message || state.error)}</${Empty}>`; }
+  if (state.error) { return html`<${Empty} icon="error_outline" title="Could not load this">${String(state.error.message || state.error)}</${Empty}>`; }
   return children(state.data);
 }
 
@@ -39,6 +39,7 @@ function uniqueAlbums(tracks, n) {
 // ── Home ────────────────────────────────────────────────────────────────
 
 export function Home() {
+  const features = useStore(app, (s) => s.features);
   const counts = useStore(app, (s) => s.counts);
   const playlists = useStore(app, (s) => s.playlists);
   const dj = useStore(playback, (s) => ({ on: s.autoDJ, ahead: djAhead(s) }));
@@ -71,30 +72,30 @@ export function Home() {
       <${SearchField} value=${q} onInput=${submit} placeholder="Search tracks, albums, artists" width=${300} hotkey="/" inputRef=${searchRef} />
     </header>
 
-    <div class="home-hero">
+    <div class=${`home-hero ${features.torrent ? '' : 'solo'}`}>
       <section class=${`card dj-card ${dj.on ? 'on' : ''}`}>
-        <div class="card-head"><${Plate} icon="radio" /><span class="card-title">Auto DJ</span>
+        <div class="card-head"><${Plate} icon="auto_awesome" /><span class="card-title">Auto DJ</span>
           <span class="micro accent">${dj.on ? `RUNNING · ${dj.ahead} AHEAD` : 'OFF'}</span></div>
         <p class="card-text">Picks random tracks from the chosen folders and keeps the queue filled. Recently picked tracks are skipped.</p>
         <div class="chips">${djSummaryChips().map((c) => html`<span class="chip static">${c}</span>`)}</div>
         <div class="card-actions">
-          <${Btn} kind="primary" icon=${dj.on ? 'square' : 'play'} onClick=${P.toggleAutoDJ}>${dj.on ? 'Stop Auto DJ' : 'Start Auto DJ'}</${Btn}>
+          <${Btn} kind="primary" icon=${dj.on ? 'stop' : 'play_arrow'} onClick=${P.toggleAutoDJ}>${dj.on ? 'Stop Auto DJ' : 'Start Auto DJ'}</${Btn}>
           <a class="btn btn-outline" href=${href('dj')}>Sources and filters</a>
         </div>
       </section>
-      <${DownloadsCard} />
+      ${features.torrent ? html`<${DownloadsCard} />` : null}
     </div>
 
     <section class="block">
       <div class="block-head"><span class="block-title">Recently played</span><a href=${href('recent')} class="see-all">See all</a></div>
       ${recent.loading && !recent.data ? html`<${Spinner} />` : recentAlbums.length ? html`<div class="grid g6">
         ${recentAlbums.map((a) => html`<${AlbumTile} album=${a} meta=${a.artist} highlight=${a.first.filepath === currentPath} />`)}
-      </div>` : html`<div class="hint">Nothing played yet. Start with an album or switch on Auto DJ.</div>`}
+      </div>` : html`<div class="hint">Nothing played yet.</div>`}
     </section>
 
     <div class="home-lists">
       <section class="card list-card">
-        <div class="card-head pad"><${Plate} icon="sparkle" /><span class="card-title">Recently added</span>
+        <div class="card-head pad"><${Plate} icon="new_releases" /><span class="card-title">Recently added</span>
           <span class="micro-n">${added.data ? `${fmtCount(added.data.length)}${added.data.length >= 80 ? '+' : ''} TRACKS` : ''}</span></div>
         ${addedAlbums.map((a) => html`<a class="mini-row" href=${href('album', a.name, { artist: a.album_artist })}>
           <${Cover} file=${a.album_art_file} class="mini-cover" />
@@ -104,13 +105,13 @@ export function Home() {
         ${added.data && !addedAlbums.length ? html`<div class="hint pad">No new albums.</div>` : null}
       </section>
       <section class="card list-card">
-        <div class="card-head pad"><${Plate} icon="list-music" /><span class="card-title">Playlists</span>
+        <div class="card-head pad"><${Plate} icon="queue_music" /><span class="card-title">Playlists</span>
           <span class="micro-n">${playlists.length}</span></div>
         ${playlists.slice(0, 4).map((name) => html`<a class="mini-row" href=${href('playlist', name)}>
-          <div class="mini-cover plate-chip"><${Icon} name="list-music" size=${15} /></div>
+          <div class="mini-cover plate-chip"><${Icon} name="queue_music" size=${15} /></div>
           <div class="mini-text"><span>${name}</span><small>Playlist</small></div>
         </a>`)}
-        ${!playlists.length ? html`<div class="hint pad">No playlists yet. Save the queue or use “Add to playlist” on any track.</div>` : null}
+        ${!playlists.length ? html`<div class="hint pad">No playlists yet.</div>` : null}
       </section>
     </div>
   </div>`;
@@ -124,7 +125,7 @@ export function Recent() {
   const state = useAsync(() => lib.recentlyPlayed(200), []);
   return html`<div class="screen">
     <${Header} title="Recently played" sub=${state.data ? `${fmtCount(state.data.length)} TRACKS · NEWEST FIRST` : ''} >
-      ${state.data?.length ? html`<${Btn} kind="primary" icon="play" iconSize=${14} onClick=${() => P.playTracks(state.data)}>Play all</${Btn}>` : null}
+      ${state.data?.length ? html`<${Btn} kind="primary" icon="play_arrow" iconSize=${14} onClick=${() => P.playTracks(state.data)}>Play all</${Btn}>` : null}
     </${Header}>
     <${Loading} state=${state}>${(tracks) => {
       const groups = [];
@@ -135,7 +136,7 @@ export function Recent() {
       });
       return html`<${TrackTable} groups=${groups} firstCol="TIME"
         firstValue=${(t) => clockLabel(parseTs(t.metadata?.['last-played']))}
-        empty=${html`<${Empty} icon="history" title="Nothing played yet">Tracks you finish show up here.</${Empty}>`} />`;
+        empty=${html`<${Empty} icon="history" title="Nothing played yet.">Tracks you listen to show up here.</${Empty}>`} />`;
     }}</${Loading}>
   </div>`;
 }
@@ -145,8 +146,9 @@ export function Recent() {
 const ALBUM_SORTS = [
   { key: 'name', label: 'Name', asc: 'A → Z', desc: 'Z → A', f: (a) => a.name },
   { key: 'artist', label: 'Artist', asc: 'A → Z', desc: 'Z → A', f: (a) => a.album_artist || (a.artists || [])[0] },
-  { key: 'year', label: 'Year', asc: 'Oldest', desc: 'Newest', f: (a) => a.year_min || a.year || 0, num: true },
-  { key: 'tracks', label: 'Length', asc: 'Shortest', desc: 'Longest', f: (a) => a.duration || 0, num: true },
+  { key: 'year', label: 'Year', asc: 'Oldest first', desc: 'Newest first', f: (a) => a.year_min || a.year || 0, num: true },
+  { key: 'count', label: 'Number of tracks', asc: 'Fewest first', desc: 'Most first', f: (a) => a.track_count || 0, num: true },
+  { key: 'duration', label: 'Duration', asc: 'Shortest first', desc: 'Longest first', f: (a) => a.duration || 0, num: true },
 ];
 
 function SortPopover({ sorts, value, onChange, onClose }) {
@@ -157,7 +159,7 @@ function SortPopover({ sorts, value, onChange, onClose }) {
     return () => document.removeEventListener('mousedown', close);
   }, []);
   return html`<div class="popover sort-pop" ref=${ref}>
-    <div class="sort-grid micro"><span>SORT BY</span><span>ASCENDING</span><span>DESCENDING</span></div>
+    <div class="sort-grid micro"><span>SORT BY</span><span>ASCENDING ↑</span><span>DESCENDING ↓</span></div>
     ${sorts.map((s) => html`<div class="sort-grid">
       <span class="sort-label">${s.label}</span>
       ${['asc', 'desc'].map((d) => html`<button type="button" class=${`cell ${value.key === s.key && value.dir === d ? 'on' : ''}`}
@@ -187,22 +189,22 @@ export function Albums() {
 
   const setView = (v) => { app.set({ albumView: v }); savePrefs(); };
   const setSort = (v) => { app.set({ albumSort: v }); savePrefs(); };
-  const metaFor = (a) => [a.album_artist || (a.artists || []).join(', '), sort.key === 'tracks' ? fmtTime(a.duration) : (a.year || '')].filter(Boolean).join(' · ');
+  const metaFor = (a) => [a.album_artist || (a.artists || []).join(', '), sort.key === 'duration' ? fmtTime(a.duration) : sort.key === 'count' ? plural(a.track_count || 0, 'track') : (a.year || '')].filter(Boolean).join(' · ');
 
   return html`<div class="screen">
     <${Header} title="Albums" sub=${`${fmtCount(list.length)} · BY ${def.label.toUpperCase()} · ${def[sort.dir].toUpperCase()}`}>
       <${SearchField} value=${q} onInput=${setQ} placeholder="Filter albums" width=${240} />
       <div class="pop-anchor">
-        <${Btn} icon="arrow-up-down" class=${sortOpen ? 'on' : ''} onClick=${() => setSortOpen(!sortOpen)}>Sort</${Btn}>
+        <${Btn} icon="swap_vert" class=${sortOpen ? 'on' : ''} onClick=${() => setSortOpen(!sortOpen)}>Sort</${Btn}>
         ${sortOpen ? html`<${SortPopover} sorts=${ALBUM_SORTS} value=${sort} onChange=${setSort} onClose=${() => setSortOpen(false)} />` : null}
       </div>
       <${Seg} class="icons" value=${view} onChange=${setView} options=${[
-        { value: 'grid', icon: 'layout-grid', title: 'Small tiles' },
-        { value: 'grid-lg', icon: 'grid-2x2', title: 'Large tiles' },
-        { value: 'list', icon: 'list', title: 'List' }]} />
+        { value: 'grid', icon: 'apps', title: 'Small tiles' },
+        { value: 'grid-lg', icon: 'grid_view', title: 'Large tiles' },
+        { value: 'list', icon: 'view_list', title: 'List' }]} />
     </${Header}>
     <div class="scroll pad">
-      <${Loading} state=${state}>${() => !list.length ? html`<${Empty} icon="disc-3" title=${q ? 'No albums match' : 'No albums yet'} />`
+      <${Loading} state=${state}>${() => !list.length ? html`<${Empty} icon="album" title=${q ? 'Nothing found' : 'No albums yet.'}>${q ? 'Try other search terms.' : 'Albums come from the tags of your files once the library is scanned.'}</${Empty}>`
         : view === 'list' ? html`<div class="card table-card">
           ${list.map((a) => html`<a class="alb-row" href=${href('album', a.name, { artist: a.album_artist || '' })}>
             <${Cover} file=${a.album_art_file} class="alb-cover" />
@@ -235,14 +237,14 @@ export function Album({ args, params }) {
     <${Header} back title=${name || 'Unknown album'}
       sub=${[who, year, tracks.length && plural(tracks.length, 'track'), tracks.length && fmtTime(sumDuration(tracks))].filter(Boolean).join(' · ').toUpperCase()}>
       ${first ? html`<${Cover} file=${trackCover(first)} class="head-cover" />` : null}
-      ${who ? html`<a class="btn btn-outline" href=${href('artist', who)}><${Icon} name="mic-vocal" size=${15} />Artist</a>` : null}
+      ${who ? html`<a class="btn btn-outline" href=${href('artist', who)}><${Icon} name="person" size=${15} />Artist</a>` : null}
       <${Btn} icon="download" onClick=${() => lib.downloadTracks(tracks)} disabled=${!tracks.length}>.zip</${Btn}>
       <${Btn} icon="shuffle" onClick=${() => P.shufflePlay(tracks)} disabled=${!tracks.length}>Shuffle</${Btn}>
-      <${Btn} kind="primary" icon="play" iconSize=${14} onClick=${() => P.playTracks(tracks)} disabled=${!tracks.length}>Play all</${Btn}>
+      <${Btn} kind="primary" icon="play_arrow" iconSize=${14} onClick=${() => P.playTracks(tracks)} disabled=${!tracks.length}>Play all</${Btn}>
     </${Header}>
     <${Loading} state=${state}>${() => html`<${TrackTable} groups=${groups} hideAlbum
       firstValue=${(t, i) => t.metadata?.track || i + 1}
-      empty=${html`<${Empty} icon="disc-3" title="This album has no tracks" />`} />`}</${Loading}>
+      empty=${html`<${Empty} icon="album" title="This album has no tracks" />`} />`}</${Loading}>
   </div>`;
 }
 
@@ -279,7 +281,7 @@ export function Artists() {
       <${SearchField} value=${q} onInput=${setQ} placeholder="Filter artists" width=${240} />
     </${Header}>
     <div class="scroll pad">
-      <${Loading} state=${state}>${() => !list.length ? html`<${Empty} icon="mic-vocal" title=${q ? 'No artists match' : 'No artists yet'} />`
+      <${Loading} state=${state}>${() => !list.length ? html`<${Empty} icon="person" title=${q ? 'Nothing found' : 'No artists yet.'}>${q ? 'Try other search terms.' : 'Artists come from the tags of your files once the library is scanned.'}</${Empty}>`
         : html`<div class="grid g6 artists">${list.map((n) => {
           const f = facts.get(n.toLowerCase());
           const hl = n.toLowerCase() === currentArtist;
@@ -306,12 +308,12 @@ export function Artist({ args }) {
   return html`<div class="screen">
     <${Header} back title=${name} sub=${state.data ? plural(albums.length, 'album').toUpperCase() : ''}>
       <${Btn} icon="shuffle" onClick=${() => playAll(true)} disabled=${!albums.length}>Shuffle</${Btn}>
-      <${Btn} kind="primary" icon="play" iconSize=${14} onClick=${() => playAll(false)} disabled=${!albums.length}>Play all</${Btn}>
+      <${Btn} kind="primary" icon="play_arrow" iconSize=${14} onClick=${() => playAll(false)} disabled=${!albums.length}>Play all</${Btn}>
     </${Header}>
     <div class="scroll pad">
       <${Loading} state=${state}>${() => albums.length
         ? html`<div class="grid g6">${albums.map((a) => html`<${AlbumTile} album=${a} meta=${[a.year, a.track_count && plural(a.track_count, 'track')].filter(Boolean).join(' · ')} />`)}</div>`
-        : html`<${Empty} icon="disc-3" title="No albums for this artist" />`}
+        : html`<${Empty} icon="album" title="No albums for this artist" />`}
       </${Loading}>
     </div>
   </div>`;
@@ -349,10 +351,10 @@ export function Tracks() {
     <${Header} title="All tracks" sub=${state.data ? `${fmtCount(all.length)} · BY NAME · A → Z` : ''}>
       <${SearchField} value=${q} onInput=${setQ} placeholder="Filter" width=${200} />
       <${Btn} icon="shuffle" onClick=${() => P.shufflePlay(all)} disabled=${!all.length}>Shuffle</${Btn}>
-      <${Btn} kind="primary" icon="play" iconSize=${14} onClick=${() => P.playTracks(all)} disabled=${!all.length}>Play all</${Btn}>
+      <${Btn} kind="primary" icon="play_arrow" iconSize=${14} onClick=${() => P.playTracks(all)} disabled=${!all.length}>Play all</${Btn}>
     </${Header}>
     <${Loading} state=${state}>${() => html`<${TrackTable} groups=${groups} rail
-      empty=${html`<${Empty} icon="music" title=${q ? 'No tracks match' : 'No tracks yet'} />`} />`}</${Loading}>
+      empty=${html`<${Empty} icon="music_note" title=${q ? 'Nothing found' : 'No tracks yet.'}>${q ? 'Try other search terms.' : 'The library fills in as your folders are scanned.'}</${Empty}>`} />`}</${Loading}>
   </div>`;
 }
 
@@ -375,12 +377,12 @@ export function Genres() {
       <${Loading} state=${state}>${() => list.length ? html`
         <div class="grid g4 genres">${list.map((g) => html`<a class="card genre-tile" href=${href('genre', g.name)}>
           <div class="gt-top"><span>${g.name}</span>
-            <button type="button" class="round-btn" title=${`Auto DJ: ${g.name}`} onClick=${(e) => djGenre(e, g)}><${Icon} name="radio" size=${14} /></button></div>
+            <button type="button" class="round-btn" title=${`Auto DJ: ${g.name}`} onClick=${(e) => djGenre(e, g)}><${Icon} name="auto_awesome" size=${14} /></button></div>
           <div class="gt-bottom"><span class="micro-n">${plural(g.track_count || 0, 'track')}</span>
             <div class="meter"><div style=${{ width: Math.max(2, Math.round((g.track_count || 0) / max * 100)) + '%' }}></div></div></div>
         </a>`)}</div>
         <div class="hint top">The round button starts Auto DJ limited to that genre.</div>`
-        : html`<${Empty} icon="tags" title="No genres">Tracks without genre tags don't show here.</${Empty}>`}
+        : html`<${Empty} icon="category" title="No genres yet.">They come from the genre tags of your files.</${Empty}>`}
       </${Loading}>
     </div>
   </div>`;
@@ -393,7 +395,7 @@ export function Genre({ args }) {
   return html`<div class="screen">
     <${Header} back title=${name} sub=${state.data ? `GENRE · ${plural(tracks.length, 'track').toUpperCase()}` : ''}>
       <${Btn} icon="shuffle" onClick=${() => P.shufflePlay(tracks)} disabled=${!tracks.length}>Shuffle</${Btn}>
-      <${Btn} kind="primary" icon="play" iconSize=${14} onClick=${() => P.playTracks(tracks)} disabled=${!tracks.length}>Play all</${Btn}>
+      <${Btn} kind="primary" icon="play_arrow" iconSize=${14} onClick=${() => P.playTracks(tracks)} disabled=${!tracks.length}>Play all</${Btn}>
     </${Header}>
     <${Loading} state=${state}>${() => html`<${TrackTable} groups=${[{ tracks }]} />`}</${Loading}>
   </div>`;
@@ -412,10 +414,10 @@ export function Favorites() {
   return html`<div class="screen">
     <${Header} title="Favorites" sub=${state.data ? `${fmtCount(count)} LIKED` : ''}>
       <${Btn} icon="shuffle" onClick=${() => P.shufflePlay(tracks)} disabled=${!tracks.length}>Shuffle</${Btn}>
-      <${Btn} kind="primary" icon="play" iconSize=${14} onClick=${() => P.playTracks(tracks)} disabled=${!tracks.length}>Play all</${Btn}>
+      <${Btn} kind="primary" icon="play_arrow" iconSize=${14} onClick=${() => P.playTracks(tracks)} disabled=${!tracks.length}>Play all</${Btn}>
     </${Header}>
     <${Loading} state=${state}>${() => html`<${TrackTable} groups=${[{ tracks }]}
-      empty=${html`<${Empty} icon="heart" title="No favorites yet">Tap the heart on any track to keep it here.</${Empty}>`} />`}</${Loading}>
+      empty=${html`<${Empty} icon="favorite_border" title="No favorites yet.">Tap the heart on a track, or use its ⋮ menu → Add to favorites.</${Empty}>`} />`}</${Loading}>
   </div>`;
 }
 
@@ -445,7 +447,7 @@ export function Search({ params }) {
     <div class="scroll pad search-results">
       ${!query.trim() ? html`<${Empty} icon="search" title="Search the library">Type a title, an album or an artist.</${Empty}>` : null}
       ${state.loading && !r && query.trim() ? html`<${Spinner} />` : null}
-      ${nothing ? html`<${Empty} icon="search" title=${`Nothing for “${query}”`} />` : null}
+      ${nothing ? html`<${Empty} icon="search" title="Nothing found">Try other search terms.</${Empty}>` : null}
       ${artists.length ? html`<section class="block"><div class="block-head"><span class="block-title">Artists</span></div>
         <div class="grid g6 artists">${artists.slice(0, 12).map((a) => html`<a class="tile artist" href=${href('artist', a.name)}>
           <${Cover} file=${a.album_art_file} round>${!a.album_art_file ? html`<span class="initials">${a.name.charAt(0)}</span>` : null}</${Cover}>

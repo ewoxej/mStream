@@ -12,12 +12,18 @@ import { AutoDJ } from './screens/dj.js';
 import { Visualizer } from './screens/viz.js';
 import { Downloads } from './screens/downloads.js';
 import { Settings } from './screens/settings.js';
+import { SonicPath } from './screens/sonicpath.js';
+import { Discover } from './screens/discover.js';
+import { Jukebox } from './screens/jukebox.js';
+import { Lyrics } from './screens/lyrics.js';
+import { Stats } from './screens/stats.js';
 
 const SCREENS = {
   home: Home, recent: Recent, albums: Albums, album: Album, artists: Artists, artist: Artist,
   tracks: Tracks, genres: Genres, genre: Genre, fav: Favorites, search: Search,
   pl: Playlists, playlist: Playlist, folders: Folders, dj: AutoDJ, viz: Visualizer,
-  dl: Downloads, settings: Settings,
+  dl: Downloads, settings: Settings, sonic: SonicPath, discover: Discover, jukebox: Jukebox,
+  lyrics: Lyrics, stats: Stats,
 };
 
 function App() {
@@ -31,7 +37,7 @@ function App() {
     <${Sidebar} />
     <main class="main">
       ${Screen ? html`<${Screen} key=${key} args=${route.args} params=${route.params} />`
-        : html`<div class="screen"><${Empty} icon="circle-alert" title="Page not found" /></div>`}
+        : html`<div class="screen"><${Empty} icon="error_outline" title="Page not found" /></div>`}
     </main>
     ${showQueue ? html`<${Queue} />` : null}
     <${PlayerBar} />
@@ -60,6 +66,13 @@ async function boot() {
   s.noMkdir = ping.noMkdir === true;
   s.discovery = ping.discovery === true;
   s.stats = Number(ping.stats) || 0;
+  s.discoveryPath = ping.discoveryPath === true;
+  s.discoveryP2p = ping.discoveryP2p === true;
+  s.federationDiscovery = ping.federationDiscovery === true;
+  app.set({ features: {
+    discover: s.discovery, sonicPath: s.discoveryPath, stats: s.stats >= 2,
+    network: s.discoveryP2p, peers: s.federationDiscovery,
+  } });
   if (ping.transcode) {
     MSTREAMPLAYER.transcodeOptions.serverEnabled = true;
     MSTREAMPLAYER.transcodeOptions.defaultCodec = ping.transcode.defaultCodec;
@@ -78,6 +91,12 @@ async function boot() {
     s.admin = false;
     app.set({ server: { name: location.hostname, version: '', user: '', vpaths: s.vpaths } });
   });
+  // Downloads (torrents) only while a torrent client is set up and this
+  // user may add torrents; otherwise the feature is off for them.
+  fetch(s.host + 'api/v1/torrent/preflight', { headers: { 'x-access-token': s.token } })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((p) => app.set({ features: { ...app.get().features, torrent: !!(p && p.active && p.userAllowed) } }))
+    .catch(() => {});
   lib.loadCounts().catch(() => {});
   lib.loadLikedCount();
 

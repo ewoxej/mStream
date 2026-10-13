@@ -38,16 +38,16 @@ export function Visualizer() {
       <span class="viz-name">${info.name}</span>
     </div>
     <div class="viz-corner">
-      <${IconBtn} icon=${full ? 'minimize-2' : 'maximize-2'} title="Full screen" onClick=${toggleFull} />
-      <${IconBtn} icon="x" title="Close" onClick=${() => history.back()} />
+      <${IconBtn} icon=${full ? 'fullscreen_exit' : 'fullscreen'} title="Full screen" onClick=${toggleFull} />
+      <${IconBtn} icon="close" title="Close" onClick=${() => history.back()} />
     </div>
     ${showTrack && track ? html`<div class="viz-track"><b>${trackTitle(track)}</b><span>${trackArtist(track)}</span></div>` : null}
     <div class="viz-bar">
-      <button type="button" onClick=${() => VIZ.prev()}><${Icon} name="chevron-left" size=${15} />Previous</button>
-      <button type="button" onClick=${() => VIZ.next()}>Next<${Icon} name="chevron-right" size=${15} /></button>
+      <button type="button" onClick=${() => VIZ.prev()}><${Icon} name="chevron_left" size=${15} />Previous</button>
+      <button type="button" onClick=${() => VIZ.next()}>Next<${Icon} name="chevron_right" size=${15} /></button>
       <i></i>
       <button type="button" class=${info.cycle ? 'on' : ''} onClick=${() => VIZ.setCycle(!info.cycle)}><${Icon} name="timer" size=${15} />Change every 20 s</button>
-      <button type="button" class=${showTrack ? 'on' : ''} onClick=${() => setShowTrack(!showTrack)}><${Icon} name="captions" size=${15} />Show track</button>
+      <button type="button" class=${showTrack ? 'on' : ''} onClick=${() => setShowTrack(!showTrack)}><${Icon} name="subtitles" size=${15} />Show track</button>
     </div>
   </div>`;
 }

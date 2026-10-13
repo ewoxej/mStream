@@ -2,7 +2,8 @@
 import { html, useEffect, useMemo, useRef, useState } from './vendor/preact-htm.js';
 import { ICONS } from './icons.js';
 import { app, useStore, href, go } from './store.js';
-import { playback, playTracks, playNext, addToQueue, toggleLike, isLiked } from './player.js';
+import { playback, playTracks, playNext, addToQueue, toggleLike, isLiked, playSimilar } from './player.js';
+import { sonicPathAdd } from './screens/sonicpath.js';
 import * as lib from './library.js';
 import {
   coverUrl, trackTitle, trackArtist, trackAlbum, formatLabel, gainLabel, fmtTime,
@@ -10,12 +11,16 @@ import {
 
 // ── Primitives ──────────────────────────────────────────────────────────
 
+// The spinner is the one stroked shape: an open arc that .spin rotates.
+const PROGRESS = '<path d="M21 12a9 9 0 1 1-6.22-8.56" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>';
+
+// `fill` picks the filled variant where the app has one (the heart of a favorite).
 export function Icon({ name, size = 16, fill = false, class: cls = '' }) {
+  const glyph = name === 'progress' ? PROGRESS : ICONS[fill && FILLED[name] ? FILLED[name] : name] || '';
   return html`<svg class=${'icon ' + cls} width=${size} height=${size} viewBox="0 0 24 24"
-    fill=${fill ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2"
-    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
-    dangerouslySetInnerHTML=${{ __html: ICONS[name] || '' }}></svg>`;
+    fill="currentColor" aria-hidden="true" dangerouslySetInnerHTML=${{ __html: glyph }}></svg>`;
 }
+const FILLED = { favorite_border: 'favorite' };
 
 // Square cover with the striped placeholder from the design.
 export function Cover({ file, size = 's', round = false, class: cls = '', children, ring = false }) {
@@ -45,9 +50,9 @@ export function Plate({ icon, tone = 'accent', size = 26, iconSize = 15 }) {
   </div>`;
 }
 
-export function Toggle({ on, onChange, tone = 'state', title }) {
+export function Toggle({ on, onChange, title }) {
   return html`<button type="button" role="switch" aria-checked=${on} title=${title}
-    class=${`toggle ${on ? 'on' : ''} toggle-${tone}`} onClick=${(e) => { e.stopPropagation(); onChange(!on); }}>
+    class=${`toggle ${on ? 'on' : ''}`} onClick=${(e) => { e.stopPropagation(); onChange(!on); }}>
     <span></span>
   </button>`;
 }
@@ -78,14 +83,14 @@ export function SearchField({ value, onInput, placeholder, width, hotkey, autoFo
     <input ref=${ref} value=${value} placeholder=${placeholder}
       onInput=${(e) => onInput(e.currentTarget.value)} />
     ${hotkey && !value ? html`<kbd>${hotkey}</kbd>` : null}
-    ${value ? html`<button type="button" class="clear" onClick=${() => onInput('')} aria-label="Clear"><${Icon} name="x" size=${14} /></button>` : null}
+    ${value ? html`<button type="button" class="clear" onClick=${() => onInput('')} aria-label="Clear"><${Icon} name="close" size=${14} /></button>` : null}
   </label>`;
 }
 
 // Screen header: big title over a mono caption, actions on the right.
 export function Header({ title, sub, back, children, crumbs }) {
   return html`<header class="screen-head">
-    ${back ? html`<${IconBtn} icon="arrow-left" size=${18} title="Back" onClick=${() => history.back()} class="back" />` : null}
+    ${back ? html`<${IconBtn} icon="arrow_back" size=${18} title="Back" onClick=${() => history.back()} class="back" />` : null}
     ${crumbs ? html`<div class="crumbs">${crumbs}</div>` : html`<div class="titles">
       <h1>${title}</h1>${sub ? html`<span class="micro">${sub}</span>` : null}
     </div>`}
@@ -104,7 +109,7 @@ export function Empty({ icon = 'music', title, children }) {
 }
 
 export function Spinner({ label }) {
-  return html`<div class="loading"><${Icon} name="loader-circle" size=${20} class="spin" />${label ? html`<span>${label}</span>` : null}</div>`;
+  return html`<div class="loading"><${Icon} name="progress" size=${20} class="spin" />${label ? html`<span>${label}</span>` : null}</div>`;
 }
 
 // ── Async data ──────────────────────────────────────────────────────────
@@ -166,14 +171,14 @@ export function MenuLayer() {
   if (!menu) { return null; }
   const items = sub || menu.items;
   return html`<div class="menu" ref=${ref} style=${pos ? { left: pos.x + 'px', top: pos.y + 'px' } : { visibility: 'hidden' }}>
-    ${sub ? html`<button type="button" class="menu-item muted" onClick=${() => setSub(null)}><${Icon} name="chevron-left" size=${15} />Back</button><div class="menu-sep"></div>` : null}
+    ${sub ? html`<button type="button" class="menu-item muted" onClick=${() => setSub(null)}><${Icon} name="chevron_left" size=${15} />Back</button><div class="menu-sep"></div>` : null}
     ${items.map((it) => it === 'sep' ? html`<div class="menu-sep"></div>`
       : it.header ? html`<div class="menu-head micro">${it.header}</div>`
       : html`<button type="button" class=${`menu-item ${it.danger ? 'danger' : ''}`} disabled=${it.disabled}
           onClick=${() => { if (it.sub) { setSub(it.sub); return; } closeMenu(); it.onClick && it.onClick(); }}>
-          ${it.icon ? html`<${Icon} name=${it.icon} size=${15} fill=${it.fill} />` : html`<span class="menu-gap"></span>`}
+          ${it.icon ? html`<${Icon} name=${it.icon} size=${15} fill=${it.fill} class=${it.tone ? 'tone-' + it.tone : ''} />` : html`<span class="menu-gap"></span>`}
           <span class="menu-label">${it.label}</span>
-          ${it.sub ? html`<${Icon} name="chevron-right" size=${14} class="menu-chev" />` : null}
+          ${it.sub ? html`<${Icon} name="chevron_right" size=${14} class="menu-chev" />` : null}
         </button>`)}
   </div>`;
 }
@@ -236,35 +241,46 @@ export function ToastLayer() {
 
 // ── Track actions ───────────────────────────────────────────────────────
 
+// The app's track ⋮ menu: same items, order, icons and tints (mustard for the
+// queue and playlists, blue for favorites, celadon for downloads).
 export function trackMenuItems(tracks, extra = []) {
   const one = tracks.length === 1 ? tracks[0] : null;
   const playlists = app.get().playlists;
   const items = [
-    { label: 'Play now', icon: 'play', onClick: () => playTracks(tracks) },
-    { label: 'Play next', icon: 'list-start', onClick: () => playNext(tracks) },
-    { label: 'Add to queue', icon: 'list-end', onClick: () => addToQueue(tracks) },
-    {
-      label: 'Add to playlist', icon: 'list-plus', sub: [
-        { label: 'New playlist…', icon: 'plus', onClick: () => newPlaylistWith(tracks) },
-        ...(playlists.length ? ['sep'] : []),
-        ...playlists.map((name) => ({ label: name, icon: 'list-music', onClick: () => addTo(name, tracks) })),
-      ],
-    },
+    { label: 'Add to queue', icon: 'queue_music', tone: 'accent', onClick: () => addToQueue(tracks) },
+    { label: 'Play next', icon: 'playlist_play', tone: 'accent', onClick: () => playNext(tracks) },
   ];
   if (one) {
-    items.push('sep');
     const liked = isLiked(one);
-    items.push({ label: liked ? 'Remove from favorites' : 'Add to favorites', icon: 'heart', fill: liked, onClick: () => toggleLike(one) });
+    items.push({ label: liked ? 'Remove from favorites' : 'Add to favorites', icon: 'favorite_border', tone: 'info', onClick: () => toggleLike(one) });
+  }
+  items.push({
+    label: 'Add to playlist…', icon: 'playlist_add', tone: 'accent', sub: [
+      { label: 'New playlist…', icon: 'add', tone: 'accent', onClick: () => newPlaylistWith(tracks) },
+      ...(playlists.length ? ['sep'] : []),
+      ...playlists.map((name) => ({ label: name, icon: 'queue_music', onClick: () => addTo(name, tracks) })),
+    ],
+  });
+  items.push({ label: tracks.length > 1 ? `Download ${tracks.length} tracks` : 'Download', icon: 'download', tone: 'state', onClick: () => lib.downloadTracks(tracks) });
+  // The server's sound analysis (the app offers these for server tracks too).
+  const features = app.get().features;
+  if (one && !one.federation && features.discover) {
+    items.push({ label: 'Play similar', icon: 'radar', tone: 'state', onClick: () => playSimilar(one) });
+  }
+  if (one && !one.federation && features.sonicPath) {
+    items.push({ label: 'Sonic path', icon: 'route', tone: 'state', onClick: () => sonicPathAdd(one) });
+  }
+  if (one) {
+    items.push('sep');
+    const folder = one.filepath.split('/').slice(0, -1).join('/');
+    items.push({ label: 'Go to folder', icon: 'folder', tone: 'accent', onClick: () => go('folders', folder) });
     if (one.metadata?.album) {
-      items.push({ label: 'Go to album', icon: 'disc-3', onClick: () => go('album', one.metadata.album, { artist: one.metadata['album-artist'] || '' }) });
+      items.push({ label: 'Go to album', icon: 'album', tone: 'accent', onClick: () => go('album', one.metadata.album, { artist: one.metadata['album-artist'] || '' }) });
     }
     if (trackArtist(one)) {
-      items.push({ label: 'Go to artist', icon: 'mic-vocal', onClick: () => go('artist', one.metadata?.artist || trackArtist(one)) });
+      items.push({ label: 'Go to artist', icon: 'person', tone: 'accent', onClick: () => go('artist', one.metadata?.artist || trackArtist(one)) });
     }
-    const folder = one.filepath.split('/').slice(0, -1).join('/');
-    items.push({ label: 'Show in folder', icon: 'folder', onClick: () => go('folders', folder) });
   }
-  items.push('sep', { label: tracks.length > 1 ? `Download ${tracks.length} tracks` : 'Download', icon: 'download', onClick: () => lib.downloadTracks(tracks) });
   return [...items, ...extra];
 }
 
@@ -292,7 +308,7 @@ export function LikeButton({ track, size = 16, always = false }) {
   return html`<button type="button" class=${`like ${liked ? 'on' : ''} ${always ? 'always' : ''}`}
     title=${liked ? 'Remove from favorites' : 'Add to favorites'}
     onClick=${(e) => { e.stopPropagation(); toggleLike(track); }}>
-    <${Icon} name="heart" size=${size} fill=${liked} />
+    <${Icon} name="favorite_border" size=${size} fill=${liked} />
   </button>`;
 }
 
@@ -360,7 +376,7 @@ export function TrackTable({ groups, firstCol = '#', firstValue, rail = false, r
     return html`<div key=${it.key} class=${`tr ${cur ? 'cur' : ''}`}
       style=${windowed ? { position: 'absolute', top: it.top + 'px', left: 0, right: 0 } : null}
       onClick=${() => playTracks(flat, it.index)} onContextMenu=${menu}>
-      <span class="c-n">${cur ? html`<${Icon} name=${playing ? 'audio-lines' : 'pause'} size=${14} />`
+      <span class="c-n">${cur ? html`<${Icon} name=${playing ? 'graphic_eq' : 'pause'} size=${14} />`
         : firstValue ? firstValue(t, it.index) : it.index + 1}</span>
       <span class="c-t">${trackTitle(t)}</span>
       <span class="c-a">${trackArtist(t)}</span>
@@ -369,7 +385,7 @@ export function TrackTable({ groups, firstCol = '#', firstValue, rail = false, r
       <span class="c-f">${formatLabel(meta)}</span>
       <span class="c-rg">${gainLabel(meta)}</span>
       <span class="c-d">${fmtTime(meta.duration)}</span>
-      <span class="c-m"><button type="button" class="row-more" title="More" onClick=${menu}><${Icon} name="ellipsis" size=${16} /></button></span>
+      <span class="c-m"><button type="button" class="row-more" title="More" onClick=${menu}><${Icon} name="more_vert" size=${16} /></button></span>
     </div>`;
   };
 
@@ -410,7 +426,7 @@ export function AlbumTile({ album, meta, highlight }) {
   };
   return html`<a class=${`tile ${highlight ? 'hl' : ''}`} href=${target} onContextMenu=${menu}>
     <${Cover} file=${album.album_art_file} size="l" ring=${highlight}>
-      <button type="button" class="tile-play" title="Play" onClick=${play}><${Icon} name="play" size=${18} fill /></button>
+      <button type="button" class="tile-play" title="Play" onClick=${play}><${Icon} name="play_arrow" size=${18} fill /></button>
     </${Cover}>
     <span class="tile-t">${album.name || 'Unknown album'}</span>
     <span class="tile-s">${meta ?? [album.album_artist, album.year].filter(Boolean).join(' · ')}</span>

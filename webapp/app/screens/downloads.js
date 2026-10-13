@@ -2,7 +2,7 @@
 // (qBittorrent / Transmission / Deluge, set up in the admin panel). The
 // transfer list is an admin route; anyone allowed to add torrents can.
 import { html, useEffect, useRef, useState } from '../vendor/preact-htm.js';
-import { href } from '../store.js';
+import { app, useStore, href } from '../store.js';
 import * as P from '../player.js';
 import { Icon, IconBtn, Header, Chip, Plate, Empty, Spinner, confirm } from '../ui.js';
 import { fmtBytes, server } from '../util.js';
@@ -49,7 +49,7 @@ function useTorrents() {
 
 const TONE = { downloading: 'accent', seeding: 'state', paused: 'muted', queued: 'muted', verifying: 'muted', error: 'danger', unknown: 'muted' };
 const LABEL = { downloading: 'Downloading', seeding: 'Seeding', paused: 'Paused', queued: 'Queued', verifying: 'Checking', error: 'Error', unknown: 'Unknown' };
-const ICON = { downloading: 'arrow-down', seeding: 'arrow-up', paused: 'circle-pause', queued: 'timer', verifying: 'refresh-cw', error: 'circle-alert', unknown: 'download' };
+const ICON = { downloading: 'arrow_downward', seeding: 'arrow_upward', paused: 'pause_circle', queued: 'timer', verifying: 'refresh', error: 'error_outline', unknown: 'download' };
 
 function eta(s) {
   if (!(s > 0)) { return ''; }
@@ -119,8 +119,8 @@ function AddTorrent({ onAdded }) {
     onDragOver=${(e) => e.preventDefault()}
     onDrop=${(e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f && /\.torrent$/i.test(f.name)) { setFile(f); setMagnet(''); } }}>
     <label class="search-field grow">
-      <${Icon} name="magnet" size=${16} />
-      ${file ? html`<span class="file-pill">${file.name}<button type="button" onClick=${() => setFile(null)}><${Icon} name="x" size=${12} /></button></span>`
+      <${Icon} name="link" size=${16} />
+      ${file ? html`<span class="file-pill">${file.name}<button type="button" onClick=${() => setFile(null)}><${Icon} name="close" size=${12} /></button></span>`
         : html`<input value=${magnet} placeholder="Paste a magnet link or drop a .torrent file" onInput=${(e) => setMagnet(e.currentTarget.value)} />`}
       <button type="button" class="link small" onClick=${() => fileInput.current.click()}>.torrent</button>
       <input type="file" accept=".torrent" hidden ref=${fileInput} onChange=${(e) => { setFile(e.currentTarget.files[0] || null); setMagnet(''); }} />
@@ -130,11 +130,20 @@ function AddTorrent({ onAdded }) {
       <span>/</span>
       <input class="dir-input" value=${dir} placeholder="Folder" onInput=${(e) => setDir(e.currentTarget.value)} />
     </label>
-    <button type="submit" class="btn btn-primary" disabled=${busy || (!magnet.trim() && !file)}><${Icon} name="plus" size=${15} />Add</button>
+    <button type="submit" class="btn btn-primary" disabled=${busy || (!magnet.trim() && !file)}><${Icon} name="add" size=${15} />Add</button>
   </form>`;
 }
 
 export function Downloads() {
+  const on = useStore(app, (x) => x.features.torrent);
+  if (on === false) {
+    return html`<div class="screen"><${Header} title="Downloads" />
+      <div class="scroll"><${Empty} icon="download" title="Downloads are off on this server.">An admin can connect a torrent client in the admin panel.</${Empty}></div></div>`;
+  }
+  return html`<${TorrentList} />`;
+}
+
+function TorrentList() {
   const s = useTorrents();
   const [tab, setTab] = useState('All');
   const filters = {
@@ -163,7 +172,7 @@ export function Downloads() {
       <${AddTorrent} onAdded=${() => { clearTimeout(timer); poll(); }} />
       ${s.loading ? html`<${Spinner} />`
         : s.forbidden ? html`<${Empty} icon="download" title="Transfers are visible to admins">Torrents you add still download and land in the folder you chose.</${Empty}>`
-        : s.error ? html`<${Empty} icon="circle-alert" title="Torrent client not available">${s.error}. Connect qBittorrent, Transmission or Deluge in the <a href="admin" target="_blank">admin panel</a>.</${Empty}>`
+        : s.error ? html`<${Empty} icon="error_outline" title="Torrent client not available">${s.error}. Connect qBittorrent, Transmission or Deluge in the <a href="admin" target="_blank">admin panel</a>.</${Empty}>`
         : html`
           <div class="chips">${Object.keys(filters).map((k) => html`<${Chip} on=${tab === k} onClick=${() => setTab(k)}>${k}<span class="chip-n">${s.torrents.filter(filters[k]).length}</span></${Chip}>`)}</div>
           ${rows.length ? html`<div class="card table-card">${rows.map((t) => html`<div class="dl-row">
@@ -173,7 +182,7 @@ export function Downloads() {
             <div class="dl-prog"><div class="meter"><div class=${TONE[t.status]} style=${{ width: pct(t) + '%' }}></div></div>
               <small>${pct(t)}%${t.status === 'downloading' && eta(t.eta) ? ' · ' + eta(t.eta) : t.errorMessage ? ' · ' + t.errorMessage : ''}</small></div>
             <span class=${'pill ' + (TONE[t.status] || 'muted')}>${LABEL[t.status] || t.status}</span>
-            <${IconBtn} icon="trash-2" title="Remove" onClick=${() => remove(t)} size=${15} />
+            <${IconBtn} icon="delete_outline" title="Remove" onClick=${() => remove(t)} size=${15} />
           </div>`)}</div>` : html`<${Empty} icon="download" title=${tab === 'All' ? 'No torrents' : `Nothing in ${tab}`} />`}`}
     </div>
   </div>`;

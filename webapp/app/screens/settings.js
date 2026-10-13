@@ -5,7 +5,7 @@ import { app, useStore, href } from '../store.js';
 import * as P from '../player.js';
 import { playback } from '../player.js';
 import * as lib from '../library.js';
-import { Header, Seg, Toggle, Btn, Icon } from '../ui.js';
+import { Header, Seg, Toggle, Btn, Icon, confirm } from '../ui.js';
 import { fmtCount, server } from '../util.js';
 
 const TABS = [
@@ -33,12 +33,12 @@ const Value = ({ children }) => html`<span class="value">${children}</span>`;
 
 function Playback() {
   const s = useStore(playback, (x) => ({ rg: x.replayGain, pre: x.replayGainPreGainDb }));
-  return html`<${Card} title="ReplayGain" note="Evens out loudness between tracks using the track-gain tags written at scan time.">
+  return html`<${Card} title="Volume normalization" note="Evens out loudness between tracks using the ReplayGain track-gain tags written at scan time.">
     <${Row} title="Mode" sub="Track applies each file's own gain tag">
       <${Seg} value=${s.rg ? 'track' : 'off'} onChange=${(v) => P.setReplayGain(v === 'track')}
         options=${[{ value: 'off', label: 'Off' }, { value: 'track', label: 'Track' }]} />
     </${Row}>
-    <${Row} title="Preamp" sub="Added on top of the tag value">
+    <${Row} title="Pre-amp" sub="Added on top of the tag value">
       <div class="range-field">
         <input type="range" min="-15" max="15" step="0.5" value=${s.pre} disabled=${!s.rg}
           onInput=${(e) => P.setPreGain(Number(e.currentTarget.value))} />
@@ -89,8 +89,12 @@ function Library() {
       <${Value}>${s.noUpload ? 'read' : 'read + upload'}</${Value}></${Row}>`)}
     <${Row} title="Tracks" sub=${`${fmtCount(counts.albums ?? 0)} albums · ${fmtCount(counts.artists ?? 0)} artists`}><${Value}>${fmtCount(counts.tracks ?? 0)}</${Value}></${Row}>
     ${s.admin ? html`<${Row} title="Rescan now" sub="Picks up new files and changed tags">
-      <${Btn} icon="refresh-cw" onClick=${scan} disabled=${busy}>Scan</${Btn}></${Row}>` : null}
+      <${Btn} icon="refresh" onClick=${scan} disabled=${busy}>Scan</${Btn}></${Row}>` : null}
   </${Card}>`;
+}
+
+async function logOut() {
+  if (await confirm({ title: 'Log out of mStream?', text: 'You will need to sign in again to listen.', okLabel: 'Log out' })) { MSTREAMAPI.logout(); }
 }
 
 function Server() {
@@ -101,10 +105,10 @@ function Server() {
     <${Row} title="Version"><${Value}>${info?.version || '—'}</${Value}></${Row}>
     <${Row} title="Signed in as"><${Value}>${info?.user || 'public'}</${Value}></${Row}>
     ${s.admin ? html`<${Row} title="Administration" sub="Users, folders, scanning, transcoding, DLNA, federation">
-      <a class="btn btn-outline" href="admin" target="_blank"><${Icon} name="external-link" size=${15} />Open admin</a></${Row}>` : null}
+      <a class="btn btn-outline" href="admin" target="_blank"><${Icon} name="open_in_new" size=${15} />Open admin</a></${Row}>` : null}
     <${Row} title="Classic player" sub="The previous interface, with Sonic Path, Discover, Jukebox and stats">
-      <a class="btn btn-outline" href="classic/"><${Icon} name="external-link" size=${15} />Open</a></${Row}>
-    ${s.token ? html`<${Row} title="Sign out"><${Btn} onClick=${() => MSTREAMAPI.logout()}><${Icon} name="log-out" size=${15} />Sign out</${Btn}></${Row}>` : null}
+      <a class="btn btn-outline" href="classic/"><${Icon} name="open_in_new" size=${15} />Open</a></${Row}>
+    ${s.token ? html`<${Row} title="Log out"><${Btn} onClick=${logOut}><${Icon} name="logout" size=${15} />Log out</${Btn}></${Row}>` : null}
   </${Card}>`;
 }
 

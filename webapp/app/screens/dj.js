@@ -67,14 +67,14 @@ export function AutoDJ() {
 
   return html`<div class="screen">
     <${Header} title="Auto DJ" sub=${sub}>
-      <${Btn} kind="primary" icon=${pb.on ? 'square' : 'play'} onClick=${P.toggleAutoDJ}>${pb.on ? 'Stop Auto DJ' : 'Start Auto DJ'}</${Btn}>
+      <${Btn} kind="primary" icon=${pb.on ? 'stop' : 'play_arrow'} onClick=${P.toggleAutoDJ}>${pb.on ? 'Stop Auto DJ' : 'Start Auto DJ'}</${Btn}>
     </${Header}>
     <div class="scroll pad dj-grid">
       <section class="card dj-opts">
         <${Section} label="SOURCES">
           ${all.map((v) => html`<button type="button" class="source" onClick=${() => toggleVpath(v)}>
             <span class=${`check ${chosen.includes(v) ? 'on' : ''}`}>${chosen.includes(v) ? html`<${Icon} name="check" size=${12} />` : null}</span>
-            <${Icon} name="hard-drive" size=${15} /><span class="source-t">${v}</span>
+            <${Icon} name="library_music" size=${15} /><span class="source-t">${v}</span>
           </button>`)}
         </${Section}>
         <${Section} label="TRACKS">

@@ -17,7 +17,7 @@
 }
 
 .collection-item:hover {
-  background-color: #EEE;
+  background-color: var(--z-placeholder);
   cursor: pointer;
 }
 
@@ -67,7 +67,7 @@ a {
 
 .tabs .indicator {
   height: 3px;
-  background-color: #ee6e73;
+  background-color: var(--z-accent);
 }
 
 .big-container {
@@ -102,11 +102,11 @@ a {
   align-items: center;
   gap: 8px;
   padding: 6px 8px;
-  background-color: #2a2a34;
+  background-color: var(--z-inset);
   color: #eee;
-  border: 1px solid #505061;
+  border: 1px solid var(--z-line);
   border-radius: 3px;
-  font-family: 'Jura', sans-serif;
+  font-family: var(--z-sans);
   font-size: 14px;
   cursor: pointer;
   text-align: left;
@@ -114,7 +114,7 @@ a {
 
 .admin-lang-toggle:hover,
 .admin-lang-toggle[aria-expanded="true"] {
-  border-color: #7f7f9a;
+  border-color: var(--z-muted);
 }
 
 .admin-lang-current {
@@ -158,8 +158,8 @@ a {
   margin: 0 0 4px 0;
   padding: 4px 0;
   list-style: none;
-  background-color: #2a2a34;
-  border: 1px solid #7f7f9a;
+  background-color: var(--z-inset);
+  border: 1px solid var(--z-line);
   border-radius: 3px;
   box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.4);
   z-index: 1000;
@@ -172,17 +172,17 @@ a {
   padding: 6px 10px;
   color: #ddd;
   cursor: pointer;
-  font-family: 'Jura', sans-serif;
+  font-family: var(--z-sans);
   font-size: 14px;
 }
 
 .admin-lang-menu li:hover {
-  background-color: #3a3a47;
+  background-color: var(--z-placeholder);
   color: #fff;
 }
 
 .admin-lang-menu li[aria-selected="true"] {
-  background-color: #505061;
+  background-color: var(--z-placeholder);
   color: #fff;
 }
 /* Torrent admin: status chips + managed-row highlight. The colour
@@ -205,25 +205,25 @@ a {
   font-weight: 600;
   letter-spacing: 0.2px;
   text-transform: uppercase;
-  background: #eceff1;
-  color: #37474f;
+  background: var(--z-placeholder);
+  color: var(--z-text);
   white-space: nowrap;
 }
-.status-chip.status-downloading { background: #e3f2fd; color: #1565c0; }
-.status-chip.status-seeding     { background: #e8f5e9; color: #2e7d32; }
-.status-chip.status-paused      { background: #f5f5f5; color: #616161; }
-.status-chip.status-verifying   { background: #fff3e0; color: #ef6c00; }
-.status-chip.status-queued      { background: #f1f8e9; color: #558b2f; }
-.status-chip.status-error       { background: #ffebee; color: #c62828; }
-.status-chip.status-managed     { background: #f3e5f5; color: #6a1b9a; }
-tr.managed-row { background: #faf5fc; }
-tr.managed-row:hover { background: #f3e5f5; }
+.status-chip.status-downloading { background: var(--z-info-tint); color: var(--z-info); }
+.status-chip.status-seeding     { background: var(--z-celadon-tint); color: var(--z-celadon); }
+.status-chip.status-paused      { background: var(--z-inset); color: var(--z-text-2); }
+.status-chip.status-verifying   { background: var(--z-accent-tint); color: var(--z-accent); }
+.status-chip.status-queued      { background: var(--z-celadon-tint); color: var(--z-celadon); }
+.status-chip.status-error       { background: var(--z-danger-tint); color: var(--z-danger); }
+.status-chip.status-managed     { background: var(--z-info-tint); color: var(--z-info); }
+tr.managed-row { background: var(--z-info-tint); }
+tr.managed-row:hover { background: var(--z-info-tint); }
 
 /* Backup admin: highlight the destinations-table row whose backup is
    currently running (class bound in backup-view). Same blue family as
    the "Backup running" progress card so the two read as one state. */
-tr.backup-row-active { background: #e3f2fd; }
-tr.backup-row-active:hover { background: #bbdefb; }
+tr.backup-row-active { background: var(--z-info-tint); }
+tr.backup-row-active:hover { background: var(--z-info-tint); }
 
 /* Library-access chips for the per-vpath verification status.
    verified  = green (Transmission's free-space round-trip succeeded)
@@ -231,10 +231,10 @@ tr.backup-row-active:hover { background: #bbdefb; }
                        to use this path, but we haven't proven it can
                        see what mStream wrote)
    unconfirmed = red (probe never succeeded; needs manual entry) */
-.status-chip.status-verified    { background: #e8f5e9; color: #1b5e20; }
-.status-chip.status-inferred    { background: #fffde7; color: #f57f17; }
-.status-chip.status-pending     { background: #e3f2fd; color: #0d47a1; }
-.status-chip.status-unconfirmed { background: #ffebee; color: #b71c1c; }
+.status-chip.status-verified    { background: var(--z-celadon-tint); color: var(--z-celadon); }
+.status-chip.status-inferred    { background: var(--z-accent-tint); color: var(--z-accent); }
+.status-chip.status-pending     { background: var(--z-info-tint); color: var(--z-info); }
+.status-chip.status-unconfirmed { background: var(--z-danger-tint); color: var(--z-danger); }
 
 /* Drag-drop zone for the "Import for Seeding" admin card.
    Visual states:
@@ -247,15 +247,15 @@ tr.backup-row-active:hover { background: #bbdefb; }
 .seed-drop-zone {
   margin-top: 12px;
   padding: 24px;
-  border: 2px dashed #bdbdbd;
+  border: 2px dashed var(--z-line);
   border-radius: 6px;
   text-align: center;
-  background: #fafafa;
+  background: var(--z-inset);
   transition: border-color 0.15s, background 0.15s;
 }
 .seed-drop-zone.is-dragover {
-  border-color: #43a047;
-  background: #e8f5e9;
+  border-color: var(--z-celadon);
+  background: var(--z-celadon-tint);
 }
 .seed-drop-zone.is-busy {
   opacity: 0.85;
@@ -282,17 +282,17 @@ tr.backup-row-active:hover { background: #bbdefb; }
   white-space: nowrap;
 }
 
-.enrich-badge-running  { background: #2e7d32; color: #fff; }
-.enrich-badge-queued   { background: #1565c0; color: #fff; }
-.enrich-badge-idle     { background: #3a3a47; color: #ddd; }
-.enrich-badge-disabled { background: #2a2a34; color: #888; border: 1px solid #505061; }
+.enrich-badge-running  { background: var(--z-celadon); color: #fff; }
+.enrich-badge-queued   { background: var(--z-info); color: #fff; }
+.enrich-badge-idle     { background: var(--z-placeholder); color: #ddd; }
+.enrich-badge-disabled { background: var(--z-inset); color: var(--z-muted); border: 1px solid var(--z-line); }
 
 .enrich-muted {
-  color: #999;
+  color: var(--z-muted);
 }
 
 .enrich-failed {
-  color: #ef5350;
+  color: var(--z-danger);
   font-weight: bold;
 }
 
@@ -301,14 +301,14 @@ tr.backup-row-active:hover { background: #bbdefb; }
   height: 5px;
   max-width: 220px;
   margin: 6px 0 4px 0;
-  background: #3a3a47;
+  background: var(--z-placeholder);
   border-radius: 99px;
   overflow: hidden;
 }
 
 .enrich-bar-fill {
   height: 100%;
-  background: #66bb6a;
+  background: var(--z-celadon);
   border-radius: 99px;
   transition: width 0.8s ease-out;
 }
@@ -333,7 +333,7 @@ tr.backup-row-active:hover { background: #bbdefb; }
 .enrich-scan-pct {
   font-size: 12px;
   font-weight: bold;
-  color: #66bb6a;
+  color: var(--z-celadon);
 }
 
 .enrich-scan-row .enrich-bar-scan {
@@ -355,7 +355,7 @@ tr.backup-row-active:hover { background: #bbdefb; }
   position: absolute;
   inset: 0;
   width: 40%;
-  background: linear-gradient(90deg, transparent, #66bb6a, transparent);
+  background: linear-gradient(90deg, transparent, var(--z-celadon), transparent);
   animation: enrich-shimmer 1.8s ease-in-out infinite;
 }
 
@@ -368,32 +368,32 @@ tr.backup-row-active:hover { background: #bbdefb; }
    The Discovery view's vocabulary (boxed status header, pill tabs, stat
    tiles, lower-case status words) as classes, plus the one new component:
    the plug-in row. Design: docs/designs/discovery-plugins-admin. */
-.dp-box { border: 1px solid #e0e0e0; border-radius: 2px; padding: 16px 20px; margin-top: 14px; }
+.dp-box { border: 1px solid var(--z-line); border-radius: 2px; padding: 16px 20px; margin-top: 14px; }
 .dp-box-h { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
 .dp-box-act { display: flex; gap: 12px; font-size: 0.9em; flex-shrink: 0; }
-.dp-status { display: inline-flex; align-items: center; gap: 7px; font-size: 0.9em; color: #616161; flex-wrap: wrap; }
-.dp-dot { width: 9px; height: 9px; border-radius: 50%; background: #9e9e9e; flex-shrink: 0; display: inline-block; }
-.dp-dot-ok { background: #2e7d32; }
-.dp-dot-warn { background: #e65100; }
-.dp-dot-err { background: #c62828; }
-.dp-ok { color: #2e7d32; font-weight: 600; }
-.dp-warn { color: #e65100; font-weight: 600; }
-.dp-err { color: #c62828; font-weight: 600; }
+.dp-status { display: inline-flex; align-items: center; gap: 7px; font-size: 0.9em; color: var(--z-text-2); flex-wrap: wrap; }
+.dp-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--z-placeholder); flex-shrink: 0; display: inline-block; }
+.dp-dot-ok { background: var(--z-celadon); }
+.dp-dot-warn { background: var(--z-accent); }
+.dp-dot-err { background: var(--z-danger); }
+.dp-ok { color: var(--z-celadon); font-weight: 600; }
+.dp-warn { color: var(--z-accent); font-weight: 600; }
+.dp-err { color: var(--z-danger); font-weight: 600; }
 .dp-off { font-weight: 600; }
-.dp-warn-soft { color: #e65100; }
-.dp-br { color: #9e9e9e; white-space: nowrap; font-size: 0.9em; }
-.dp-muted { color: #9e9e9e; }
-.dp-sub { font-size: 0.9em; color: #757575; }
+.dp-warn-soft { color: var(--z-accent); }
+.dp-br { color: var(--z-muted); white-space: nowrap; font-size: 0.9em; }
+.dp-muted { color: var(--z-muted); }
+.dp-sub { font-size: 0.9em; color: var(--z-muted); }
 .dp-mono { font-family: ui-monospace, Consolas, monospace; font-size: 0.9em; word-break: break-all; }
-.dp-pills { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; border-bottom: 1px solid #e0e0e0; padding-bottom: 10px; }
-.dp-pill { padding: 6px 16px; border-radius: 2px; font-size: 0.85em; font-weight: 600; letter-spacing: 0.4px; cursor: pointer; color: #616161; border: 1px solid #e0e0e0; user-select: none; }
-.dp-pill-on { background: #505061; color: #fff; border-color: #505061; }
+.dp-pills { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; border-bottom: 1px solid var(--z-line); padding-bottom: 10px; }
+.dp-pill { padding: 6px 16px; border-radius: 2px; font-size: 0.85em; font-weight: 600; letter-spacing: 0.4px; cursor: pointer; color: var(--z-text-2); border: 1px solid var(--z-line); user-select: none; }
+.dp-pill-on { background: var(--z-placeholder); color: #fff; border-color: var(--z-line); }
 .dp-pill small { font-weight: 400; opacity: 0.8; margin-left: 5px; font-size: 1em; }
 .dp-pills-sm { margin-top: 0; border-bottom: 0; padding-bottom: 0; }
 .dp-pills-sm .dp-pill { padding: 3px 12px; }
-.dp-group { display: flex; align-items: baseline; gap: 10px; margin: 18px 0 2px; padding-bottom: 6px; border-bottom: 1px solid #e0e0e0; }
-.dp-group b { font-size: 13px; letter-spacing: 0.6px; text-transform: uppercase; color: #616161; }
-.dp-group span { font-size: 0.85em; color: #9e9e9e; }
+.dp-group { display: flex; align-items: baseline; gap: 10px; margin: 18px 0 2px; padding-bottom: 6px; border-bottom: 1px solid var(--z-line); }
+.dp-group b { font-size: 13px; letter-spacing: 0.6px; text-transform: uppercase; color: var(--z-text-2); }
+.dp-group span { font-size: 0.85em; color: var(--z-muted); }
 .dp-plugin { display: flex; align-items: flex-start; gap: 16px; padding: 14px 5px; border-bottom: 1px solid rgba(0, 0, 0, 0.12); }
 .dp-plugin:last-child { border-bottom: 0; }
 .dp-plugin-sw { padding-top: 3px; flex-shrink: 0; }
@@ -401,47 +401,47 @@ tr.backup-row-active:hover { background: #bbdefb; }
 .dp-plugin-body { flex: 1; min-width: 0; }
 .dp-plugin-h { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .dp-plugin-h b { font-size: 15.5px; }
-.dp-plugin-d { font-size: 0.9em; color: #616161; margin-top: 2px; }
-.dp-plugin-meta { font-size: 0.85em; color: #757575; margin-top: 6px; }
+.dp-plugin-d { font-size: 0.9em; color: var(--z-text-2); margin-top: 2px; }
+.dp-plugin-meta { font-size: 0.85em; color: var(--z-muted); margin-top: 6px; }
 .dp-plugin-act { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; padding-top: 2px; }
-.dp-plugin-off .dp-plugin-h b, .dp-plugin-off .dp-plugin-d { color: #9e9e9e; }
-.dp-tag { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: #616161; border: 1px solid #e0e0e0; border-radius: 2px; padding: 0 6px; line-height: 18px; white-space: nowrap; }
-.dp-tag-user { color: #4527a0; border-color: #d1c4e9; background: #f6f2fc; }
-.dp-reason { display: flex; gap: 8px; margin-top: 8px; padding: 8px 10px; background: #fff3e0; border-left: 3px solid #e65100; font-size: 0.85em; color: #5d4037; }
-.dp-callout { background: #e3f2fd; border-left: 3px solid #2196f3; padding: 8px 12px; font-size: 0.85em; margin: 12px 0 0; line-height: 1.45; }
-.dp-callout-warn { background: #fff8e1; border-left-color: #ffa000; }
-.dp-help { font-size: 12px; color: #757575; margin-top: 4px; line-height: 1.4; }
-.dp-help-err { color: #f44336; }
+.dp-plugin-off .dp-plugin-h b, .dp-plugin-off .dp-plugin-d { color: var(--z-muted); }
+.dp-tag { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: var(--z-text-2); border: 1px solid var(--z-line); border-radius: 2px; padding: 0 6px; line-height: 18px; white-space: nowrap; }
+.dp-tag-user { color: var(--z-info); border-color: var(--z-line); background: var(--z-info-tint); }
+.dp-reason { display: flex; gap: 8px; margin-top: 8px; padding: 8px 10px; background: var(--z-accent-tint); border-left: 3px solid var(--z-accent); font-size: 0.85em; color: var(--z-text-2); }
+.dp-callout { background: var(--z-info-tint); border-left: 3px solid var(--z-info); padding: 8px 12px; font-size: 0.85em; margin: 12px 0 0; line-height: 1.45; }
+.dp-callout-warn { background: var(--z-accent-tint); border-left-color: var(--z-accent); }
+.dp-help { font-size: 12px; color: var(--z-muted); margin-top: 4px; line-height: 1.4; }
+.dp-help-err { color: var(--z-danger); }
 .dp-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-top: 14px; }
-.dp-tile { border: 1px solid #e0e0e0; border-radius: 2px; padding: 12px 14px; }
-.dp-tile-n { font-size: 1.3em; font-weight: 700; color: #212121; }
-.dp-tile-n small { font-size: 0.7em; color: #757575; font-weight: 400; }
-.dp-tile-l { font-size: 0.85em; color: #757575; margin-top: 2px; }
-.dp-tile-s { font-size: 0.8em; color: #9e9e9e; margin-top: 4px; }
+.dp-tile { border: 1px solid var(--z-line); border-radius: 2px; padding: 12px 14px; }
+.dp-tile-n { font-size: 1.3em; font-weight: 700; color: var(--z-text); }
+.dp-tile-n small { font-size: 0.7em; color: var(--z-muted); font-weight: 400; }
+.dp-tile-l { font-size: 0.85em; color: var(--z-muted); margin-top: 2px; }
+.dp-tile-s { font-size: 0.8em; color: var(--z-muted); margin-top: 4px; }
 .dp-rows { width: 100%; }
 .dp-rows td { padding: 15px 5px; vertical-align: middle; }
 .dp-rows td:last-child { text-align: right; white-space: nowrap; width: 1%; }
-.dp-note { display: block; font-size: 0.85em; color: #757575; margin-top: 2px; }
+.dp-note { display: block; font-size: 0.85em; color: var(--z-muted); margin-top: 2px; }
 .dp-table { font-size: 14px; }
 .dp-table th { padding: 12px 5px; white-space: nowrap; }
 .dp-table td { padding: 11px 5px; vertical-align: middle; }
 .dp-table .dp-num { text-align: right; white-space: nowrap; }
-.dp-table .dp-muted-row td { color: #9e9e9e; }
+.dp-table .dp-muted-row td { color: var(--z-muted); }
 .dp-table .dp-state { min-width: 210px; }
-.dp-detail td { padding-top: 0; font-size: 12.5px; color: #616161; }
+.dp-detail td { padding-top: 0; font-size: 12.5px; color: var(--z-text-2); }
 .dp-detail code { display: block; white-space: pre-wrap; word-break: break-word; padding: 8px 10px; margin-bottom: 6px; background: rgba(0, 0, 0, 0.06); border-radius: 2px; font-family: ui-monospace, Consolas, monospace; }
 .dp-act-h { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin: 14px 0 6px; }
 .dp-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(160, 160, 160, 0.2); }
 /* Settings modals: plain labelled fields (Materialize's floating labels fight
    values that are there from the start). */
 .dp-field { margin: 0 0 18px; }
-.dp-field > label { display: block; font-size: 12.8px; color: #9e9e9e; margin-bottom: 2px; }
+.dp-field > label { display: block; font-size: 12.8px; color: var(--z-muted); margin-bottom: 2px; }
 .dp-field-row { display: flex; align-items: center; gap: 10px; }
 .dp-field-row input.dp-input { margin: 0; flex: 1; min-width: 0; }
 .dp-field-row input.dp-input-narrow { flex: 0 0 140px; }
 .dp-field-row input.dp-input-mono { font-family: ui-monospace, Consolas, monospace; font-size: 14px; }
 .dp-field-row .dp-select { max-width: 320px; }
-.dp-unit { color: #9e9e9e; font-size: 14px; }
+.dp-unit { color: var(--z-muted); font-size: 14px; }
 /* Phones: a plug-in row wraps so its status sits under the text, and the two
    tables become stacked rows (five columns do not fit, and sideways scrolling
    inside a card hides the column that matters). */
@@ -456,7 +456,7 @@ tr.backup-row-active:hover { background: #bbdefb; }
   .dp-table, .dp-table tbody, .dp-table tr, .dp-table td { display: block; width: 100%; }
   .dp-table tr { padding: 8px 0; border-bottom: 1px solid rgba(0, 0, 0, 0.12); }
   .dp-table td { padding: 2px 5px; border: 0; text-align: left; }
-  .dp-table td[data-label]::before { content: attr(data-label) ": "; color: #9e9e9e; font-size: 12px; }
+  .dp-table td[data-label]::before { content: attr(data-label) ": "; color: var(--z-muted); font-size: 12px; }
   .dp-table .dp-num { text-align: left; }
 }
 /* The Activity table has six columns and the admin's card is 70 % of what the
@@ -466,7 +466,7 @@ tr.backup-row-active:hover { background: #bbdefb; }
   .dp-table-act, .dp-table-act tbody, .dp-table-act tr, .dp-table-act td { display: block; width: 100%; }
   .dp-table-act tr { padding: 8px 0; border-bottom: 1px solid rgba(0, 0, 0, 0.12); }
   .dp-table-act td { padding: 2px 5px; border: 0; text-align: left; }
-  .dp-table-act td[data-label]::before { content: attr(data-label) ": "; color: #9e9e9e; font-size: 12px; }
+  .dp-table-act td[data-label]::before { content: attr(data-label) ": "; color: var(--z-muted); font-size: 12px; }
   .dp-table-act .dp-num { text-align: left; }
   .dp-table-act .dp-state { min-width: 0; }
   .dp-table-act .dp-detail { padding-top: 0; border-bottom: 1px solid rgba(0, 0, 0, 0.12); }

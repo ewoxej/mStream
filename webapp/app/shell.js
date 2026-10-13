@@ -4,7 +4,7 @@ import { app, useStore, href, go, savePrefs } from './store.js';
 import * as P from './player.js';
 import { playback } from './player.js';
 import * as lib from './library.js';
-import { Icon, IconBtn, Cover, Toggle, LikeButton, openMenu, trackMenuItems, prompt } from './ui.js';
+import { Icon, IconBtn, Cover, LikeButton, openMenu, trackMenuItems, prompt } from './ui.js';
 import { fmtTime, fmtCount, trackTitle, trackArtist, trackAlbum, trackCover, formatLabel, gainLabel } from './util.js';
 
 // ── Sidebar ─────────────────────────────────────────────────────────────
@@ -58,32 +58,37 @@ export function Sidebar() {
   const counts = useStore(app, (s) => s.counts);
   const plCount = useStore(app, (s) => s.playlists.length);
   const dj = useStore(playback, (s) => s.autoDJ);
+  const features = useStore(app, (s) => s.features);
   const c = (n) => (n === undefined || n === null ? '' : fmtCount(n));
   return html`<aside class="sidebar">
     <a class="brand" href=${href('home')}>
-      <div class="brand-mark"><${Icon} name="audio-lines" size=${18} /></div>
+      <div class="brand-mark"><${Icon} name="graphic_eq" size=${18} /></div>
       <span>mStream</span>
     </a>
     <nav class="nav">
       <div class="nav-group">
-        <${NavItem} id="home" label="Home" icon="house" screen=${screen} />
+        <${NavItem} id="home" label="Home" icon="home" screen=${screen} />
         <${NavItem} id="recent" label="Recently played" icon="history" screen=${screen} />
       </div>
       <div class="nav-group">
         <div class="nav-head">LIBRARY</div>
-        <${NavItem} id="albums" label="Albums" icon="disc-3" trail=${c(counts.albums)} screen=${screen} />
-        <${NavItem} id="artists" label="Artists" icon="mic-vocal" trail=${c(counts.artists)} screen=${screen} />
-        <${NavItem} id="tracks" label="All tracks" icon="music" trail=${c(counts.tracks)} screen=${screen} />
-        <${NavItem} id="genres" label="Genres" icon="tags" trail=${c(counts.genres)} screen=${screen} />
+        <${NavItem} id="albums" label="Albums" icon="album" trail=${c(counts.albums)} screen=${screen} />
+        <${NavItem} id="artists" label="Artists" icon="person" trail=${c(counts.artists)} screen=${screen} />
+        <${NavItem} id="tracks" label="All tracks" icon="music_note" trail=${c(counts.tracks)} screen=${screen} />
+        <${NavItem} id="genres" label="Genres" icon="category" trail=${c(counts.genres)} screen=${screen} />
         <${NavItem} id="folders" label="Folders" icon="folder" screen=${screen} />
-        <${NavItem} id="fav" label="Favorites" icon="heart" trail=${c(counts.liked)} screen=${screen} />
-        <${NavItem} id="pl" label="Playlists" icon="list-music" trail=${c(plCount)} screen=${screen} />
+        <${NavItem} id="fav" label="Favorites" icon="favorite_border" trail=${c(counts.liked)} screen=${screen} />
+        <${NavItem} id="pl" label="Playlists" icon="queue_music" trail=${c(plCount)} screen=${screen} />
       </div>
       <div class="nav-group">
         <div class="nav-head">TOOLS</div>
-        <${NavItem} id="dj" label="Auto DJ" icon="radio" trail=${dj ? 'ON' : ''} trailTone="accent" screen=${screen} />
-        <${NavItem} id="viz" label="Visualizer" icon="audio-waveform" screen=${screen} />
-        <${NavItem} id="dl" label="Downloads" icon="download" screen=${screen} />
+        <${NavItem} id="dj" label="Auto DJ" icon="auto_awesome" trail=${dj ? 'ON' : ''} trailTone="accent" screen=${screen} />
+        ${features.sonicPath ? html`<${NavItem} id="sonic" label="Sonic Path" icon="route" screen=${screen} />` : null}
+        ${features.discover ? html`<${NavItem} id="discover" label="Discover" icon="explore" screen=${screen} />` : null}
+        <${NavItem} id="jukebox" label="Jukebox" icon="qr_code_2" screen=${screen} />
+        ${features.stats ? html`<${NavItem} id="stats" label="Stats" icon="insights" screen=${screen} />` : null}
+        <${NavItem} id="viz" label="Visualizer" icon="equalizer" screen=${screen} />
+        ${features.torrent ? html`<${NavItem} id="dl" label="Downloads" icon="download" screen=${screen} />` : null}
         <${NavItem} id="settings" label="Settings" icon="settings" screen=${screen} />
       </div>
     </nav>
@@ -96,10 +101,10 @@ export function Sidebar() {
 function QueueRow({ song, index, cur, faded, playing, dragState }) {
   const track = { filepath: song.rawFilePath, metadata: song.metadata };
   const menu = (e) => openMenu(e, [
-    { label: 'Play', icon: 'play', onClick: () => P.playAt(index) },
-    { label: 'Remove from queue', icon: 'x', onClick: () => P.removeAt(index) },
+    { label: 'Play', icon: 'play_arrow', tone: 'accent', onClick: () => P.playAt(index) },
+    { label: 'Remove from queue', icon: 'remove_circle_outline', tone: 'danger', onClick: () => P.removeAt(index) },
     'sep',
-    ...trackMenuItems([track]).filter((it) => it === 'sep' || !['Play now', 'Play next', 'Add to queue'].includes(it.label)),
+    ...trackMenuItems([track]).filter((it) => it === 'sep' || !['Play next', 'Add to queue'].includes(it.label)),
   ]);
   return html`<div class=${`q-row ${cur ? 'cur' : ''} ${faded ? 'faded' : ''} ${dragState.over === index ? 'drop' : ''}`}
     draggable="true"
@@ -110,14 +115,14 @@ function QueueRow({ song, index, cur, faded, playing, dragState }) {
     onDragEnd=${() => { dragState.from = null; dragState.setOver(null); }}
     onClick=${() => P.playAt(index)} onContextMenu=${menu}>
     <${Cover} file=${trackCover(track)} class="q-cover">
-      ${cur ? html`<span class="q-eq"><${Icon} name=${playing ? 'audio-lines' : 'pause'} size=${16} /></span>` : null}
+      ${cur ? html`<span class="q-eq"><${Icon} name=${playing ? 'graphic_eq' : 'pause'} size=${16} /></span>` : null}
     </${Cover}>
     <div class="q-text">
       <span class="q-t">${trackTitle(track)}</span>
       <span class="q-a">${trackArtist(track)}</span>
     </div>
     <span class="q-d">${fmtTime(song.metadata?.duration)}</span>
-    <button type="button" class="q-x" title="Remove" onClick=${(e) => { e.stopPropagation(); P.removeAt(index); }}><${Icon} name="x" size=${14} /></button>
+    <button type="button" class="q-x" title="Remove from queue" onClick=${(e) => { e.stopPropagation(); P.removeAt(index); }}><${Icon} name="close" size=${14} /></button>
   </div>`;
 }
 
@@ -152,6 +157,8 @@ export function Queue() {
     P.clearQueue();
   };
 
+  // Each section is one keyed group: headers between keyed rows got reordered
+  // by the diff (Now playing below Up next after a jump back).
   const row = ({ s, i }, faded) => html`<${QueueRow} key=${i + ':' + s.rawFilePath} song=${s} index=${i}
     cur=${i === pos} faded=${faded} playing=${playing} dragState=${drag} />`;
 
@@ -160,26 +167,20 @@ export function Queue() {
       <span class="q-title">Queue</span>
       <span class="micro-n">${upNext.length + (cur ? 1 : 0)}${autoDJ ? ' + AUTO' : ''}</span>
       <${IconBtn} icon="save" title="Save as playlist" onClick=${save} size=${15} />
-      <${IconBtn} icon="trash-2" title="Clear queue" onClick=${clear} size=${15} />
-    </div>
-    <div class=${`dj-row ${autoDJ ? 'on' : ''}`} onClick=${P.toggleAutoDJ}>
-      <${Icon} name="radio" size=${16} />
-      <span>Auto DJ</span>
-      <${Toggle} on=${autoDJ} tone="accent" onChange=${P.toggleAutoDJ} />
+      <${IconBtn} icon="delete_outline" title="Clear queue" onClick=${clear} size=${15} />
     </div>
     <div class="q-list" ref=${listRef}>
       ${!queueLen ? html`<div class="q-empty">
-        <${Icon} name="list-music" size=${22} />
+        <${Icon} name="queue_music" size=${22} />
         <span>The queue is empty</span>
-        <small>Play an album or a track, or switch on Auto DJ to keep music coming.</small>
+        <small>Play an album or a track, or set the repeat button to ∞ Auto DJ to keep music coming.</small>
       </div>` : null}
-      ${before.length ? html`<button type="button" class="q-section q-toggle" onClick=${() => setShowHistory(!showHistory)}>
-        PLAYED · ${before.length} <${Icon} name=${showHistory ? 'chevron-down' : 'chevron-right'} size=${12} />
-      </button>` : null}
-      ${showHistory ? before.map((x) => row(x, true)) : null}
-      ${cur ? html`<div class="q-section">NOW PLAYING</div>${row({ s: cur, i: pos }, false)}` : null}
-      ${upNext.length ? html`<div class="q-section">UP NEXT · ${upNext.length}</div>${upNext.map((x) => row(x, false))}` : null}
-      ${djPicks.length ? html`<div class="q-section">AUTO DJ PICKS</div>${djPicks.map((x) => row(x, true))}` : null}
+      ${before.length ? html`<div class="q-group" key="played"><button type="button" class="q-section q-toggle" onClick=${() => setShowHistory(!showHistory)}>
+        PLAYED · ${before.length} <${Icon} name=${showHistory ? 'expand_more' : 'chevron_right'} size=${12} />
+      </button>${showHistory ? before.map((x) => row(x, true)) : null}</div>` : null}
+      ${cur ? html`<div class="q-group" key="now"><div class="q-section">NOW PLAYING</div>${row({ s: cur, i: pos }, false)}</div>` : null}
+      ${upNext.length ? html`<div class="q-group" key="next"><div class="q-section">UP NEXT · ${upNext.length}</div>${upNext.map((x) => row(x, false))}</div>` : null}
+      ${djPicks.length ? html`<div class="q-group" key="dj"><div class="q-section">AUTO DJ PICKS</div>${djPicks.map((x) => row(x, true))}</div>` : null}
     </div>
   </aside>`;
 }
@@ -234,7 +235,7 @@ function Volume() {
     window.addEventListener('pointerup', up);
   };
   return html`<div class="volume">
-    <${IconBtn} icon=${volume === 0 ? 'volume-x' : volume < 50 ? 'volume-1' : 'volume-2'} title=${volume === 0 ? 'Unmute' : 'Mute'} onClick=${P.toggleMute} size=${17} />
+    <${IconBtn} icon=${volume === 0 ? 'volume_off' : volume < 50 ? 'volume_down' : 'volume_up'} title=${volume === 0 ? 'Unmute' : 'Mute'} onClick=${P.toggleMute} size=${17} />
     <div class="bar" ref=${bar} onPointerDown=${down}
       onWheel=${(e) => { e.preventDefault(); P.setVolume(volume - Math.sign(e.deltaY) * 5); }}>
       <div class="bar-fill" style=${{ width: volume + '%' }}></div>
@@ -268,18 +269,19 @@ export function PlayerBar() {
           </span>
         </div>
         <${LikeButton} track=${track} size=${17} always />
-        <${IconBtn} icon="ellipsis" title="More" size=${17} onClick=${(e) => openMenu(e, trackMenuItems([track]))} />
+        <${IconBtn} icon="more_vert" title="More" size=${17} onClick=${(e) => openMenu(e, trackMenuItems([track]))} />
       ` : html`<div class="pb-cover cover"></div><div class="pb-text"><span class="pb-t muted">Nothing playing</span></div>`}
     </div>
     <div class="pb-center">
       <div class="pb-controls">
         <${IconBtn} icon="shuffle" title=${s.autoDJ ? 'Shuffle (off while Auto DJ runs)' : 'Shuffle'} active=${s.shuffle} onClick=${P.toggleShuffle} size=${17} class="dim" />
-        <${IconBtn} icon="skip-back" title="Previous" onClick=${P.prev} size=${19} />
+        <${IconBtn} icon="skip_previous" title="Previous" onClick=${P.prev} size=${19} />
         <button type="button" class="play" onClick=${P.playPause} title=${s.playing ? 'Pause' : 'Play'}>
-          <${Icon} name=${s.playing ? 'pause' : 'play'} size=${19} fill />
+          <${Icon} name=${s.playing ? 'pause' : 'play_arrow'} size=${19} fill />
         </button>
-        <${IconBtn} icon="skip-forward" title="Next" onClick=${P.next} size=${19} />
-        <${IconBtn} icon=${s.loopOne ? 'repeat-1' : 'repeat'} title="Repeat" active=${s.loop || s.loopOne} onClick=${P.toggleRepeat} size=${17} class="dim" />
+        <${IconBtn} icon="skip_next" title="Next" onClick=${P.next} size=${19} />
+        <${IconBtn} icon=${s.autoDJ ? 'all_inclusive' : s.loopOne ? 'repeat_one' : 'repeat'} title=${s.autoDJ ? 'Auto DJ' : 'Repeat'}
+          active=${s.autoDJ || s.loop || s.loopOne} onClick=${P.cycleRepeat} size=${17} class="dim" />
       </div>
       <${Seek} />
     </div>
@@ -288,9 +290,11 @@ export function PlayerBar() {
         <span>${formatLabel(meta) || '—'}${P.isTranscodingOn() ? html` <em>→ ${P.transcodeLabel()}</em>` : null}</span>
         <span>${rgText}</span>
       </div>
-      <${IconBtn} icon="audio-waveform" title="Visualizer" active=${screen === 'viz'} size=${17}
+      <${IconBtn} icon="mic" title="Lyrics" active=${screen === 'lyrics'} size=${17}
+        onClick=${() => (screen === 'lyrics' ? history.back() : go('lyrics'))} />
+      <${IconBtn} icon="equalizer" title="Visualizer" active=${screen === 'viz'} size=${17}
         onClick=${() => (screen === 'viz' ? history.back() : go('viz'))} />
-      <${IconBtn} icon="list-ordered" title=${queueOpen ? 'Hide queue' : 'Show queue'} active=${queueOpen} size=${17}
+      <${IconBtn} icon="queue_music" title=${queueOpen ? 'Hide queue' : 'Show queue'} active=${queueOpen} size=${17}
         onClick=${() => { app.set({ queueOpen: !queueOpen }); savePrefs(); }} />
       <${Volume} />
     </div>

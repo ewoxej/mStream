@@ -716,17 +716,17 @@ const foldersView = Vue.component('folders-view', {
             <div class="card">
               <div class="card-content">
                 <span class="card-title">{{ t('admin.folders.title') }}</span>
-                <div style="display: flex; flex-wrap: wrap; border: 1px solid #e0e0e0; border-radius: 2px; overflow: hidden; margin-top: 8px;">
-                  <div style="flex: 1.5 1 300px; min-width: 0; height: 400px; border-right: 1px solid #e0e0e0; display: flex; flex-direction: column;">
-                    <div style="padding: 9px 14px; background: #f5f5f5; border-bottom: 1px solid #e0e0e0; font-size: 0.85em; color: #616161; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                <div style="display: flex; flex-wrap: wrap; border: 1px solid var(--z-line); border-radius: 2px; overflow: hidden; margin-top: 8px;">
+                  <div style="flex: 1.5 1 300px; min-width: 0; height: 400px; border-right: 1px solid var(--z-line); display: flex; flex-direction: column;">
+                    <div style="padding: 9px 14px; background: var(--z-inset); border-bottom: 1px solid var(--z-line); font-size: 0.85em; color: var(--z-text-2); display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
                       <select v-if="winDrives.length > 0" @change="browseTo($event.target.value)" class="browser-default"
                         style="width: auto; height: 26px; font-size: 12px; padding: 0 4px; display: inline-block;">
                         <option v-for="value in winDrives" :selected="browse.path && browse.path.startsWith(value)" :value="value">{{ value }}</option>
                       </select>
                       <span style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap; min-width: 0;">
                         <span v-for="(crumb, i) in breadcrumbs" :key="crumb.target" style="display: inline-flex; gap: 5px; align-items: center;">
-                          <span v-if="i > 0" style="color: #bdbdbd;">›</span>
-                          <b v-if="i === breadcrumbs.length - 1" style="color: #212121;">{{ crumb.label }}</b>
+                          <span v-if="i > 0" style="color: var(--z-muted);">›</span>
+                          <b v-if="i === breadcrumbs.length - 1" style="color: var(--z-text);">{{ crumb.label }}</b>
                           <a v-else v-on:click="browseTo(crumb.target)">{{ crumb.label }}</a>
                         </span>
                       </span>
@@ -737,35 +737,35 @@ const foldersView = Vue.component('folders-view', {
                       <svg class="spinner" width="40px" height="40px" viewBox="0 0 66 66" xmlns="http://www.w3.org/2000/svg"><circle class="spinner-path" fill="none" stroke-width="6" stroke-linecap="round" cx="33" cy="33" r="30"></circle></svg>
                     </div>
                     <div v-else style="flex: 1 1 auto; min-height: 0; overflow-y: auto;">
-                      <div v-if="breadcrumbs.length > 1" v-on:click="browseTo(browse.path, '..')" style="padding: 8px 14px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #f0f0f0; color: #616161; cursor: pointer; font-size: 0.9em;">
+                      <div v-if="breadcrumbs.length > 1" v-on:click="browseTo(browse.path, '..')" style="padding: 8px 14px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--z-line); color: var(--z-text-2); cursor: pointer; font-size: 0.9em;">
                         <svg width="18" height="15" viewBox="0 0 48 48" style="flex-shrink: 0;"><path fill="#bdbdbd" d="M38 12H22l-4-4H8c-2.2 0-4 1.8-4 4v24c0 2.2 1.8 4 4 4h31c1.7 0 3-1.3 3-3V16c0-2.2-1.8-4-4-4z"/></svg>
                         .. up one level
                       </div>
                       <div v-for="dir in browse.dirs" :key="dir.name" v-on:click="selectDir(dir.name)" v-on:dblclick="browseTo(browse.path, dir.name)"
-                        :style="'padding: 8px 14px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #f0f0f0; cursor: pointer; font-size: 0.9em;' + (isSelected(dir.name) ? ' background: #e8f5e9;' : '')">
+                        :style="'padding: 8px 14px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--z-line); cursor: pointer; font-size: 0.9em;' + (isSelected(dir.name) ? ' background: var(--z-celadon-tint);' : '')">
                         <svg width="18" height="15" viewBox="0 0 48 48" style="flex-shrink: 0;"><path fill="#FFA000" d="M38 12H22l-4-4H8c-2.2 0-4 1.8-4 4v24c0 2.2 1.8 4 4 4h31c1.7 0 3-1.3 3-3V16c0-2.2-1.8-4-4-4z"/><path fill="#FFCA28" d="M42.2 18H15.3c-1.9 0-3.6 1.4-3.9 3.3L8 40h31.7c1.9 0 3.6-1.4 3.9-3.3l2.5-14c.5-2.4-1.4-4.7-3.9-4.7z"/></svg>
                         <span style="min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" :title="dir.name">{{ dir.name }}</span>
-                        <span v-if="isSelected(dir.name)" style="margin-left: auto; font-size: 0.85em; color: #2e7d32; font-weight: 600; flex-shrink: 0;">selected</span>
+                        <span v-if="isSelected(dir.name)" style="margin-left: auto; font-size: 0.85em; color: var(--z-celadon); font-weight: 600; flex-shrink: 0;">selected</span>
                         <a v-on:click.stop="browseTo(browse.path, dir.name)"
                           :style="'font-size: 0.85em; flex-shrink: 0;' + (isSelected(dir.name) ? '' : ' margin-left: auto;')">open</a>
                       </div>
-                      <div v-if="browse.dirs.length === 0" style="padding: 14px; color: #9e9e9e; font-size: 0.85em;">No subfolders here.</div>
+                      <div v-if="browse.dirs.length === 0" style="padding: 14px; color: var(--z-muted); font-size: 0.85em;">No subfolders here.</div>
                     </div>
-                    <div style="padding: 7px 14px; border-top: 1px solid #f0f0f0; font-size: 0.8em; color: #9e9e9e; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 8px; margin-top: auto;">
+                    <div style="padding: 7px 14px; border-top: 1px solid var(--z-line); font-size: 0.8em; color: var(--z-muted); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 8px; margin-top: auto;">
                       <span>{{ browse.dirs.length }} folder{{ browse.dirs.length === 1 ? '' : 's' }} · double click to open</span>
                       <span style="white-space: nowrap;">[<a v-on:click="selectCurrent()">select this folder</a>]</span>
                     </div>
                   </div>
-                  <div style="flex: 1 1 240px; min-width: 0; min-height: 400px; padding: 16px 18px; display: flex; flex-direction: column; gap: 18px; background: #fafafa; box-sizing: border-box;">
+                  <div style="flex: 1 1 240px; min-width: 0; min-height: 400px; padding: 16px 18px; display: flex; flex-direction: column; gap: 18px; background: var(--z-inset); box-sizing: border-box;">
                     <div>
-                      <div style="font-size: 0.75em; letter-spacing: 0.8px; color: #757575; margin-bottom: 4px;">ADDING</div>
-                      <div v-if="selected" style="font-family: monospace; font-size: 0.85em; color: #212121; word-break: break-all;">{{ selected }}</div>
-                      <div v-else style="font-size: 0.85em; color: #9e9e9e;">Pick a folder on the left.</div>
+                      <div style="font-size: 0.75em; letter-spacing: 0.8px; color: var(--z-muted); margin-bottom: 4px;">ADDING</div>
+                      <div v-if="selected" style="font-family: monospace; font-size: 0.85em; color: var(--z-text); word-break: break-all;">{{ selected }}</div>
+                      <div v-else style="font-size: 0.85em; color: var(--z-muted);">Pick a folder on the left.</div>
                     </div>
                     <div v-if="selected">
-                      <div style="font-size: 0.75em; letter-spacing: 0.8px; color: #757575; margin-bottom: 4px;">SHOWN IN THE APP AS</div>
+                      <div style="font-size: 0.75em; letter-spacing: 0.8px; color: var(--z-muted); margin-bottom: 4px;">SHOWN IN THE APP AS</div>
                       <div v-if="!renaming" style="display: flex; align-items: center; gap: 8px;">
-                        <span style="background: #ececf2; color: #505061; padding: 3px 10px; border-radius: 10px; font-size: 0.85em; font-weight: 600;">{{ dirName || '?' }}</span>
+                        <span style="background: var(--z-placeholder); color: var(--z-text-2); padding: 3px 10px; border-radius: 10px; font-size: 0.85em; font-weight: 600;">{{ dirName || '?' }}</span>
                         <a style="font-size: 0.85em;" v-on:click="renaming = true">rename</a>
                       </div>
                       <div v-else style="display: flex; align-items: center; gap: 8px;">
@@ -773,8 +773,8 @@ const foldersView = Vue.component('folders-view', {
                           style="flex: 1; min-width: 0; margin: 0; height: 28px; font-size: 13px;" v-on:keyup.enter="renaming = false">
                         <a style="font-size: 0.85em; flex-shrink: 0;" v-on:click="renaming = false">done</a>
                       </div>
-                      <div v-if="!vpathOk" style="font-size: 0.8em; color: #b71c1c; margin-top: 4px;">Letters, numbers and dashes only.</div>
-                      <div v-else-if="folders[dirName]" style="font-size: 0.8em; color: #b71c1c; margin-top: 4px;">That name is already in use.</div>
+                      <div v-if="!vpathOk" style="font-size: 0.8em; color: var(--z-danger); margin-top: 4px;">Letters, numbers and dashes only.</div>
+                      <div v-else-if="folders[dirName]" style="font-size: 0.8em; color: var(--z-danger); margin-top: 4px;">That name is already in use.</div>
                     </div>
                     <div style="display: flex; flex-direction: column; gap: 10px;">
                       <div class="pad-checkbox"><label>
@@ -1088,55 +1088,55 @@ const usersView = Vue.component('users-view', {
                 <div v-else>
                   <div v-if="Object.keys(users).length === 0" style="margin: 4px 0 12px 0;">
                     <p style="margin: 0 0 4px 0;"><b>{{ t('admin.users.noUsers') }}</b></p>
-                    <p style="margin: 0; color: #757575;">{{ t('admin.users.addWarning') }}</p>
+                    <p style="margin: 0; color: var(--z-muted);">{{ t('admin.users.addWarning') }}</p>
                   </div>
-                  <div style="display: flex; flex-wrap: wrap; border: 1px solid #e0e0e0; border-radius: 2px; overflow: hidden; margin-top: 8px;">
-                    <div style="flex: 1 1 210px; min-width: 0; max-height: 660px; border-right: 1px solid #e0e0e0; display: flex; flex-direction: column;">
+                  <div style="display: flex; flex-wrap: wrap; border: 1px solid var(--z-line); border-radius: 2px; overflow: hidden; margin-top: 8px;">
+                    <div style="flex: 1 1 210px; min-width: 0; max-height: 660px; border-right: 1px solid var(--z-line); display: flex; flex-direction: column;">
                       <div style="flex: 1 1 auto; min-height: 0; overflow-y: auto;">
                       <div v-for="(v, k) in users" :key="k" v-on:click="selectUser(k)"
-                        :style="'padding: 10px 14px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #f0f0f0; cursor: pointer;' + (selectedUser === k ? ' background: #e8f5e9;' : '')">
-                        <span :style="'width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; flex-shrink: 0;' + (v.admin === true ? ' background: #505061; color: #fff;' : ' background: #ececf2; color: #505061;')">{{ initialOf(k) }}</span>
+                        :style="'padding: 10px 14px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--z-line); cursor: pointer;' + (selectedUser === k ? ' background: var(--z-celadon-tint);' : '')">
+                        <span :style="'width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; flex-shrink: 0;' + (v.admin === true ? ' background: var(--z-placeholder); color: #fff;' : ' background: var(--z-placeholder); color: var(--z-text-2);')">{{ initialOf(k) }}</span>
                         <span style="min-width: 0;">
                           <b style="display: block; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" :title="k">{{ k }}</b>
-                          <span v-if="v.admin === true" style="font-size: 11px; color: #2e7d32; font-weight: 600;">admin</span>
-                          <span v-else style="font-size: 11px; color: #9e9e9e;">{{ v.vpaths.length }} librar{{ v.vpaths.length === 1 ? 'y' : 'ies' }}</span>
+                          <span v-if="v.admin === true" style="font-size: 11px; color: var(--z-celadon); font-weight: 600;">admin</span>
+                          <span v-else style="font-size: 11px; color: var(--z-muted);">{{ v.vpaths.length }} librar{{ v.vpaths.length === 1 ? 'y' : 'ies' }}</span>
                         </span>
                       </div>
                       </div>
-                      <div style="padding: 12px 14px; margin-top: auto; border-top: 1px solid #f0f0f0;">
+                      <div style="padding: 12px 14px; margin-top: auto; border-top: 1px solid var(--z-line);">
                         <div v-on:click="selectUser('')"
-                          :style="'border: 1px dashed #bdbdbd; border-radius: 2px; padding: 8px 0; text-align: center; font-size: 12px; font-weight: 600; cursor: pointer;' + (selectedUser === '' ? ' background: #e8f5e9; color: #2e7d32; border-color: #a5d6a7;' : ' color: #616161;')">+ {{ t('admin.users.title').toUpperCase() }}</div>
+                          :style="'border: 1px dashed var(--z-line); border-radius: 2px; padding: 8px 0; text-align: center; font-size: 12px; font-weight: 600; cursor: pointer;' + (selectedUser === '' ? ' background: var(--z-celadon-tint); color: var(--z-celadon); border-color: var(--z-celadon);' : ' color: var(--z-text-2);')">+ {{ t('admin.users.title').toUpperCase() }}</div>
                       </div>
                     </div>
-                    <div style="flex: 3 1 300px; min-width: 0; height: 660px; overflow-y: auto; box-sizing: border-box; padding: 16px 20px; background: #fafafa; display: flex; flex-direction: column; gap: 16px;">
+                    <div style="flex: 3 1 300px; min-width: 0; height: 660px; overflow-y: auto; box-sizing: border-box; padding: 16px 20px; background: var(--z-inset); display: flex; flex-direction: column; gap: 16px;">
                     <template v-if="selectedUser !== '' && users[selectedUser]">
                       <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-                        <span :style="'width: 40px; height: 40px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 17px; flex-shrink: 0;' + (users[selectedUser].admin === true ? ' background: #505061; color: #fff;' : ' background: #ececf2; color: #505061;')">{{ initialOf(selectedUser) }}</span>
+                        <span :style="'width: 40px; height: 40px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 17px; flex-shrink: 0;' + (users[selectedUser].admin === true ? ' background: var(--z-placeholder); color: #fff;' : ' background: var(--z-placeholder); color: var(--z-text-2);')">{{ initialOf(selectedUser) }}</span>
                         <span style="min-width: 0;">
                           <b style="display: block; font-size: 16px; overflow: hidden; text-overflow: ellipsis;">{{ selectedUser }}</b>
-                          <span v-if="users[selectedUser].admin === true" style="font-size: 12px; color: #2e7d32; font-weight: 600;">admin</span>
+                          <span v-if="users[selectedUser].admin === true" style="font-size: 12px; color: var(--z-celadon); font-weight: 600;">admin</span>
                         </span>
                         <span style="margin-left: auto; font-size: 12px; white-space: nowrap;">[<a v-on:click="changePassword(selectedUser)">{{ t('admin.users.changePass') }}</a>]</span>
                       </div>
                       <div>
                         <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 8px;">
-                          <span style="font-size: 11px; letter-spacing: 0.8px; color: #757575;">LIBRARIES</span>
+                          <span style="font-size: 11px; letter-spacing: 0.8px; color: var(--z-muted);">LIBRARIES</span>
                           <span style="font-size: 12px;">
                             <span v-if="!libsUnlocked">[<a v-on:click="unlockLibs()">{{ t('admin.settings.edit') }}</a>]</span>
                             <span v-else>[<a v-on:click="saveLibs()">{{ libsSaving ? 'saving…' : 'save' }}</a>]</span>
                           </span>
                         </div>
-                        <div v-if="Object.keys(directories).length === 0" style="font-size: 12px; color: #9e9e9e;">{{ t('admin.users.noDirsWarning') }}</div>
+                        <div v-if="Object.keys(directories).length === 0" style="font-size: 12px; color: var(--z-muted);">{{ t('admin.users.noDirsWarning') }}</div>
                         <div v-else style="display: flex; gap: 8px; flex-wrap: wrap;">
                           <span v-for="(dv, dirName) in directories" :key="dirName" v-on:click="toggleLib(dirName)"
-                            :style="'padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;' + (userHasLib(dirName) ? ' background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7;' : ' background: #fff; color: #9e9e9e; border: 1px dashed #bdbdbd;') + (libsUnlocked ? ' cursor: pointer;' : '')">{{ dirName }}</span>
+                            :style="'padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;' + (userHasLib(dirName) ? ' background: var(--z-celadon-tint); color: var(--z-celadon); border: 1px solid var(--z-celadon);' : ' background: var(--z-card); color: var(--z-muted); border: 1px dashed var(--z-line);') + (libsUnlocked ? ' cursor: pointer;' : '')">{{ dirName }}</span>
                         </div>
-                        <div style="font-size: 11px; color: #9e9e9e; margin-top: 6px;">{{ libsUnlocked
+                        <div style="font-size: 11px; color: var(--z-muted); margin-top: 6px;">{{ libsUnlocked
                           ? 'click a library to grant or remove it, then save'
                           : 'locked — click edit to change which libraries this user sees' }}</div>
                       </div>
                       <div>
-                        <div style="font-size: 11px; letter-spacing: 0.8px; color: #757575; margin-bottom: 8px;">PERMISSIONS</div>
+                        <div style="font-size: 11px; letter-spacing: 0.8px; color: var(--z-muted); margin-bottom: 8px;">PERMISSIONS</div>
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); gap: 8px 20px;">
                           <div class="pad-checkbox"><label>
                             <input type="checkbox" :checked="users[selectedUser].admin === true" v-on:change="saveAccess('admin', $event.target.checked)"/>
@@ -1156,12 +1156,12 @@ const usersView = Vue.component('users-view', {
                           </label></div>
                         </div>
                       </div>
-                      <div style="margin-top: auto; border-top: 1px solid #e0e0e0; padding-top: 12px; font-size: 12px;">
-                        [<a v-on:click="deleteUser(selectedUser)" style="color: #b71c1c;">delete user</a>]
+                      <div style="margin-top: auto; border-top: 1px solid var(--z-line); padding-top: 12px; font-size: 12px;">
+                        [<a v-on:click="deleteUser(selectedUser)" style="color: var(--z-danger);">delete user</a>]
                       </div>
                     </template>
                     <template v-else>
-                      <div style="font-size: 16px; font-weight: 700; color: #212121;">{{ t('admin.users.title') }}</div>
+                      <div style="font-size: 16px; font-weight: 700; color: var(--z-text);">{{ t('admin.users.title') }}</div>
                 <form id="add-user-form" @submit.prevent="addUser">
                   <div class="row">
                     <div class="input-field directory-name-field col s12 m6">
@@ -1243,6 +1243,10 @@ const usersView = Vue.component('users-view', {
         if (ov === 0 && nv > 0 && this.selectedUser === ''
           && Object.keys(this.users).length > 0 && this.newUsername === '') {
           this.selectUser(Object.keys(this.users)[0]);
+        } else if (ov === 0 && nv > 0 && Object.keys(this.users).length === 0) {
+          // No users: the add form only renders now (a spinner showed until
+          // the load), so its directories multiselect needs the init here.
+          this.$nextTick(() => this.initDirsSelect());
         }
       }
     },
@@ -3291,7 +3295,7 @@ const lyricsView = Vue.component('lyrics-view', {
                   <a v-on:click="purgeLyricsCache('full')" class="btn-flat waves-effect red-text" style="padding:0 8px">
                     Purge all
                   </a>
-                  <span v-if="cachePurgeMsg" style="margin-left:12px;color:#5cb85c">
+                  <span v-if="cachePurgeMsg" style="margin-left:12px;color:var(--z-celadon)">
                     {{cachePurgeMsg}}
                   </span>
                 </p>
@@ -3561,7 +3565,7 @@ const infoView = Vue.component('info-view', {
                     </td>
                   </tr>
                   <tr v-if="update.s.error">
-                    <td colspan="2" style="color:#c62828;">{{update.s.error}}</td>
+                    <td colspan="2" style="color:var(--z-danger);">{{update.s.error}}</td>
                   </tr>
                   <tr>
                     <td><b title="notify: report only. stage: download updates in the background; applying still takes a restart or a click. auto (default): additionally restart into the update once the server is idle - nothing streaming, no scan, and a quiet stretch since the last request. Headless installs self-apply only when a supervisor that restarts mStream is detected; otherwise auto downloads and waits for the next restart.">Mode:</b> {{update.s.mode}}</td>
@@ -4096,9 +4100,9 @@ const federationView = Vue.component('federation-view', {
     },
     reqChipStyle(fam) {
       const pal = {
-        wait: '#fff8e1;color:#8d6e00', theirs: '#e8eaf6;color:#3949ab',
-        good: '#e8f5e9;color:#2e7d32', dead: '#fdecea;color:#b71c1c',
-        mute: '#f5f5f5;color:#757575',
+        wait: '#fff8e1;color:var(--z-accent)', theirs: '#e8eaf6;color:var(--z-info)',
+        good: '#e8f5e9;color:var(--z-celadon)', dead: '#fdecea;color:var(--z-danger)',
+        mute: '#f5f5f5;color:var(--z-muted)',
       };
       return `display:inline-block;padding:2px 9px;border-radius:10px;font-size:0.78em;font-weight:600;white-space:nowrap;background:${pal[fam] || pal.mute}`;
     },
@@ -4157,7 +4161,7 @@ const federationView = Vue.component('federation-view', {
         displayMode: 'once', id: 'question', zindex: 99999, layout: 2, maxWidth: 600,
         title: `<b>Reject the request from ${who}?</b>`
           + `<div style="margin:10px 0 2px"><input id="fedreq-reject-reason" type="text" maxlength="200" placeholder="Reason (optional, sent to them)" style="width:100%"></div>`
-          + `<div style="font-size:0.85em;color:#616161;margin-top:6px">Further requests from this server are ignored for 7 days.</div>`,
+          + `<div style="font-size:0.85em;color:var(--z-text-2);margin-top:6px">Further requests from this server are ignored for 7 days.</div>`,
         position: 'center',
         buttons: [
           [`<button><b>Reject</b></button>`, async (instance, toast) => {
@@ -4239,7 +4243,7 @@ const federationView = Vue.component('federation-view', {
               </div>
               <p><b>Tickets are credentials.</b> Anyone holding an unredeemed ticket can read the libraries it grants — send tickets over a private channel. The first server to use a ticket claims it; revoke a ticket at any time to cut access.</p>
               <p style="margin-top:8px" v-if="fed.enabled && fed.running"><b>Status:</b>
-                <span style="color:#2e7d32">On{{ fed.online ? ' · connected to relay' : ' · connecting…' }}</span>
+                <span style="color:var(--z-celadon)">On{{ fed.online ? ' · connected to relay' : ' · connecting…' }}</span>
                 <span style="word-break:break-all;font-family:monospace;font-size:0.8em;display:block">{{ fed.endpointId }}</span>
               </p>
             </div>
@@ -4257,18 +4261,18 @@ const federationView = Vue.component('federation-view', {
           <div class="card">
             <div class="card-content">
               <span class="card-title">Federation Requests
-                <span v-if="pendingInbound > 0" style="display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;border-radius:11px;background:#ef5350;color:#fff;font-size:0.55em;font-weight:700;padding:0 7px;vertical-align:4px">{{ pendingInbound }}</span>
+                <span v-if="pendingInbound > 0" style="display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;border-radius:11px;background:var(--z-danger);color:#fff;font-size:0.55em;font-weight:700;padding:0 7px;vertical-align:4px">{{ pendingInbound }}</span>
               </span>
-              <p style="font-size:0.9em;color:#777">Servers on the discovery network can ask to pair with you here — and this is where your own asks live. No access changes hands until a request is accepted.</p>
+              <p style="font-size:0.9em;color:var(--z-muted)">Servers on the discovery network can ask to pair with you here — and this is where your own asks live. No access changes hands until a request is accepted.</p>
               <div style="display:flex;align-items:center;gap:14px;margin:6px 0 14px;flex-wrap:wrap">
                 <div class="switch"><label>
                   <input type="checkbox" :checked="requests.acceptRequests" :disabled="inboxPending" v-on:change="toggleInbox()"/>
                   <span class="lever"></span>
                 </label></div>
                 <span>Accept requests from the discovery network</span>
-                <span style="font-size:0.85em;color:#777">— off by default; when off, new requests are refused at the transport, but answers to <i>your</i> requests still arrive.</span>
+                <span style="font-size:0.85em;color:var(--z-muted)">— off by default; when off, new requests are refused at the transport, but answers to <i>your</i> requests still arrive.</span>
               </div>
-              <p v-if="requests.acceptRequests && pendingInbound >= 50" style="font-size:0.9em;color:#8d6e00">Inbox is full — new requests are refused until you act on these.</p>
+              <p v-if="requests.acceptRequests && pendingInbound >= 50" style="font-size:0.9em;color:var(--z-accent)">Inbox is full — new requests are refused until you act on these.</p>
               <div v-if="requests.list.length > 0" style="overflow-x:auto">
               <table class="striped">
                 <thead><tr><th>Server</th><th>Message / Offer</th><th>Status</th><th style="width:90px">Age</th><th style="width:220px"></th></tr></thead>
@@ -4276,18 +4280,18 @@ const federationView = Vue.component('federation-view', {
                   <tr v-for="r in requests.list" :key="r.id">
                     <td>
                       <b>{{ r.peer_name || '(unnamed server)' }}</b>
-                      <div style="font-family:monospace;font-size:0.78em;color:#757575">{{ fp(r.peer_endpoint_id) }}</div>
+                      <div style="font-family:monospace;font-size:0.78em;color:var(--z-muted)">{{ fp(r.peer_endpoint_id) }}</div>
                     </td>
                     <td style="max-width:290px;font-size:0.9em">
-                      <div v-if="r.message" style="color:#424242">“{{ r.message }}”</div>
-                      <div v-if="r.direction === 'in'" style="color:#777">{{ r.offered_libraries.length ? 'offers: ' + r.offered_libraries.join(', ') : 'offers nothing' }}</div>
-                      <div v-else style="color:#777">{{ r.offered_libraries.length ? 'you offered: ' + r.offered_libraries.join(', ') : 'you offered nothing' }}</div>
+                      <div v-if="r.message" style="color:var(--z-text-2)">“{{ r.message }}”</div>
+                      <div v-if="r.direction === 'in'" style="color:var(--z-muted)">{{ r.offered_libraries.length ? 'offers: ' + r.offered_libraries.join(', ') : 'offers nothing' }}</div>
+                      <div v-else style="color:var(--z-muted)">{{ r.offered_libraries.length ? 'you offered: ' + r.offered_libraries.join(', ') : 'you offered nothing' }}</div>
                     </td>
                     <td style="font-size:0.95em">
                       <span :style="reqChipStyle(reqChip(r)[0])">{{ reqChip(r)[1] }}</span>
-                      <div v-if="reqRetryLine(r)" style="font-size:0.8em;color:#8d6e00;margin-top:3px">{{ reqRetryLine(r) }}</div>
-                      <div v-if="r.direction === 'out' && r.state === 'rejected' && r.reject_reason" style="font-size:0.85em;color:#757575;margin-top:3px">“{{ r.reject_reason }}”</div>
-                      <div v-if="r.direction === 'in' && r.state === 'rejected'" style="font-size:0.8em;color:#757575;margin-top:3px">requests from this server are ignored for 7 days</div>
+                      <div v-if="reqRetryLine(r)" style="font-size:0.8em;color:var(--z-accent);margin-top:3px">{{ reqRetryLine(r) }}</div>
+                      <div v-if="r.direction === 'out' && r.state === 'rejected' && r.reject_reason" style="font-size:0.85em;color:var(--z-muted);margin-top:3px">“{{ r.reject_reason }}”</div>
+                      <div v-if="r.direction === 'in' && r.state === 'rejected'" style="font-size:0.8em;color:var(--z-muted);margin-top:3px">requests from this server are ignored for 7 days</div>
                       <div v-if="r.state === 'completed' && reqPeerFor(r)" style="font-size:0.85em;margin-top:3px"><a v-on:click="scrollToPeers()" style="cursor:pointer">view peer</a></div>
                     </td>
                     <td style="font-size:0.9em">{{ reqAge(r) }}</td>
@@ -4305,7 +4309,7 @@ const federationView = Vue.component('federation-view', {
                 </tbody>
               </table>
               </div>
-              <p v-else-if="requests.acceptRequests" style="color:#777">No requests yet — servers on the discovery network can find you here.</p>
+              <p v-else-if="requests.acceptRequests" style="color:var(--z-muted)">No requests yet — servers on the discovery network can find you here.</p>
             </div>
           </div>
         </div>
@@ -4316,7 +4320,7 @@ const federationView = Vue.component('federation-view', {
           <div class="card">
             <div class="card-content">
               <span class="card-title">Shared Libraries — Tickets You Minted</span>
-              <p style="font-size:0.9em;color:#777">Each ticket is a read-only grant for the libraries you picked. Copy it and send it to the friend it's for.</p>
+              <p style="font-size:0.9em;color:var(--z-muted)">Each ticket is a read-only grant for the libraries you picked. Copy it and send it to the friend it's for.</p>
               <table v-if="keys.list.length > 0" class="striped">
                 <thead><tr><th>Name</th><th>Libraries</th><th>Limits</th><th>Today</th><th>Last used</th><th>Redeemed</th><th style="width:280px"></th></tr></thead>
                 <tbody>
@@ -4325,14 +4329,14 @@ const federationView = Vue.component('federation-view', {
                     <td>{{ k.library_names.join(', ') }}</td>
                     <td style="font-size:0.85em">
                       <a v-on:click="openLimitsModal(k)" style="cursor:pointer" title="Edit this key's bandwidth limits and expiry">{{ fmtLimits(k) }}</a>
-                      <div v-if="k.expired" style="color:#c62828">expired</div>
-                      <div v-else-if="k.expires_at" style="color:#777">{{ fmtExpiry(k.expires_at) }}</div>
+                      <div v-if="k.expired" style="color:var(--z-danger)">expired</div>
+                      <div v-else-if="k.expires_at" style="color:var(--z-muted)">{{ fmtExpiry(k.expires_at) }}</div>
                     </td>
                     <td style="font-size:0.85em" title="Bytes served to this key today (UTC)">{{ fmtBytes(k.usage_today_bytes) }}</td>
                     <td>{{ fmtDate(k.last_used) }}</td>
                     <td>
-                      <span v-if="k.bound_endpoint_id" style="color:#2e7d32">✔ claimed</span>
-                      <span v-else style="color:#9e9e9e">not yet</span>
+                      <span v-if="k.bound_endpoint_id" style="color:var(--z-celadon)">✔ claimed</span>
+                      <span v-else style="color:var(--z-muted)">not yet</span>
                     </td>
                     <td class="right-align">
                       <a v-if="k.ticket" class="btn-flat btn-small waves-effect fed-copy-button" :data-clipboard-text="k.ticket" title="Copy the ticket to send to your friend">Copy ticket</a>
@@ -4342,7 +4346,7 @@ const federationView = Vue.component('federation-view', {
                   </tr>
                 </tbody>
               </table>
-              <p v-else style="color:#777">No tickets yet.</p>
+              <p v-else style="color:var(--z-muted)">No tickets yet.</p>
             </div>
             <div class="card-action flow-root">
               <a v-on:click="openNewTicketModal()" class="waves-effect waves-light btn right">New Ticket</a>
@@ -4377,12 +4381,12 @@ const federationView = Vue.component('federation-view', {
                   </tr>
                 </tbody>
               </table>
-              <p v-else style="color:#777">No peers yet — paste a friend's ticket below.</p>
+              <p v-else style="color:var(--z-muted)">No peers yet — paste a friend's ticket below.</p>
               <div style="margin-top:16px">
                 <div class="input-field">
                   <textarea id="fed-peer-ticket" class="materialize-textarea" v-model="peerTicket" placeholder="Paste a federation ticket (mstrfed1:…)"></textarea>
                 </div>
-                <div v-if="peerPreview && peerPreview.error" style="color:#c62828;font-size:0.9em">That doesn't look like a federation ticket.</div>
+                <div v-if="peerPreview && peerPreview.error" style="color:var(--z-danger);font-size:0.9em">That doesn't look like a federation ticket.</div>
                 <div v-if="peerPreview && !peerPreview.error" class="card-panel green lighten-5" style="padding:10px">
                   <b>{{ peerPreview.name }}</b>
                   <span v-if="peerPreview.libraries.length"> — shares: {{ peerPreview.libraries.join(', ') }}</span>
@@ -4481,7 +4485,7 @@ const logsView = Vue.component('logs-view', {
                     <a v-on:click="clearLog" class="waves-effect waves-light btn-small grey lighten-1" style="margin-left:6px;">{{ t('admin.logs.clear') }}</a>
                   </div>
                   <div ref="logbox" v-on:scroll="onScroll" style="background:#1e1e1e; color:#d4d4d4; font-family:monospace; font-size:12px; line-height:1.45; height:360px; overflow-y:auto; padding:10px; border-radius:4px; white-space:pre-wrap; word-break:break-word;">
-                    <div v-if="logLines.length === 0" style="color:#888;">{{ t('admin.logs.bufferEmpty') }}</div>
+                    <div v-if="logLines.length === 0" style="color:var(--z-muted);">{{ t('admin.logs.bufferEmpty') }}</div>
                     <div v-for="line in logLines" :key="line.seq" :style="{ color: lineColor(line.level) }">{{ fmtTime(line.t) }} {{ line.level }}: {{ line.message }}</div>
                   </div>
                 </div>
@@ -5233,14 +5237,14 @@ const torrentView = Vue.component('torrent-view', {
             <div class="card-content">
               <span class="card-title">
                 Torrent Client
-                <span style="display:inline-block; margin-left:8px; padding:2px 8px; font-size:0.55em; font-weight:bold; letter-spacing:0.5px; background:#ff9800; color:#fff; border-radius:3px; vertical-align:middle;">BETA</span>
+                <span style="display:inline-block; margin-left:8px; padding:2px 8px; font-size:0.55em; font-weight:bold; letter-spacing:0.5px; background:var(--z-accent); color:#fff; border-radius:3px; vertical-align:middle;">BETA</span>
               </span>
               <p>Hand off magnet links and <code>.torrent</code> files to a torrent client running on this host (or reachable on the LAN). Completed downloads are picked up by the next library scan.</p>
-              <p style="font-size:0.85em; color:#888; margin-top:-6px; margin-bottom:14px;">
-                <b style="color:#e67e22;">Beta:</b> The torrent feature is new — please <a href="https://github.com/IrosTheBeggar/mStream/issues" target="_blank" rel="noopener">report any issues</a> you run into.
+              <p style="font-size:0.85em; color:var(--z-muted); margin-top:-6px; margin-bottom:14px;">
+                <b style="color:var(--z-accent);">Beta:</b> The torrent feature is new — please <a href="https://github.com/IrosTheBeggar/mStream/issues" target="_blank" rel="noopener">report any issues</a> you run into.
               </p>
-              <p style="font-size:0.85em; margin-top:-6px; margin-bottom:14px; padding:8px 12px; background:rgba(33,150,243,0.10); border-left:3px solid #2196f3; border-radius:3px;">
-                <b>Mobile:</b> Users can add torrents from their phone at <a href="/torrent" target="_blank" rel="noopener" style="color:#90caf9;"><code>/torrent</code></a> — a standalone, mobile-friendly add-torrent page. The torrent feature isn't exposed by the apps; this gives users a way to add them on the go.
+              <p style="font-size:0.85em; margin-top:-6px; margin-bottom:14px; padding:8px 12px; background:rgba(33,150,243,0.10); border-left:3px solid var(--z-info); border-radius:3px;">
+                <b>Mobile:</b> Users can add torrents from their phone at <a href="/torrent" target="_blank" rel="noopener" style="color:var(--z-info);"><code>/torrent</code></a> — a standalone, mobile-friendly add-torrent page. The torrent feature isn't exposed by the apps; this gives users a way to add them on the go.
               </p>
               <div style="margin-top:16px">
                 <p><b>Current:</b> {{params.client || 'disabled'}}</p>
@@ -5558,7 +5562,7 @@ const torrentView = Vue.component('torrent-view', {
                       <span class="status-chip" :class="accessChipClass(v)">
                         {{accessChipLabel(v)}}
                       </span>
-                      <div v-if="v.lastError" style="font-size:0.75em;color:#c62828;margin-top:4px">{{v.lastError}}</div>
+                      <div v-if="v.lastError" style="font-size:0.75em;color:var(--z-danger);margin-top:4px">{{v.lastError}}</div>
                     </td>
                     <td>
                       <input type="text"
@@ -5635,7 +5639,7 @@ const torrentView = Vue.component('torrent-view', {
                              @input="onTmplInput(name, $event.target.value)"
                              placeholder="(empty — uses manual freeform entry)"
                              style="margin:0" />
-                      <div v-if="tmplError[name]" style="font-size:0.78em;color:#c62828;margin-top:4px">
+                      <div v-if="tmplError[name]" style="font-size:0.78em;color:var(--z-danger);margin-top:4px">
                         {{tmplError[name]}}
                       </div>
                       <a v-if="!tmplInputValue(name, t)" v-on:click="useSuggestedTemplate(name)"
@@ -5748,10 +5752,10 @@ const torrentView = Vue.component('torrent-view', {
                         <span v-else-if="r.outcome === 'already_in_daemon'">
                           Daemon already has this torrent — no action taken
                         </span>
-                        <span v-else-if="r.outcome === 'invalid_torrent'" style="color:#c62828">
+                        <span v-else-if="r.outcome === 'invalid_torrent'" style="color:var(--z-danger)">
                           {{r.error}}
                         </span>
-                        <span v-else-if="r.outcome === 'daemon_error'" style="color:#c62828">
+                        <span v-else-if="r.outcome === 'daemon_error'" style="color:var(--z-danger)">
                           {{r.error || 'Daemon refused the add'}}
                         </span>
                       </td>
@@ -5830,11 +5834,11 @@ const torrentView = Vue.component('torrent-view', {
                     </td>
                     <td>
                       <span class="status-chip" :class="'status-' + t.status">{{t.status}}</span>
-                      <div v-if="t.errorMessage" style="font-size:0.75em;color:#c62828;margin-top:4px">{{t.errorMessage}}</div>
+                      <div v-if="t.errorMessage" style="font-size:0.75em;color:var(--z-danger);margin-top:4px">{{t.errorMessage}}</div>
                     </td>
                     <td style="min-width:120px">
                       <div style="font-size:0.85em">{{Math.round(t.percent * 100)}}%</div>
-                      <div style="background:#e0e0e0;border-radius:3px;height:6px;width:100px;overflow:hidden">
+                      <div style="background:var(--z-placeholder);border-radius:3px;height:6px;width:100px;overflow:hidden">
                         <div :style="{ width: (t.percent * 100) + '%', background: t.status === 'seeding' ? '#43a047' : '#1e88e5', height: '100%' }"></div>
                       </div>
                     </td>
@@ -6823,8 +6827,8 @@ const backupView = Vue.component('backup-view', {
            operator now sets expectations for any UI/config changes that
            land in subsequent releases. -->
       <div class="row" style="margin:8px 16px 0 16px">
-        <div class="col s12" style="background:#fff8e1;border-left:4px solid #f9a825;padding:10px 14px;border-radius:2px">
-          <strong style="color:#f57f17;letter-spacing:0.5px;font-size:12px">BETA</strong>
+        <div class="col s12" style="background:var(--z-accent-tint);border-left:4px solid var(--z-accent);padding:10px 14px;border-radius:2px">
+          <strong style="color:var(--z-accent);letter-spacing:0.5px;font-size:12px">BETA</strong>
           <span style="margin-left:8px;font-size:13px">
             The backup feature is new and the configuration UI may change in a future release.
             Existing destinations will keep working, but expect some fields and behaviours to evolve
@@ -6838,20 +6842,20 @@ const backupView = Vue.component('backup-view', {
            detail (last-run summary + history link); this card is the
            prominent at-a-glance "what's happening right now" view. -->
       <div v-if="status.active" class="container">
-        <div class="card-panel" style="background:#e3f2fd;border-left:4px solid #1976d2;padding:14px 18px">
+        <div class="card-panel" style="background:var(--z-info-tint);border-left:4px solid var(--z-info);padding:14px 18px">
           <div style="display:flex;align-items:center;flex-wrap:wrap;margin-bottom:8px">
             <strong style="font-size:15px;letter-spacing:0.3px">Backup running</strong>
-            <span style="margin-left:auto;font-size:12px;color:#555" :title="status.active.startedAt">
+            <span style="margin-left:auto;font-size:12px;color:var(--z-text-2)" :title="status.active.startedAt">
               {{ formatElapsed(status.active.startedAt) }} elapsed
             </span>
           </div>
           <div style="margin-bottom:8px;font-size:13px">
             <strong>{{ status.active.libraryName }}</strong>
-            <span style="color:#888">→</span>
+            <span style="color:var(--z-muted)">→</span>
             <code style="font-size:12px">{{ status.active.destPath }}</code>
-            <span style="margin-left:8px;font-size:11px;color:#777">trigger: {{ status.active.triggerReason }}</span>
+            <span style="margin-left:8px;font-size:11px;color:var(--z-muted)">trigger: {{ status.active.triggerReason }}</span>
           </div>
-          <div class="progress" style="margin:6px 0;background-color:#bbdefb">
+          <div class="progress" style="margin:6px 0;background-color:var(--z-info-tint)">
             <div v-if="progressPercent !== null" class="determinate" :style="{ width: progressPercent + '%' }"></div>
             <div v-else class="indeterminate"></div>
           </div>
@@ -6859,16 +6863,16 @@ const backupView = Vue.component('backup-view', {
             <span><strong>{{ status.active.filesCopied }}</strong> copied</span>
             <span style="margin-left:14px"><strong>{{ status.active.filesUnchanged }}</strong> unchanged</span>
             <span style="margin-left:14px"><strong>{{ status.active.filesTrashed }}</strong> trashed</span>
-            <span v-if="progressPercent !== null" style="margin-left:14px;color:#1976d2">
+            <span v-if="progressPercent !== null" style="margin-left:14px;color:var(--z-info)">
               <strong>{{ progressPercent }}%</strong>
-              <span style="color:#666">({{ progressDone }}/{{ status.active.expectedFiles }})</span>
+              <span style="color:var(--z-text-2)">({{ progressDone }}/{{ status.active.expectedFiles }})</span>
             </span>
           </div>
-          <div style="font-size:12px;color:#555;margin-top:4px">
+          <div style="font-size:12px;color:var(--z-text-2);margin-top:4px">
             <span v-if="status.active.bytesCopied > 0">
               {{ formatBytesShort(status.active.bytesCopied) }} written
             </span>
-            <span v-else style="color:#888">no bytes written yet (worker may be checking unchanged files)</span>
+            <span v-else style="color:var(--z-muted)">no bytes written yet (worker may be checking unchanged files)</span>
           </div>
         </div>
       </div>
@@ -6876,7 +6880,7 @@ const backupView = Vue.component('backup-view', {
       <!-- Queued notice. Tasks are waiting (most commonly behind a scan,
            since the task-queue mutex blocks scan ⇄ backup overlap). -->
       <div v-else-if="status.queueLength > 0" class="container">
-        <div class="card-panel grey lighten-4" style="border-left:4px solid #9e9e9e;padding:10px 14px;font-size:13px">
+        <div class="card-panel grey lighten-4" style="border-left:4px solid var(--z-muted);padding:10px 14px;font-size:13px">
           <strong>{{ status.queueLength }}</strong>
           {{ status.queueLength === 1 ? 'task' : 'tasks' }} queued — waiting for the active scan or backup to finish.
         </div>
@@ -6950,20 +6954,20 @@ const backupView = Vue.component('backup-view', {
                     </div>
                   </div>
 
-                  <div v-if="checkPending" class="row" style="color:#888">
+                  <div v-if="checkPending" class="row" style="color:var(--z-muted)">
                     <div class="col s12">Checking path…</div>
                   </div>
                   <div v-if="!checkPending && checkErrors.length > 0" class="row">
-                    <div class="col s12" style="background:#ffebee;border-left:4px solid #c62828;padding:8px 12px">
-                      <strong style="color:#c62828">Cannot save:</strong>
+                    <div class="col s12" style="background:var(--z-danger-tint);border-left:4px solid var(--z-danger);padding:8px 12px">
+                      <strong style="color:var(--z-danger)">Cannot save:</strong>
                       <ul style="margin:4px 0 0 0">
                         <li v-for="e in checkErrors" :key="e">{{ e }}</li>
                       </ul>
                     </div>
                   </div>
                   <div v-if="!checkPending && checkErrors.length === 0 && checkWarnings.length > 0" class="row">
-                    <div class="col s12" style="background:#fff8e1;border-left:4px solid #f9a825;padding:8px 12px">
-                      <strong style="color:#f57f17">Heads up:</strong>
+                    <div class="col s12" style="background:var(--z-accent-tint);border-left:4px solid var(--z-accent);padding:8px 12px">
+                      <strong style="color:var(--z-accent)">Heads up:</strong>
                       <ul style="margin:4px 0 0 0">
                         <li v-for="w in checkWarnings" :key="w">{{ w }}</li>
                       </ul>
@@ -7024,7 +7028,7 @@ const backupView = Vue.component('backup-view', {
                   <span v-else>{{ (d.excludeGlobs || []).join(', ') }}</span>
                 </td>
                 <td>
-                  <span v-if="status.active && status.active.destinationId === d.id" style="color:#1976d2">running…</span>
+                  <span v-if="status.active && status.active.destinationId === d.id" style="color:var(--z-info)">running…</span>
                   <span v-else-if="!d.lastRun" class="grey-text">never</span>
                   <span v-else :title="d.lastRun.error_message || ''" :style="{ color: statusColor(d.lastRun.status) }">
                     {{ d.lastRun.status }}
@@ -7047,7 +7051,7 @@ const backupView = Vue.component('backup-view', {
                        link out instead of offering a dead button. -->
                   [<a v-if="d.enabled" v-on:click="runNow(d)">Run now</a><span v-else class="grey-text" style="cursor:default" title="Destination is disabled — set Enabled to 'on' to run it">Run now</span>]
                   [<a v-on:click="showHistory(d)">History</a>]
-                  [<a v-on:click="removeDestination(d)" style="color:#c62828">Delete</a>]
+                  [<a v-on:click="removeDestination(d)" style="color:var(--z-danger)">Delete</a>]
                 </td>
               </tr>
             </tbody>
@@ -7461,7 +7465,7 @@ const discoveryView = Vue.component('discovery-view', {
                   post-scan analysis that builds the embeddings) if it isn't already on. You can
                   disable the network here at any time; collected data stays local until you
                   re-enable it.</p>
-                  <p v-if="discoveryP2p.status && discoveryP2p.status.binaryFound === false" style="color: #b71c1c;">
+                  <p v-if="discoveryP2p.status && discoveryP2p.status.binaryFound === false" style="color: var(--z-danger);">
                     The p2p-sidecar binary was not found for this platform — the network is unavailable.
                   </p>
                   <a v-else v-on:click="enableP2p()" :class="{disabled: p2pToggling}" class="waves-effect waves-light btn green">
@@ -7470,49 +7474,49 @@ const discoveryView = Vue.component('discovery-view', {
                   <div v-if="p2pToggling" class="progress" style="max-width: 480px; margin: 10px 0 4px 0;"><div class="indeterminate"></div></div>
                 </div>
                 <div v-else>
-                  <p v-if="!discoveryP2p.status.binaryFound" style="color: #b71c1c;">
+                  <p v-if="!discoveryP2p.status.binaryFound" style="color: var(--z-danger);">
                     The p2p-sidecar binary was not found for this platform — the network is unavailable.
                   </p>
-                  <div style="border: 1px solid #e0e0e0; border-radius: 2px; padding: 16px 20px; margin-bottom: 14px;">
+                  <div style="border: 1px solid var(--z-line); border-radius: 2px; padding: 16px 20px; margin-bottom: 14px;">
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap;">
-                      <div style="display: flex; align-items: center; gap: 8px; font-size: 0.9em; color: #616161; flex-wrap: wrap;">
+                      <div style="display: flex; align-items: center; gap: 8px; font-size: 0.9em; color: var(--z-text-2); flex-wrap: wrap;">
                         <span v-if="discoveryP2p.status.neighbors > 0" style="display: inline-flex; align-items: center; gap: 7px;">
-                          <span style="width: 9px; height: 9px; border-radius: 50%; background: #2e7d32; flex-shrink: 0;"></span>
-                          <span style="color: #2e7d32; font-weight: 600;">connected</span>
+                          <span style="width: 9px; height: 9px; border-radius: 50%; background: var(--z-celadon); flex-shrink: 0;"></span>
+                          <span style="color: var(--z-celadon); font-weight: 600;">connected</span>
                           <span>— {{ discoveryP2p.status.neighbors }} mesh neighbor{{ discoveryP2p.status.neighbors === 1 ? '' : 's' }}</span>
                         </span>
                         <span v-else-if="meshRecovering" style="display: inline-flex; align-items: center; gap: 7px;">
-                          <span style="width: 9px; height: 9px; border-radius: 50%; background: #c62828; flex-shrink: 0;"></span>
-                          <span style="color: #c62828; font-weight: 600;">reconnecting</span>
+                          <span style="width: 9px; height: 9px; border-radius: 50%; background: var(--z-danger); flex-shrink: 0;"></span>
+                          <span style="color: var(--z-danger); font-weight: 600;">reconnecting</span>
                           <span>— the sidecar died and is being replayed (attempt {{ discoveryP2p.status.recovery.attempts }})</span>
                         </span>
                         <span v-else-if="discoveryP2p.status.joined" style="display: inline-flex; align-items: center; gap: 7px;">
-                          <span style="width: 9px; height: 9px; border-radius: 50%; background: #e65100; flex-shrink: 0;"></span>
-                          <span style="color: #e65100; font-weight: 600;">joined, waiting for neighbors</span>
+                          <span style="width: 9px; height: 9px; border-radius: 50%; background: var(--z-accent); flex-shrink: 0;"></span>
+                          <span style="color: var(--z-accent); font-weight: 600;">joined, waiting for neighbors</span>
                         </span>
                         <span v-else style="display: inline-flex; align-items: center; gap: 7px;">
-                          <span style="width: 9px; height: 9px; border-radius: 50%; background: #9e9e9e; flex-shrink: 0;"></span>
+                          <span style="width: 9px; height: 9px; border-radius: 50%; background: var(--z-placeholder); flex-shrink: 0;"></span>
                           <span style="font-weight: 600;">not joined yet</span>
                         </span>
                         <span v-if="discoveryP2p.status.watchdog && discoveryP2p.status.watchdog.lastRssMb !== null">
                           · sidecar {{ discoveryP2p.status.watchdog.lastRssMb.toFixed(0) }} MB<span
-                            v-if="discoveryP2p.status.watchdog.restarts > 0" style="color: #e65100;"> ({{ discoveryP2p.status.watchdog.restarts }} watchdog restart{{ discoveryP2p.status.watchdog.restarts === 1 ? '' : 's' }})</span>
+                            v-if="discoveryP2p.status.watchdog.restarts > 0" style="color: var(--z-accent);"> ({{ discoveryP2p.status.watchdog.restarts }} watchdog restart{{ discoveryP2p.status.watchdog.restarts === 1 ? '' : 's' }})</span>
                         </span>
-                        <span>· announcing as <span style="color: #212121; font-weight: 600;">{{ p2pIdentity.serverName }}</span>
+                        <span>· announcing as <span style="color: var(--z-text); font-weight: 600;">{{ p2pIdentity.serverName }}</span>
                           [<a v-on:click="openModal('edit-p2p-identity-modal')">{{ t('admin.settings.edit') }}</a>]</span>
                       </div>
                       <div style="display: flex; gap: 12px; font-size: 0.9em; flex-shrink: 0;">
-                        <span style="color: #9e9e9e;">[<a v-on:click="loadDiscoveryP2p()">Refresh</a>]</span>
-                        <span style="color: #9e9e9e;">[<a style="color: #b71c1c;" v-on:click="disableP2p()">Disable</a>]</span>
+                        <span style="color: var(--z-muted);">[<a v-on:click="loadDiscoveryP2p()">Refresh</a>]</span>
+                        <span style="color: var(--z-muted);">[<a style="color: var(--z-danger);" v-on:click="disableP2p()">Disable</a>]</span>
                       </div>
                     </div>
                     <div v-if="meshSearching" style="max-width: 520px; margin-top: 8px;">
                       <div class="progress" style="margin: 0 0 4px 0;"><div class="indeterminate"></div></div>
-                      <span style="color: #757575; font-size: 0.85em;">{{ meshRecovering
+                      <span style="color: var(--z-muted); font-size: 0.85em;">{{ meshRecovering
                         ? 'reconnecting — crash recovery replays the stack on a widening ladder; no action needed'
                         : 'searching for peers — this page updates itself every few seconds' }}</span>
                     </div>
-                    <div style="display: flex; gap: 8px; margin-top: 12px; border-bottom: 1px solid #e0e0e0; padding-bottom: 10px; flex-wrap: wrap;">
+                    <div style="display: flex; gap: 8px; margin-top: 12px; border-bottom: 1px solid var(--z-line); padding-bottom: 10px; flex-wrap: wrap;">
                       <div v-on:click="headerTab = 'stats'" :style="headerTabStyle('stats')">Stats</div>
                       <div v-on:click="headerTab = 'activity'; loadDiscoveryActivity()" :style="headerTabStyle('activity')">Activity</div>
                       <div v-on:click="headerTab = 'invite'" :style="headerTabStyle('invite')">Invite</div>
@@ -7520,63 +7524,63 @@ const discoveryView = Vue.component('discovery-view', {
                     </div>
                     <div style="height: 300px; overflow-y: auto;">
                     <div v-if="headerTab === 'stats'" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; padding-top: 12px; align-content: start;">
-                      <div style="border: 1px solid #e0e0e0; border-radius: 2px; padding: 12px 14px;">
-                        <div style="font-size: 1.3em; font-weight: 700; color: #212121;">{{ discoveryP2p.status.neighbors }}</div>
-                        <div style="font-size: 0.85em; color: #757575; margin-top: 2px;">mesh neighbors</div>
-                        <div style="font-size: 0.8em; color: #9e9e9e; margin-top: 4px;">live gossip links</div>
+                      <div style="border: 1px solid var(--z-line); border-radius: 2px; padding: 12px 14px;">
+                        <div style="font-size: 1.3em; font-weight: 700; color: var(--z-text);">{{ discoveryP2p.status.neighbors }}</div>
+                        <div style="font-size: 0.85em; color: var(--z-muted); margin-top: 2px;">mesh neighbors</div>
+                        <div style="font-size: 0.8em; color: var(--z-muted); margin-top: 4px;">live gossip links</div>
                       </div>
-                      <div style="border: 1px solid #e0e0e0; border-radius: 2px; padding: 12px 14px;">
-                        <div style="font-size: 1.3em; font-weight: 700; color: #212121;">{{ knownServersTotal }}</div>
-                        <div style="font-size: 0.85em; color: #757575; margin-top: 2px;">servers known</div>
-                        <div style="font-size: 0.8em; color: #9e9e9e; margin-top: 4px;">{{ discoveryP2p.hiddenIncompatible }} hidden ·
+                      <div style="border: 1px solid var(--z-line); border-radius: 2px; padding: 12px 14px;">
+                        <div style="font-size: 1.3em; font-weight: 700; color: var(--z-text);">{{ knownServersTotal }}</div>
+                        <div style="font-size: 0.85em; color: var(--z-muted); margin-top: 2px;">servers known</div>
+                        <div style="font-size: 0.8em; color: var(--z-muted); margin-top: 4px;">{{ discoveryP2p.hiddenIncompatible }} hidden ·
                           {{ (discoveryP2p.status.blockedPeers || []).length }} blocked</div>
                       </div>
-                      <div style="border: 1px solid #e0e0e0; border-radius: 2px; padding: 12px 14px;">
-                        <div style="font-size: 1.3em; font-weight: 700; color: #212121;">{{ heldPeers.length }}<span
-                          v-if="discoveryP2p.status.autoFetchCount > 0" style="font-size: 0.7em; color: #757575;"> of {{ discoveryP2p.status.autoFetchCount }}</span></div>
-                        <div style="font-size: 0.85em; color: #757575; margin-top: 2px;">snapshots held</div>
-                        <div style="font-size: 0.8em; color: #9e9e9e; margin-top: 4px;" v-if="discoveryP2p.storage">
+                      <div style="border: 1px solid var(--z-line); border-radius: 2px; padding: 12px 14px;">
+                        <div style="font-size: 1.3em; font-weight: 700; color: var(--z-text);">{{ heldPeers.length }}<span
+                          v-if="discoveryP2p.status.autoFetchCount > 0" style="font-size: 0.7em; color: var(--z-muted);"> of {{ discoveryP2p.status.autoFetchCount }}</span></div>
+                        <div style="font-size: 0.85em; color: var(--z-muted); margin-top: 2px;">snapshots held</div>
+                        <div style="font-size: 0.8em; color: var(--z-muted); margin-top: 4px;" v-if="discoveryP2p.storage">
                           {{ discoveryBytes(discoveryP2p.storage.usedBytes) }} of {{ discoveryBytes(discoveryP2p.storage.capBytes) }}</div>
                       </div>
-                      <div style="border: 1px solid #e0e0e0; border-radius: 2px; padding: 12px 14px;">
-                        <div style="font-size: 1.3em; font-weight: 700; color: #212121;">{{ heldTrackTotal.toLocaleString() }}</div>
-                        <div style="font-size: 0.85em; color: #757575; margin-top: 2px;">peer tracks searchable</div>
-                        <div style="font-size: 0.8em; color: #9e9e9e; margin-top: 4px;">across {{ heldPeers.length }} held
+                      <div style="border: 1px solid var(--z-line); border-radius: 2px; padding: 12px 14px;">
+                        <div style="font-size: 1.3em; font-weight: 700; color: var(--z-text);">{{ heldTrackTotal.toLocaleString() }}</div>
+                        <div style="font-size: 0.85em; color: var(--z-muted); margin-top: 2px;">peer tracks searchable</div>
+                        <div style="font-size: 0.8em; color: var(--z-muted); margin-top: 4px;">across {{ heldPeers.length }} held
                           librar{{ heldPeers.length === 1 ? 'y' : 'ies' }}</div>
                       </div>
-                      <div style="border: 1px solid #e0e0e0; border-radius: 2px; padding: 12px 14px;">
-                        <div style="font-size: 1.3em; font-weight: 700; color: #212121;">{{ discoveryP2p.status.watchdog && discoveryP2p.status.watchdog.lastRssMb !== null
+                      <div style="border: 1px solid var(--z-line); border-radius: 2px; padding: 12px 14px;">
+                        <div style="font-size: 1.3em; font-weight: 700; color: var(--z-text);">{{ discoveryP2p.status.watchdog && discoveryP2p.status.watchdog.lastRssMb !== null
                           ? discoveryP2p.status.watchdog.lastRssMb.toFixed(0) + ' MB' : '—' }}</div>
-                        <div style="font-size: 0.85em; color: #757575; margin-top: 2px;">sidecar memory</div>
-                        <div style="font-size: 0.8em; color: #9e9e9e; margin-top: 4px;">{{ discoveryP2p.status.watchdog && discoveryP2p.status.watchdog.maxRssMb > 0
+                        <div style="font-size: 0.85em; color: var(--z-muted); margin-top: 2px;">sidecar memory</div>
+                        <div style="font-size: 0.8em; color: var(--z-muted); margin-top: 4px;">{{ discoveryP2p.status.watchdog && discoveryP2p.status.watchdog.maxRssMb > 0
                           ? 'ceiling ' + discoveryP2p.status.watchdog.maxRssMb + ' MB · ' + discoveryP2p.status.watchdog.restarts + ' restart' + (discoveryP2p.status.watchdog.restarts === 1 ? '' : 's')
                           : 'watchdog off' }}</div>
                       </div>
-                      <div style="border: 1px solid #e0e0e0; border-radius: 2px; padding: 12px 14px;">
-                        <div style="font-size: 1.3em; font-weight: 700; color: #212121;">{{ heldPeers.length }}</div>
-                        <div style="font-size: 0.85em; color: #757575; margin-top: 2px;">seeding</div>
-                        <div style="font-size: 0.8em; color: #9e9e9e; margin-top: 4px;">snapshots served back to the mesh</div>
+                      <div style="border: 1px solid var(--z-line); border-radius: 2px; padding: 12px 14px;">
+                        <div style="font-size: 1.3em; font-weight: 700; color: var(--z-text);">{{ heldPeers.length }}</div>
+                        <div style="font-size: 0.85em; color: var(--z-muted); margin-top: 2px;">seeding</div>
+                        <div style="font-size: 0.8em; color: var(--z-muted); margin-top: 4px;">snapshots served back to the mesh</div>
                       </div>
                     </div>
                     <div v-if="headerTab === 'activity'" style="padding-top: 12px;">
                       <div style="background: #1e1e1e; color: #d4d4d4; font-family: monospace; font-size: 12px; line-height: 1.45; height: 236px; overflow-y: auto; padding: 10px; border-radius: 4px; white-space: pre-wrap; word-break: break-word;">
-                        <div v-if="activityFeed.length === 0" style="color: #888;">Nothing yet — mesh joins, snapshot fetches, rotation and recovery events land here as they happen.</div>
+                        <div v-if="activityFeed.length === 0" style="color: var(--z-muted);">Nothing yet — mesh joins, snapshot fetches, rotation and recovery events land here as they happen.</div>
                         <div v-for="e in activityFeed" :key="e.seq">
-                          <span style="color: #888;">{{ discoveryLogTime(e.t) }}</span>
+                          <span style="color: var(--z-muted);">{{ discoveryLogTime(e.t) }}</span>
                           <span :style="{ color: activityLineColor(e.level) }"> {{ e.message }}</span>
                         </div>
                       </div>
-                      <div style="font-size: 0.75em; color: #9e9e9e; margin-top: 8px;">newest first · held in memory only — the
+                      <div style="font-size: 0.75em; color: var(--z-muted); margin-top: 8px;">newest first · held in memory only — the
                       full history lives in the server logs</div>
                     </div>
                     <div v-if="headerTab === 'invite'" style="padding-top: 12px;">
-                      <p style="font-size: 0.85em; color: #616161; margin: 0 0 8px 0;"><b style="color: #212121;">Endpoint:</b>
-                        <code style="word-break: break-all; color: #757575;">{{ discoveryP2p.status.endpointId || '(sidecar not running yet)' }}</code></p>
-                      <p v-if="discoveryP2p.status.ticket" style="margin-bottom: 4px; font-size: 0.85em; color: #616161;"><b style="color: #212121;">Your ticket</b>
+                      <p style="font-size: 0.85em; color: var(--z-text-2); margin: 0 0 8px 0;"><b style="color: var(--z-text);">Endpoint:</b>
+                        <code style="word-break: break-all; color: var(--z-muted);">{{ discoveryP2p.status.endpointId || '(sidecar not running yet)' }}</code></p>
+                      <p v-if="discoveryP2p.status.ticket" style="margin-bottom: 4px; font-size: 0.85em; color: var(--z-text-2);"><b style="color: var(--z-text);">Your ticket</b>
                         — a friend pastes this into the box below on <i>their</i> Discovery page to befriend this server:<br>
                         <textarea readonly rows="2" style="width:100%; font-size: 0.8em;" onclick="this.select()">{{ discoveryP2p.status.ticket }}</textarea>
                       </p>
-                      <p style="margin: 8px 0 2px 0; font-size: 0.85em; color: #616161;"><b style="color: #212121;">Befriend a server</b>
+                      <p style="margin: 8px 0 2px 0; font-size: 0.85em; color: var(--z-text-2);"><b style="color: var(--z-text);">Befriend a server</b>
                         — paste the ticket from a friend's Discovery page (saved to your config, so the friendship survives restarts):</p>
                       <div style="display: flex; gap: 8px; max-width: 640px; align-items: center; margin-bottom: 8px;">
                         <input v-model="friendTicket" id="p2p-friend-ticket" type="text" placeholder="endpoint…"
@@ -7588,37 +7592,37 @@ const discoveryView = Vue.component('discovery-view', {
                     </div>
                     <div v-if="headerTab === 'config'" style="padding-top: 6px;">
                       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); gap: 0 28px;">
-                        <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 9px 0; border-bottom: 1px solid #eee; font-size: 0.85em;">
-                          <span style="color: #757575;">Snapshot storage cap</span>
-                          <span style="color: #212121; text-align: right;"><b>{{ discoveryP2p.status.maxPeerDbStorageMb }} MB</b>
+                        <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--z-line); font-size: 0.85em;">
+                          <span style="color: var(--z-muted);">Snapshot storage cap</span>
+                          <span style="color: var(--z-text); text-align: right;"><b>{{ discoveryP2p.status.maxPeerDbStorageMb }} MB</b>
                             [<a v-on:click="openModal('edit-p2p-max-storage-modal')">{{ t('admin.settings.edit') }}</a>]</span>
                         </div>
-                        <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 9px 0; border-bottom: 1px solid #eee; font-size: 0.85em;">
-                          <span style="color: #757575;">Forget offline servers</span>
-                          <span style="color: #212121; text-align: right;"><b>{{ discoveryP2p.status.peerRetentionDays > 0
+                        <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--z-line); font-size: 0.85em;">
+                          <span style="color: var(--z-muted);">Forget offline servers</span>
+                          <span style="color: var(--z-text); text-align: right;"><b>{{ discoveryP2p.status.peerRetentionDays > 0
                             ? 'after ' + discoveryP2p.status.peerRetentionDays + ' days of silence' : 'never' }}</b>
                             [<a v-on:click="openModal('edit-p2p-peer-retention-modal')">{{ t('admin.settings.edit') }}</a>]</span>
                         </div>
-                        <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 9px 0; border-bottom: 1px solid #eee; font-size: 0.85em;">
-                          <span style="color: #757575;">Auto-fetch snapshots</span>
-                          <span style="color: #212121; text-align: right;"><b>{{ discoveryP2p.autoFetch === false ? 'off'
+                        <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--z-line); font-size: 0.85em;">
+                          <span style="color: var(--z-muted);">Auto-fetch snapshots</span>
+                          <span style="color: var(--z-text); text-align: right;"><b>{{ discoveryP2p.autoFetch === false ? 'off'
                             : discoveryP2p.status.autoFetchCount === 0 ? 'on — 0 servers (downloads paused)'
                             : 'up to ' + discoveryP2p.status.autoFetchCount + ' servers' }}</b>
                             [<a v-on:click="openModal('edit-p2p-auto-fetch-count-modal')">{{ t('admin.settings.edit') }}</a>]</span>
                         </div>
-                        <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 9px 0; border-bottom: 1px solid #eee; font-size: 0.85em;">
-                          <span style="color: #757575;">Rotate downloads</span>
-                          <span style="color: #212121; text-align: right;"><b>{{ discoveryP2p.status.rotationDays > 0
+                        <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--z-line); font-size: 0.85em;">
+                          <span style="color: var(--z-muted);">Rotate downloads</span>
+                          <span style="color: var(--z-text); text-align: right;"><b>{{ discoveryP2p.status.rotationDays > 0
                             ? 'after ' + discoveryP2p.status.rotationDays + ' days' : 'never' }}</b>
                             [<a v-on:click="openModal('edit-p2p-rotation-modal')">{{ t('admin.settings.edit') }}</a>]</span>
                         </div>
-                        <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 9px 0; border-bottom: 1px solid #eee; font-size: 0.85em;">
-                          <span style="color: #757575;">Community seeds</span>
-                          <span style="color: #212121; text-align: right;"><b>{{ discoveryP2p.status.communitySeeds ? 'on' : 'off' }}</b></span>
+                        <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--z-line); font-size: 0.85em;">
+                          <span style="color: var(--z-muted);">Community seeds</span>
+                          <span style="color: var(--z-text); text-align: right;"><b>{{ discoveryP2p.status.communitySeeds ? 'on' : 'off' }}</b></span>
                         </div>
-                        <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 9px 0; border-bottom: 1px solid #eee; font-size: 0.85em;">
-                          <span style="color: #757575;">Sidecar memory ceiling</span>
-                          <span style="color: #212121; text-align: right;"><b>{{ discoveryP2p.status.watchdog && discoveryP2p.status.watchdog.maxRssMb > 0
+                        <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--z-line); font-size: 0.85em;">
+                          <span style="color: var(--z-muted);">Sidecar memory ceiling</span>
+                          <span style="color: var(--z-text); text-align: right;"><b>{{ discoveryP2p.status.watchdog && discoveryP2p.status.watchdog.maxRssMb > 0
                             ? discoveryP2p.status.watchdog.maxRssMb + ' MB' : 'watchdog off' }}</b>
                             [<a v-on:click="openModal('edit-p2p-sidecar-max-rss-modal')">{{ t('admin.settings.edit') }}</a>]</span>
                         </div>
@@ -7628,7 +7632,7 @@ const discoveryView = Vue.component('discovery-view', {
                   </div>
                   <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 4px 0 2px 0;">
                     <b>Servers you follow</b>
-                    <div style="display: inline-flex; border: 1px solid #bdbdbd; border-radius: 2px; overflow: hidden;">
+                    <div style="display: inline-flex; border: 1px solid var(--z-line); border-radius: 2px; overflow: hidden;">
                       <div v-on:click="listMode = 'cards'" :style="listBtnStyle('cards')">cards</div>
                       <div v-on:click="listMode = 'list'" :style="listBtnStyle('list')">list</div>
                     </div>
@@ -7636,40 +7640,40 @@ const discoveryView = Vue.component('discovery-view', {
                   <div v-if="discoveryP2p.peers.length > 5" class="input-field" style="max-width: 360px; margin: 4px 0 0 0;">
                     <input v-model="peerFilter" id="p2p-peer-filter" type="text" placeholder="Search servers — name or description">
                   </div>
-                  <p v-if="peerFilter && discoveryP2p.peers.length > 0" style="color: #757575; font-size: 0.85em; margin: 2px 0;">
+                  <p v-if="peerFilter && discoveryP2p.peers.length > 0" style="color: var(--z-muted); font-size: 0.85em; margin: 2px 0;">
                     {{ filteredPeers.length }} of {{ discoveryP2p.peers.length }} servers
                   </p>
                   <div v-if="listMode === 'cards' && filteredPeers.length > 0"
                     style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); gap: 14px; margin: 8px 0;">
                     <div v-for="peer in filteredPeers" :key="'card-' + peer.from"
-                      :style="'border: 1px solid #e0e0e0; border-radius: 2px; padding: 12px 14px; display: flex; flex-direction: column; gap: 7px;' + (peer.online ? '' : ' opacity: 0.75;')">
+                      :style="'border: 1px solid var(--z-line); border-radius: 2px; padding: 12px 14px; display: flex; flex-direction: column; gap: 7px;' + (peer.online ? '' : ' opacity: 0.75;')">
                       <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
                         <b style="min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ peer.payload.name || (peer.from.slice(0, 12) + '…') }}</b>
                         <span :title="peer.updatedAt" style="display: inline-flex; align-items: center; gap: 5px; font-size: 0.8em; flex-shrink: 0;">
                           <span :style="'width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; background: ' + (peer.online ? '#2e7d32' : '#9e9e9e') + ';'"></span>
                           {{ peer.online ? 'online' : 'offline' + discoveryAge(peer.updatedAt) }}</span>
                       </div>
-                      <div v-if="peer.payload.description" style="color: #757575; font-size: 0.85em;">{{ peer.payload.description }}</div>
-                      <div style="color: #616161; font-size: 0.85em;">{{ peer.payload.rowCount }} tracks
+                      <div v-if="peer.payload.description" style="color: var(--z-muted); font-size: 0.85em;">{{ peer.payload.description }}</div>
+                      <div style="color: var(--z-text-2); font-size: 0.85em;">{{ peer.payload.rowCount }} tracks
                         · {{ peer.seeders }} seeder{{ peer.seeders === 1 ? '' : 's' }}</div>
                       <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-                        <span v-if="peer.fetched" :style="'padding: 2px 8px; border-radius: 10px; font-size: 0.75em; font-weight: 600; background: ' + (peer.fetched.stale ? '#fff8e1; color: #8d6e00' : '#e8f5e9; color: #2e7d32') + ';'">
+                        <span v-if="peer.fetched" :style="'padding: 2px 8px; border-radius: 10px; font-size: 0.75em; font-weight: 600; background: ' + (peer.fetched.stale ? '#fff8e1; color: var(--z-accent)' : '#e8f5e9; color: var(--z-celadon)') + ';'">
                           {{ peer.fetched.stale ? 'update available' : 'downloaded' }}</span>
-                        <span v-else style="padding: 2px 8px; border-radius: 10px; font-size: 0.75em; font-weight: 600; background: #f5f5f5; color: #757575;">not downloaded</span>
-                        <span v-if="peer.fetched && peer.fetched.pinned" style="padding: 2px 8px; border-radius: 10px; font-size: 0.75em; font-weight: 600; background: #ececf2; color: #505061;">pinned</span>
-                        <span v-if="peer.compatible === false" style="padding: 2px 8px; border-radius: 10px; font-size: 0.75em; font-weight: 600; background: #fff3e0; color: #a06010;">incompatible model</span>
-                        <span v-if="fedReqStateFor(peer.from) === 'federated'" style="padding: 2px 8px; border-radius: 10px; font-size: 0.75em; font-weight: 600; background: #e8f5e9; color: #2e7d32;">federated</span>
-                        <span v-else-if="fedReqStateFor(peer.from) === 'theirs'" style="padding: 2px 8px; border-radius: 10px; font-size: 0.75em; font-weight: 600; background: #e8eaf6; color: #3949ab;">they asked you</span>
-                        <span v-else-if="fedReqStateFor(peer.from) === 'sent'" style="padding: 2px 8px; border-radius: 10px; font-size: 0.75em; font-weight: 600; background: #fff8e1; color: #8d6e00;">request sent</span>
+                        <span v-else style="padding: 2px 8px; border-radius: 10px; font-size: 0.75em; font-weight: 600; background: var(--z-inset); color: var(--z-muted);">not downloaded</span>
+                        <span v-if="peer.fetched && peer.fetched.pinned" style="padding: 2px 8px; border-radius: 10px; font-size: 0.75em; font-weight: 600; background: var(--z-placeholder); color: var(--z-text-2);">pinned</span>
+                        <span v-if="peer.compatible === false" style="padding: 2px 8px; border-radius: 10px; font-size: 0.75em; font-weight: 600; background: var(--z-accent-tint); color: var(--z-accent);">incompatible model</span>
+                        <span v-if="fedReqStateFor(peer.from) === 'federated'" style="padding: 2px 8px; border-radius: 10px; font-size: 0.75em; font-weight: 600; background: var(--z-celadon-tint); color: var(--z-celadon);">federated</span>
+                        <span v-else-if="fedReqStateFor(peer.from) === 'theirs'" style="padding: 2px 8px; border-radius: 10px; font-size: 0.75em; font-weight: 600; background: var(--z-info-tint); color: var(--z-info);">they asked you</span>
+                        <span v-else-if="fedReqStateFor(peer.from) === 'sent'" style="padding: 2px 8px; border-radius: 10px; font-size: 0.75em; font-weight: 600; background: var(--z-accent-tint); color: var(--z-accent);">request sent</span>
                       </div>
-                      <div style="display: flex; gap: 10px; font-size: 0.85em; border-top: 1px solid #eee; padding-top: 7px; flex-wrap: wrap;">
+                      <div style="display: flex; gap: 10px; font-size: 0.85em; border-top: 1px solid var(--z-line); padding-top: 7px; flex-wrap: wrap;">
                         <span>[<a v-on:click="discoveryFetchPeer(peer.from)">{{ peer.fetched ? 'Update' : 'Download' }}</a>]</span>
                         <span v-if="fed.available !== false && fedReqStateFor(peer.from) === null">[<a v-on:click="openFederateModal(peer)">Federate…</a>]</span>
                         <span v-if="fedReqStateFor(peer.from) === 'theirs'">[<a v-on:click="goToFederationTab()">Review their request</a>]</span>
                         <span v-if="peer.fetched">[<a v-on:click="discoveryRemovePeer(peer.from)">Remove</a>]</span>
                         <span v-if="peer.fetched">[<a v-on:click="discoveryPinPeer(peer.from, !peer.fetched.pinned)">{{ peer.fetched.pinned ? 'Unpin' : 'Pin' }}</a>]</span>
                         <span v-if="!peer.online && !peer.fetched">[<a v-on:click="discoveryForgetPeer(peer.from)">Forget</a>]</span>
-                        <span>[<a v-on:click="discoveryBlockPeer(peer.from)" style="color: #b71c1c;">Block</a>]</span>
+                        <span>[<a v-on:click="discoveryBlockPeer(peer.from)" style="color: var(--z-danger);">Block</a>]</span>
                       </div>
                     </div>
                   </div>
@@ -7680,7 +7684,7 @@ const discoveryView = Vue.component('discovery-view', {
                       <tr v-for="peer in filteredPeers" :key="peer.from">
                         <td>
                           {{ peer.payload.name || (peer.from.slice(0, 12) + '…') }}
-                          <div v-if="peer.payload.description" style="color: #757575; font-size: 0.85em; max-width: 360px;">{{ peer.payload.description }}</div>
+                          <div v-if="peer.payload.description" style="color: var(--z-muted); font-size: 0.85em; max-width: 360px;">{{ peer.payload.description }}</div>
                         </td>
                         <td>{{ peer.payload.rowCount }}</td>
                         <td>{{ peer.seeders }}</td>
@@ -7694,12 +7698,12 @@ const discoveryView = Vue.component('discovery-view', {
                           [<a v-on:click="discoveryFetchPeer(peer.from)">{{ peer.fetched ? 'Update' : 'Download' }}</a>]
                           <span v-if="fed.available !== false && fedReqStateFor(peer.from) === null">[<a v-on:click="openFederateModal(peer)">Federate…</a>]</span>
                           <span v-if="fedReqStateFor(peer.from) === 'theirs'">[<a v-on:click="goToFederationTab()">Review their request</a>]</span>
-                          <span v-else-if="fedReqStateFor(peer.from) === 'federated'" style="padding: 2px 8px; border-radius: 10px; font-size: 0.75em; font-weight: 600; background: #e8f5e9; color: #2e7d32;">federated</span>
-                          <span v-else-if="fedReqStateFor(peer.from) === 'sent'" style="padding: 2px 8px; border-radius: 10px; font-size: 0.75em; font-weight: 600; background: #fff8e1; color: #8d6e00;">request sent</span>
+                          <span v-else-if="fedReqStateFor(peer.from) === 'federated'" style="padding: 2px 8px; border-radius: 10px; font-size: 0.75em; font-weight: 600; background: var(--z-celadon-tint); color: var(--z-celadon);">federated</span>
+                          <span v-else-if="fedReqStateFor(peer.from) === 'sent'" style="padding: 2px 8px; border-radius: 10px; font-size: 0.75em; font-weight: 600; background: var(--z-accent-tint); color: var(--z-accent);">request sent</span>
                           <span v-if="peer.fetched">[<a v-on:click="discoveryRemovePeer(peer.from)">Remove</a>]</span>
                           <span v-if="peer.fetched">[<a v-on:click="discoveryPinPeer(peer.from, !peer.fetched.pinned)">{{ peer.fetched.pinned ? 'Unpin' : 'Pin' }}</a>]</span>
                           <span v-if="!peer.online && !peer.fetched">[<a v-on:click="discoveryForgetPeer(peer.from)">Forget</a>]</span>
-                          [<a v-on:click="discoveryBlockPeer(peer.from)" style="color: #b71c1c;">Block</a>]
+                          [<a v-on:click="discoveryBlockPeer(peer.from)" style="color: var(--z-danger);">Block</a>]
                         </td>
                       </tr>
                     </tbody>
@@ -7709,7 +7713,7 @@ const discoveryView = Vue.component('discovery-view', {
                     &ldquo;{{ peerFilter }}&rdquo; — [<a v-on:click="peerFilter = ''">clear</a>]</p>
                   <p v-else-if="discoveryP2p.hiddenIncompatible === 0">No servers heard yet — paste a friend's ticket above and give gossip a minute.</p>
                   <p v-if="discoveryP2p.hiddenIncompatible > 0 || discoveryP2p.showIncompatible"
-                    style="color: #757575; font-size: 0.9em;">
+                    style="color: var(--z-muted); font-size: 0.9em;">
                     <span v-if="discoveryP2p.hiddenIncompatible > 0">{{ discoveryP2p.hiddenIncompatible }}
                       server{{ discoveryP2p.hiddenIncompatible === 1 ? '' : 's' }} hidden — incompatible embedding
                       model (their libraries can't power this server's similar-search)
@@ -7718,7 +7722,7 @@ const discoveryView = Vue.component('discovery-view', {
                       [<a v-on:click="discoveryToggleIncompatible()">hide</a>]</span>
                   </p>
                   <p v-if="discoveryP2p.status.blockedPeers && discoveryP2p.status.blockedPeers.length > 0"
-                    style="color: #757575; font-size: 0.9em;">
+                    style="color: var(--z-muted); font-size: 0.9em;">
                     <b>Blocked servers</b> — announcements ignored, snapshots never fetched:<br>
                     <span v-for="id in discoveryP2p.status.blockedPeers" :key="id" style="margin-right: 12px; white-space: nowrap;">
                       <code>{{ id.slice(0, 12) }}…</code> [<a v-on:click="discoveryUnblockPeer(id)">Unblock</a>]
@@ -7807,14 +7811,14 @@ const discoveryView = Vue.component('discovery-view', {
     headerTabStyle: function(tab) {
       const base = 'padding: 6px 16px; border-radius: 2px; font-size: 0.85em; font-weight: 600; cursor: pointer; letter-spacing: 0.4px; ';
       return base + (this.headerTab === tab
-        ? 'background: #505061; color: #fff;'
-        : 'background: transparent; color: #616161; border: 1px solid #e0e0e0;');
+        ? 'background: var(--z-placeholder); color: #fff;'
+        : 'background: transparent; color: var(--z-text-2); border: 1px solid var(--z-line);');
     },
     listBtnStyle: function(mode) {
       const base = 'padding: 4px 14px; font-size: 0.85em; font-weight: 600; cursor: pointer; ';
       return base + (this.listMode === mode
-        ? 'background: #505061; color: #fff;'
-        : 'background: #fff; color: #616161;');
+        ? 'background: var(--z-placeholder); color: #fff;'
+        : 'background: var(--z-card); color: var(--z-text-2);');
     },
     // The consent moment. What used to be "edit the config file and
     // restart" is now this dialog — it must say what enabling actually
@@ -7839,10 +7843,10 @@ const discoveryView = Vue.component('discovery-view', {
         // A <div> sibling sidesteps that rule; one clean native checkbox.
         title: `<b>Join the discovery network?</b>`,
         message: `Your server will publish a metadata-only snapshot of its music library (never audio files) to the public discovery network, with your server's name and description visible to everyone. Music-discovery data collection will also be enabled.`
-          + `<div style="margin-top:12px; padding:10px 12px; background:#f5f5f5; border-radius:3px;">`
+          + `<div style="margin-top:12px; padding:10px 12px; background:var(--z-inset); border-radius:3px;">`
           + `<label style="display:flex; gap:8px; align-items:flex-start; cursor:pointer; margin:0;">`
           + `<input id="fedreq-enable-inbox" type="checkbox" style="position:static; opacity:1; pointer-events:auto; width:16px; height:16px; margin:2px 0 0 0; flex-shrink:0;"/>`
-          + `<div style="flex:1;">Also let other servers send me <b>federation requests</b> — invitations to share libraries. Nothing is shared unless you approve each one. <span style="color:#616161;">(Turns federation on.)</span></div>`
+          + `<div style="flex:1;">Also let other servers send me <b>federation requests</b> — invitations to share libraries. Nothing is shared unless you approve each one. <span style="color:var(--z-text-2);">(Turns federation on.)</span></div>`
           + `</label></div>`,
         position: 'center',
         buttons: [
@@ -8255,7 +8259,7 @@ const discoveryPluginsView = Vue.component('discovery-plugins-view', {
                 <p>{{ t('admin.dplugins.lead') }}</p>
                 <div v-if="!dp.loaded"><p>{{ t('admin.dplugins.loading') }}</p></div>
                 <div v-else-if="!dp.status">
-                  <p style="color:#b71c1c">{{ t('admin.dplugins.loadFailed') }}</p>
+                  <p style="color:var(--z-danger)">{{ t('admin.dplugins.loadFailed') }}</p>
                   <a class="waves-effect waves-light btn" v-on:click="load()">{{ t('admin.dplugins.retry') }}</a>
                 </div>
                 <div v-else class="dp-box">
@@ -8388,7 +8392,7 @@ const discoveryPluginsView = Vue.component('discovery-plugins-view', {
                           <td :data-label="t('admin.dplugins.dl.col.where')"><span class="dp-mono">{{ r.crumbs.join(' / ') }}</span><span v-if="r.state === 'missing'" class="dp-warn-soft"> &middot; {{ t('admin.dplugins.dl.missing') }}</span><span v-else-if="r.state === 'removed'" class="dp-muted"> &middot; {{ t('admin.dplugins.dl.removed', { when: ago(r.removedAt) }) }}</span></td>
                           <td class="dp-num" :data-label="t('admin.dplugins.dl.col.size')">{{ r.size || '—' }}</td>
                           <td class="dp-num">
-                            <span v-if="r.actions.indexOf('remove') !== -1 && downloads.removing[r.id] !== true" class="dp-br">[<a style="color:#b71c1c" v-on:click="removeDownload(r)">{{ t('admin.dplugins.dl.remove') }}</a>]</span>
+                            <span v-if="r.actions.indexOf('remove') !== -1 && downloads.removing[r.id] !== true" class="dp-br">[<a style="color:var(--z-danger)" v-on:click="removeDownload(r)">{{ t('admin.dplugins.dl.remove') }}</a>]</span>
                           </td>
                         </tr>
                       </tbody>
@@ -8425,7 +8429,7 @@ const discoveryPluginsView = Vue.component('discovery-plugins-view', {
                                 <div v-if="a.row.progress !== null" class="progress" style="margin:5px 0 0 0"><div :class="a.row.progress === 'indeterminate' ? 'indeterminate' : 'determinate'" :style="a.row.progress === 'indeterminate' ? null : { width: a.row.progress + '%' }"></div></div>
                               </td>
                               <td class="dp-num">
-                                <span v-if="a.row.live && activity.cancelling[a.job.id] !== true" class="dp-br">[<a style="color:#b71c1c" v-on:click="cancelJob(a.job)">{{ t('admin.dplugins.act.cancel') }}</a>]</span>
+                                <span v-if="a.row.live && activity.cancelling[a.job.id] !== true" class="dp-br">[<a style="color:var(--z-danger)" v-on:click="cancelJob(a.job)">{{ t('admin.dplugins.act.cancel') }}</a>]</span>
                                 <span v-else-if="a.job.state === 'failed'" class="dp-br">[<a v-on:click="toggleWhy(a.job)">{{ t(activity.open[a.job.id] ? 'admin.dplugins.act.hide' : 'admin.dplugins.act.why') }}</a>]</span>
                               </td>
                             </tr>
@@ -8888,7 +8892,7 @@ const irohView = Vue.component('iroh-view', {
             <div class="card-content center-align">
               <span class="card-title left-align">Pairing code</span>
               <div id="iroh-qr" style="margin:12px auto"></div>
-              <p style="font-size:0.85em;color:#777" class="left-align">Scan from the mStream app, or copy the code into the desktop client.</p>
+              <p style="font-size:0.85em;color:var(--z-muted)" class="left-align">Scan from the mStream app, or copy the code into the desktop client.</p>
               <a class="waves-effect waves-light btn-flat iroh-copy-button" :data-clipboard-text="iroh.qr">
                 Copy code
               </a>
@@ -8900,15 +8904,15 @@ const irohView = Vue.component('iroh-view', {
             <div class="card-content">
               <span class="card-title">Details</span>
               <p style="margin-top:8px"><b>Status:</b>
-                <span v-if="iroh.enabled && iroh.running" style="color:#2e7d32">On{{ iroh.online ? ' · connected to relay' : ' · connecting…' }}</span>
-                <span v-else style="color:#777">Off</span>
+                <span v-if="iroh.enabled && iroh.running" style="color:var(--z-celadon)">On{{ iroh.online ? ' · connected to relay' : ' · connecting…' }}</span>
+                <span v-else style="color:var(--z-muted)">Off</span>
               </p>
               <p style="margin-top:8px"><b>Endpoint ID</b></p>
               <p style="word-break:break-all;font-family:monospace;font-size:0.8em">{{ iroh.endpointId }}</p>
               <p style="margin-top:8px" v-if="iroh.relayUrl"><b>Home relay:</b> {{ iroh.relayUrl }}</p>
               <div style="margin-top:20px">
                 <p><b>Rotate secret</b></p>
-                <p style="font-size:0.85em;color:#777">Issues a new pairing code and invalidates the current one. Use this if a code leaked or a device should lose access.</p>
+                <p style="font-size:0.85em;color:var(--z-muted)">Issues a new pairing code and invalidates the current one. Use this if a code leaked or a device should lose access.</p>
                 <a v-on:click="rotate()" :class="{disabled: rotatePending}" class="waves-effect waves-light btn red lighten-1" style="margin-top:8px">
                   Rotate secret
                 </a>
@@ -8963,6 +8967,11 @@ const vm = new Vue({
     currentViewMain: _initialViewFromHash(),
     componentKey: false
   }
+});
+
+// Mark the nav item of the view the page opened on (#users-view …).
+document.querySelectorAll('.side-nav-item').forEach((el) => {
+  el.classList.toggle('select', (el.getAttribute('onclick') || '').includes(`'${vm.currentViewMain}'`));
 });
 
 function changeView(viewName, el){
@@ -10696,7 +10705,7 @@ const federationNewTicketModal = Vue.component('federation-new-ticket-modal', {
           <p v-for="(cfg, vpath) in directories" :key="vpath" style="margin:4px 0">
             <label><input type="checkbox" v-model="selected" :value="vpath"/><span>{{ vpath }}</span></label>
           </p>
-          <p style="margin:16px 0 4px"><b>Bandwidth limits</b> <span style="color:#777;font-size:0.85em">— 0 means unlimited</span></p>
+          <p style="margin:16px 0 4px"><b>Bandwidth limits</b> <span style="color:var(--z-muted);font-size:0.85em">— 0 means unlimited</span></p>
           <div class="row" style="margin-bottom:0">
             <div class="input-field col s3">
               <input id="fed-limit-kbps" type="number" min="0" v-model.number="streamKbps"/>
@@ -10787,7 +10796,7 @@ const federationEditLimitsModal = Vue.component('federation-edit-limits-modal', 
     <form @submit.prevent="save">
       <div class="modal-content">
         <h4>Limits for '{{ target.name }}'</h4>
-        <p style="color:#777;font-size:0.9em">Applies from this key's next request. 0 means unlimited.</p>
+        <p style="color:var(--z-muted);font-size:0.9em">Applies from this key's next request. 0 means unlimited.</p>
         <div class="row" style="margin-bottom:0">
           <div class="input-field col s4">
             <input id="fed-edit-kbps" type="number" min="0" v-model.number="streamKbps"/>
@@ -10883,13 +10892,13 @@ const federationRequestAcceptModal = Vue.component('federation-request-accept-mo
     <form @submit.prevent="accept">
       <div class="modal-content">
         <h4>Accept — share libraries with {{ r.peer_name || '(unnamed server)' }}</h4>
-        <p style="margin:0 0 6px;font-family:monospace;font-size:0.8em;color:#757575">{{ peerFp }}</p>
-        <p v-if="r.message" style="font-size:0.9em;color:#616161;background:#f5f5f5;padding:8px 10px;border-radius:3px">“{{ r.message }}”</p>
+        <p style="margin:0 0 6px;font-family:monospace;font-size:0.8em;color:var(--z-muted)">{{ peerFp }}</p>
+        <p v-if="r.message" style="font-size:0.9em;color:var(--z-text-2);background:var(--z-inset);padding:8px 10px;border-radius:3px">“{{ r.message }}”</p>
         <p style="margin:14px 0 4px"><b>Libraries they can read:</b></p>
         <p v-for="(cfg, vpath) in directories" :key="vpath" style="margin:4px 0">
           <label><input type="checkbox" v-model="selected" :value="vpath"/><span>{{ vpath }}</span></label>
         </p>
-        <p style="margin:16px 0 4px"><b>Bandwidth limits</b> <span style="color:#777;font-size:0.85em">— 0 means unlimited</span></p>
+        <p style="margin:16px 0 4px"><b>Bandwidth limits</b> <span style="color:var(--z-muted);font-size:0.85em">— 0 means unlimited</span></p>
         <div class="row" style="margin-bottom:0">
           <div class="input-field col s3">
             <input id="fedreq-limit-kbps" type="number" min="0" v-model.number="streamKbps"/>
@@ -10981,10 +10990,10 @@ const federationRequestComposeModal = Vue.component('federation-request-compose-
     <form @submit.prevent="send">
       <div class="modal-content">
         <h4>Ask {{ peerLabel }} to federate</h4>
-        <p style="font-size:0.9em;color:#616161;margin:0 0 14px">Sends a request over the discovery network. <b>No access is exchanged now</b> — they see your name, message, and offer, and libraries are only shared if they accept.</p>
+        <p style="font-size:0.9em;color:var(--z-text-2);margin:0 0 14px">Sends a request over the discovery network. <b>No access is exchanged now</b> — they see your name, message, and offer, and libraries are only shared if they accept.</p>
         <div class="input-field">
           <textarea id="fedreq-compose-msg" class="materialize-textarea" v-model="message" maxlength="500" placeholder="Message (optional)"></textarea>
-          <div style="text-align:right;font-size:0.75em;color:#9e9e9e">{{ message.length }} / 500</div>
+          <div style="text-align:right;font-size:0.75em;color:var(--z-muted)">{{ message.length }} / 500</div>
         </div>
         <p style="margin:8px 0 4px"><b>Libraries you'll share back if they accept:</b></p>
         <p v-for="(cfg, vpath) in directories" :key="vpath" style="margin:4px 0">
@@ -11303,7 +11312,7 @@ const backupHistoryModal = Vue.component('backup-history-modal', {
               <td>{{ run.files_unchanged }}</td>
               <td>{{ run.files_trashed }}</td>
               <td>{{ formatBytes(run.bytes_copied) }}</td>
-              <td style="font-size:12px;color:#555">{{ run.error_message || '' }}</td>
+              <td style="font-size:12px;color:var(--z-text-2)">{{ run.error_message || '' }}</td>
             </tr>
           </tbody>
         </table>
@@ -11443,18 +11452,18 @@ const backupEditModal = Vue.component('backup-edit-modal', {
         </div>
       </div>
 
-      <div v-if="checkPending" class="row" style="color:#888"><div class="col s12">Checking path…</div></div>
+      <div v-if="checkPending" class="row" style="color:var(--z-muted)"><div class="col s12">Checking path…</div></div>
       <div v-if="!checkPending && checkErrors.length > 0" class="row">
-        <div class="col s12" style="background:#ffebee;border-left:4px solid #c62828;padding:8px 12px">
-          <strong style="color:#c62828">Cannot save:</strong>
+        <div class="col s12" style="background:var(--z-danger-tint);border-left:4px solid var(--z-danger);padding:8px 12px">
+          <strong style="color:var(--z-danger)">Cannot save:</strong>
           <ul style="margin:4px 0 0 0">
             <li v-for="e in checkErrors" :key="e">{{ e }}</li>
           </ul>
         </div>
       </div>
       <div v-if="!checkPending && checkErrors.length === 0 && checkWarnings.length > 0" class="row">
-        <div class="col s12" style="background:#fff8e1;border-left:4px solid #f9a825;padding:8px 12px">
-          <strong style="color:#f57f17">Heads up:</strong>
+        <div class="col s12" style="background:var(--z-accent-tint);border-left:4px solid var(--z-accent);padding:8px 12px">
+          <strong style="color:var(--z-accent)">Heads up:</strong>
           <ul style="margin:4px 0 0 0">
             <li v-for="w in checkWarnings" :key="w">{{ w }}</li>
           </ul>

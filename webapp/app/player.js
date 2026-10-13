@@ -85,7 +85,21 @@ window.VUEPLAYERCORE.addSongWizard = async (filepath, metadata, lookup, position
   bump();
   if (lookup) { await enrich(song); }
 };
-window.VUEPLAYERCORE.addFederationSongWizard = () => {};
+// A peer's track (Discover → Peers, federated Auto DJ): streamed through
+// this server's federation proxy, as the classic player does.
+window.VUEPLAYERCORE.addFederationSongWizard = (peer, remotePath, metadata, autoPlayOff, position, playNow = true) => {
+  let fp = remotePath.replace(/%/g, '%25').replace(/#/g, '%23').replace(/\?/g, '%3F');
+  if (fp.charAt(0) === '/') { fp = fp.substr(1); }
+  const s = server();
+  let url = `${s.host}api/v1/federation/peers/${peer.id}/stream/${fp}?`;
+  if (s.token) { url += 'token=' + s.token; }
+  const song = {
+    url, rawFilePath: remotePath, filepath: remotePath, metadata: metadata || {}, authToken: s.token,
+    federation: { peerId: peer.id, peerName: peer.name || 'peer' },
+  };
+  if (position !== undefined) { P().insertSongAt(song, position, playNow !== false); } else { P().addSong(song, autoPlayOff); }
+  bump();
+};
 
 const asSongs = (tracks) => tracks
   .filter((t) => t && t.filepath)
@@ -137,6 +151,16 @@ export function playNext(tracks) {
   toast(`${songs.length === 1 ? trackTitle(tracks[0]) : songs.length + ' tracks'} will play next`);
 }
 
+// "Play similar" (the app's): the track, then what the server's sound
+// analysis finds closest to it.
+export async function playSimilar(track) {
+  const path = String(track.filepath || '').replace(/^\/+/, '');
+  const res = await MSTREAMAPI.discoverySimilar(path, 25);
+  if (!res || res.disabled) { toast('Could not find similar tracks', 'error'); return; }
+  if (res.notAnalyzed) { toast('This track hasn’t been analyzed yet'); return; }
+  playTracks([track, ...(res.results || []).map((r) => ({ filepath: r.filepath, metadata: r.metadata || {} }))]);
+}
+
 export function playAt(i) { P().goToSongAtPosition(i); bump(); }
 export function removeAt(i) { P().removeSongAtPosition(i); bump(); }
 
@@ -175,7 +199,14 @@ export const seekPct = (pct) => {
   publish();
 };
 export const toggleShuffle = () => { P().toggleShuffle(); publish(); };
-export const toggleRepeat = () => { P().toggleRepeat(); publish(); };
+// The app's repeat button: off → all → one → ∞ Auto DJ → off. Auto DJ
+// clears the repeat flags when it starts; turning it off leaves repeat off.
+export const cycleRepeat = () => {
+  const p = P();
+  const st = p.playerStats;
+  if (st.autoDJ) { p.toggleAutoDJ(); } else if (st.shouldLoopOne) { p.toggleAutoDJ(); } else { p.toggleRepeat(); }
+  publish();
+};
 
 export function setVolume(v) {
   const vol = Math.round(Math.max(0, Math.min(100, v)));
