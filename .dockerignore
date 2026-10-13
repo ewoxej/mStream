@@ -1,0 +1,26 @@
+# Build context of the mstream-zenelo image (Dockerfile at the repo root).
+node_modules
+.git
+.github
+.claude
+.vscode
+dist
+build
+image-cache
+waveform-cache
+save
+model-cache
+test
+rust-parser/target
+rust-launcher/target
+rust-server-audio/target
+docs/api.html
+*.log
+TODO.md
+# bin/ holds the pinned manifests mStream downloads ffmpeg, the player, the
+# sidecars … from (keep them) and, on a dev machine, those downloads (don't).
+bin/**
+!bin/*/
+!bin/**/*.json
+!bin/**/README.md
+!bin/**/.source-tree

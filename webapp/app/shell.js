@@ -4,15 +4,18 @@ import { app, useStore, href, go, savePrefs } from './store.js';
 import * as P from './player.js';
 import { playback } from './player.js';
 import * as lib from './library.js';
+import { sidebarLayout } from './nav.js';
+import { devices, activeRemote, positionOf, command as devCommand } from './devices.js';
+import { DevicesButton } from './devices-ui.js';
 import { Icon, IconBtn, Cover, LikeButton, openMenu, trackMenuItems, prompt } from './ui.js';
 import { fmtTime, fmtCount, trackTitle, trackArtist, trackAlbum, trackCover, formatLabel, gainLabel } from './util.js';
 
 // ── Sidebar ─────────────────────────────────────────────────────────────
 
-function NavItem({ id, label, icon, trail, trailTone, screen }) {
+function NavItem({ id, label, icon, trail, trailTone, screen, to }) {
   const on = screen === id || (id === 'albums' && screen === 'album') || (id === 'artists' && screen === 'artist')
     || (id === 'genres' && screen === 'genre') || (id === 'pl' && screen === 'playlist');
-  return html`<a class=${`nav-item ${on ? 'on' : ''}`} href=${href(id)} title=${label}>
+  return html`<a class=${`nav-item ${on ? 'on' : ''}`} href=${to || href(id)} title=${label}>
     <${Icon} name=${icon} size=${17} />
     <span class="nav-label">${label}</span>
     ${trail ? html`<span class=${'nav-trail ' + (trailTone || '')}>${trail}</span>` : null}
@@ -59,38 +62,28 @@ export function Sidebar() {
   const plCount = useStore(app, (s) => s.playlists.length);
   const dj = useStore(playback, (s) => s.autoDJ);
   const features = useStore(app, (s) => s.features);
+  const home = useStore(app, (s) => s.homeFolder);
+  const stored = useStore(app, (s) => s.sidebar);
   const c = (n) => (n === undefined || n === null ? '' : fmtCount(n));
+  const trail = {
+    albums: c(counts.albums), artists: c(counts.artists), tracks: c(counts.tracks), genres: c(counts.genres),
+    fav: c(counts.liked), pl: c(plCount), dj: dj ? 'ON' : '',
+  };
+  const groups = sidebarLayout(stored)
+    .map((g) => ({ ...g, items: g.items.filter((i) => i.on && (!i.when || i.when(features))) }))
+    .filter((g) => g.items.length);
   return html`<aside class="sidebar">
     <a class="brand" href=${href('home')}>
       <div class="brand-mark"><${Icon} name="graphic_eq" size=${18} /></div>
       <span>mStream</span>
     </a>
     <nav class="nav">
-      <div class="nav-group">
-        <${NavItem} id="home" label="Home" icon="home" screen=${screen} />
-        <${NavItem} id="recent" label="Recently played" icon="history" screen=${screen} />
-      </div>
-      <div class="nav-group">
-        <div class="nav-head">LIBRARY</div>
-        <${NavItem} id="albums" label="Albums" icon="album" trail=${c(counts.albums)} screen=${screen} />
-        <${NavItem} id="artists" label="Artists" icon="person" trail=${c(counts.artists)} screen=${screen} />
-        <${NavItem} id="tracks" label="All tracks" icon="music_note" trail=${c(counts.tracks)} screen=${screen} />
-        <${NavItem} id="genres" label="Genres" icon="category" trail=${c(counts.genres)} screen=${screen} />
-        <${NavItem} id="folders" label="Folders" icon="folder" screen=${screen} />
-        <${NavItem} id="fav" label="Favorites" icon="favorite_border" trail=${c(counts.liked)} screen=${screen} />
-        <${NavItem} id="pl" label="Playlists" icon="queue_music" trail=${c(plCount)} screen=${screen} />
-      </div>
-      <div class="nav-group">
-        <div class="nav-head">TOOLS</div>
-        <${NavItem} id="dj" label="Auto DJ" icon="auto_awesome" trail=${dj ? 'ON' : ''} trailTone="accent" screen=${screen} />
-        ${features.sonicPath ? html`<${NavItem} id="sonic" label="Sonic Path" icon="route" screen=${screen} />` : null}
-        ${features.discover ? html`<${NavItem} id="discover" label="Discover" icon="explore" screen=${screen} />` : null}
-        <${NavItem} id="jukebox" label="Jukebox" icon="qr_code_2" screen=${screen} />
-        ${features.stats ? html`<${NavItem} id="stats" label="Stats" icon="insights" screen=${screen} />` : null}
-        <${NavItem} id="viz" label="Visualizer" icon="equalizer" screen=${screen} />
-        ${features.torrent ? html`<${NavItem} id="dl" label="Downloads" icon="download" screen=${screen} />` : null}
-        <${NavItem} id="settings" label="Settings" icon="settings" screen=${screen} />
-      </div>
+      ${groups.map((g) => html`<div class="nav-group" key=${g.id}>
+        ${g.label ? html`<div class="nav-head">${g.label}</div>` : null}
+        ${g.items.map((i) => html`<${NavItem} key=${i.id} id=${i.id} label=${i.label} icon=${i.icon} screen=${screen}
+          trail=${trail[i.id]} trailTone=${i.id === 'dj' ? 'accent' : ''}
+          to=${i.id === 'folders' && home ? href('folders', ...home.split('/')) : null} />`)}
+      </div>`)}
     </nav>
     <${ServerCard} />
   </aside>`;
@@ -171,7 +164,7 @@ export function Queue() {
     </div>
     <div class="q-list" ref=${listRef}>
       ${!queueLen ? html`<div class="q-empty">
-        <${Icon} name="queue_music" size=${22} />
+        <${Icon} name="list" size=${22} />
         <span>The queue is empty</span>
         <small>Play an album or a track, or set the repeat button to ∞ Auto DJ to keep music coming.</small>
       </div>` : null}
@@ -189,6 +182,19 @@ export function Queue() {
 
 function Seek() {
   const { currentTime, duration } = useStore(playback, (s) => ({ currentTime: Math.floor(s.currentTime * 4) / 4, duration: s.duration }));
+  return html`<${SeekBar} currentTime=${currentTime} duration=${duration} onSeek=${P.seekPct} />`;
+}
+
+// Another device's playhead, moving on between its reports.
+function RemoteSeek({ d }) {
+  const [, tick] = useState(0);
+  useEffect(() => { const t = setInterval(() => tick((n) => n + 1), 500); return () => clearInterval(t); }, []);
+  const duration = (d.track?.durationMs || 0) / 1000;
+  return html`<${SeekBar} currentTime=${positionOf(d) / 1000} duration=${duration}
+    onSeek=${(pct) => devCommand(d.id, 'seek', { positionMs: Math.round(pct * duration * 1000) })} />`;
+}
+
+function SeekBar({ currentTime, duration, onSeek }) {
   const bar = useRef();
   const [drag, setDrag] = useState(null);
   const pct = drag ?? (duration > 0 ? Math.min(1, currentTime / duration) : 0);
@@ -204,7 +210,7 @@ function Seek() {
     const up = (ev) => {
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
-      P.seekPct(at(ev));
+      onSeek(at(ev));
       setDrag(null);
     };
     window.addEventListener('pointermove', move);
@@ -220,12 +226,20 @@ function Seek() {
   </div>`;
 }
 
-function Volume() {
-  const volume = useStore(playback, (s) => s.volume);
+function Volume({ remote }) {
+  const local = useStore(playback, (s) => s.volume);
+  const volume = remote ? (remote.volume ?? 100) : local;
+  const setVol = (v) => {
+    if (!remote) { P.setVolume(v); return; }
+    const vol = Math.round(Math.max(0, Math.min(100, v)));
+    devices.set((st) => ({ list: st.list.map((x) => (x.id === remote.id ? { ...x, volume: vol } : x)) }));
+    clearTimeout(Volume.timer);
+    Volume.timer = setTimeout(() => devCommand(remote.id, 'setVolume', { volume: vol }), 120);
+  };
   const bar = useRef();
   const set = (e) => {
     const r = bar.current.getBoundingClientRect();
-    P.setVolume(((e.clientX - r.left) / r.width) * 100);
+    setVol(((e.clientX - r.left) / r.width) * 100);
   };
   const down = (e) => {
     e.preventDefault();
@@ -235,9 +249,10 @@ function Volume() {
     window.addEventListener('pointerup', up);
   };
   return html`<div class="volume">
-    <${IconBtn} icon=${volume === 0 ? 'volume_off' : volume < 50 ? 'volume_down' : 'volume_up'} title=${volume === 0 ? 'Unmute' : 'Mute'} onClick=${P.toggleMute} size=${17} />
+    <${IconBtn} icon=${volume === 0 ? 'volume_off' : volume < 50 ? 'volume_down' : 'volume_up'} title=${volume === 0 ? 'Unmute' : 'Mute'}
+      onClick=${remote ? () => setVol(volume > 0 ? 0 : 100) : P.toggleMute} size=${17} />
     <div class="bar" ref=${bar} onPointerDown=${down}
-      onWheel=${(e) => { e.preventDefault(); P.setVolume(volume - Math.sign(e.deltaY) * 5); }}>
+      onWheel=${(e) => { e.preventDefault(); setVol(volume - Math.sign(e.deltaY) * 5); }}>
       <div class="bar-fill" style=${{ width: volume + '%' }}></div>
       <div class="bar-knob" style=${{ left: volume + '%' }}></div>
     </div>
@@ -251,13 +266,23 @@ export function PlayerBar() {
   }));
   const screen = useStore(app, (x) => x.route.screen);
   const queueOpen = useStore(app, (x) => x.queueOpen);
+  const dev = useStore(devices, (x) => ({ list: x.list, self: x.self }));
+  // Another device playing while this one doesn't: the bar shows and controls it.
+  const remote = activeRemote(dev.list, dev.self, s.playing);
   const song = s.current;
-  const track = song ? { filepath: song.rawFilePath, metadata: song.metadata || {} } : null;
+  const track = remote ? (remote.track ? { filepath: remote.track.filepath, metadata: {
+    title: remote.track.title, artist: remote.track.artist, album: remote.track.album, 'album-art': remote.track.art || null,
+    duration: (remote.track.durationMs || 0) / 1000,
+  } } : null) : song ? { filepath: song.rawFilePath, metadata: song.metadata || {} } : null;
   const meta = track?.metadata || {};
+  const playing = remote ? remote.playing : s.playing;
+  const ctl = remote ? {
+    prev: () => devCommand(remote.id, 'previous'), playPause: () => devCommand(remote.id, 'playPause'), next: () => devCommand(remote.id, 'next'),
+  } : { prev: P.prev, playPause: P.playPause, next: P.next };
   const rgText = !s.rg ? 'RG OFF' : meta['replaygain-track'] != null && meta['replaygain-track'] !== ''
     ? `RG ${gainLabel({ 'replaygain-track': Number(meta['replaygain-track']) + Number(s.pre || 0) })}` : 'RG · NO TAG';
 
-  return html`<footer class="playerbar">
+  return html`<footer class=${`playerbar ${remote ? 'remote' : ''}`}>
     <div class="pb-now">
       ${track ? html`
         <${Cover} file=${trackCover(track)} class="pb-cover" />
@@ -274,29 +299,30 @@ export function PlayerBar() {
     </div>
     <div class="pb-center">
       <div class="pb-controls">
-        <${IconBtn} icon="shuffle" title=${s.autoDJ ? 'Shuffle (off while Auto DJ runs)' : 'Shuffle'} active=${s.shuffle} onClick=${P.toggleShuffle} size=${17} class="dim" />
-        <${IconBtn} icon="skip_previous" title="Previous" onClick=${P.prev} size=${19} />
-        <button type="button" class="play" onClick=${P.playPause} title=${s.playing ? 'Pause' : 'Play'}>
-          <${Icon} name=${s.playing ? 'pause' : 'play_arrow'} size=${19} fill />
+        <${IconBtn} icon="shuffle" title=${s.autoDJ ? 'Shuffle (off while Auto DJ runs)' : 'Shuffle'} active=${!remote && s.shuffle} onClick=${P.toggleShuffle} size=${17} class=${`dim ${remote ? 'idle' : ''}`} />
+        <${IconBtn} icon="skip_previous" title="Previous" onClick=${ctl.prev} size=${19} />
+        <button type="button" class="play" onClick=${ctl.playPause} title=${playing ? 'Pause' : 'Play'}>
+          <${Icon} name=${playing ? 'pause' : 'play_arrow'} size=${19} fill />
         </button>
-        <${IconBtn} icon="skip_next" title="Next" onClick=${P.next} size=${19} />
+        <${IconBtn} icon="skip_next" title="Next" onClick=${ctl.next} size=${19} />
         <${IconBtn} icon=${s.autoDJ ? 'all_inclusive' : s.loopOne ? 'repeat_one' : 'repeat'} title=${s.autoDJ ? 'Auto DJ' : 'Repeat'}
-          active=${s.autoDJ || s.loop || s.loopOne} onClick=${P.cycleRepeat} size=${17} class="dim" />
+          active=${!remote && (s.autoDJ || s.loop || s.loopOne)} onClick=${P.cycleRepeat} size=${17} class=${`dim ${remote ? 'idle' : ''}`} />
       </div>
-      <${Seek} />
+      ${remote ? html`<${RemoteSeek} d=${remote} />` : html`<${Seek} />`}
     </div>
     <div class="pb-right">
-      <div class="pb-fmt">
+      ${remote ? null : html`<div class="pb-fmt">
         <span>${formatLabel(meta) || '—'}${P.isTranscodingOn() ? html` <em>→ ${P.transcodeLabel()}</em>` : null}</span>
         <span>${rgText}</span>
-      </div>
-      <${IconBtn} icon="mic" title="Lyrics" active=${screen === 'lyrics'} size=${17}
+      </div>`}
+      <${IconBtn} icon="queue_music" title="Lyrics" active=${screen === 'lyrics'} size=${17} class="pager"
         onClick=${() => (screen === 'lyrics' ? history.back() : go('lyrics'))} />
-      <${IconBtn} icon="equalizer" title="Visualizer" active=${screen === 'viz'} size=${17} class="pb-viz"
+      <${IconBtn} icon="equalizer" title="Visualizer" active=${screen === 'viz'} size=${17} class="pb-viz pager"
         onClick=${() => (screen === 'viz' ? history.back() : go('viz'))} />
-      <${IconBtn} icon="queue_music" title=${queueOpen ? 'Hide queue' : 'Show queue'} active=${queueOpen} size=${17}
+      <${IconBtn} icon="list" title=${queueOpen ? 'Hide queue' : 'Show queue'} active=${queueOpen} size=${17} class="pager"
         onClick=${() => { app.set({ queueOpen: !queueOpen }); savePrefs(); }} />
-      <${Volume} />
+      <${DevicesButton} />
+      <${Volume} remote=${remote} />
     </div>
   </footer>`;
 }

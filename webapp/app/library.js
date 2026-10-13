@@ -56,6 +56,8 @@ export const allSongs = () => cached('songs:all', async () => {
 });
 
 export const search = (q) => MSTREAMAPI.search({ search: q });
+// File-path matches only (the folder browser's search over sub-folders).
+export const searchFiles = async (q) => (await MSTREAMAPI.search({ search: q, noArtists: true, noAlbums: true, noTitles: true })).files || [];
 
 // ── Playlists ───────────────────────────────────────────────────────────
 

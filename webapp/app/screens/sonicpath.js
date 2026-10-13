@@ -62,7 +62,7 @@ function Picker({ side, onPick, onClose }) {
   const playing = current && !current.federation ? { filepath: current.rawFilePath, metadata: current.metadata || {} } : null;
   return html`<div class="sp-picker">
     <div class="sp-picker-head">
-      <${SearchField} value=${q} onInput=${(v) => { setQ(v); later(v); }} placeholder=${`${side === 'start' ? 'Start' : 'End'} track: title, artist, album`} autoFocus />
+      <${SearchField} value=${q} onInput=${(v) => { setQ(v); later(v); }} autoFocus />
       ${playing ? html`<${Btn} icon="graphic_eq" onClick=${() => onPick(playing)}>Playing</${Btn}>` : null}
       <${IconBtn} icon="close" title="Cancel" onClick=${onClose} />
     </div>

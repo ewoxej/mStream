@@ -979,6 +979,24 @@ const MSTREAMPLAYER = (() => {
     return goToSong(mstreamModule.positionCache.val);
   }
 
+  // Load the song at `position` without playing it, the playhead at
+  // `seconds` — a queue picked up from another device (webapp/app/devices.js)
+  // waits paused where it was left.
+  mstreamModule.cueSongAtPosition = function (position, seconds) {
+    if (!mstreamModule.playlist[position]) {
+      return false;
+    }
+    clearEnd();
+    mstreamModule.positionCache.val = position;
+    goToSong(position, true);
+    mstreamModule.playerStats.playing = false;
+    if (seconds > 0) {
+      seekToAbsolute(seconds);
+      mstreamModule.playerStats.currentTime = seconds;
+    }
+    return true;
+  }
+
   mstreamModule.removeSongAtPosition = function (position, sanityCheckUrl) {
     // Check that position is filled
     if (position > mstreamModule.playlist.length || position < 0) {

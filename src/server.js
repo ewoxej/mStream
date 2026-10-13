@@ -37,6 +37,7 @@ import * as discoveryCollectionApi from './api/discovery-collection.js';
 import * as discoveryDownloadsApi from './api/discovery-downloads.js';
 import * as discoveryOwnedApi from './api/discovery-owned.js';
 import * as remoteApi from './api/remote.js';
+import * as devicesApi from './api/devices.js';
 import * as sharedApi from './api/shared.js';
 import * as scrobblerApi from './api/scrobbler.js';
 import * as config from './state/config.js';
@@ -590,6 +591,7 @@ export async function serveIt(configFile, { relisten = null } = {}) {
   dbApi.setup(mstream);
   syncApi.setup(mstream);
   statsApi.setup(mstream);
+  devicesApi.setup(mstream);
   startRetentionSweep();
   searchApi.setup(mstream);
   randomApi.setup(mstream);

@@ -121,6 +121,24 @@ export function playTracks(tracks, start = 0) {
   songs.forEach(enrich);
 }
 
+// Replace the queue with `tracks`, cued at `start` and `seconds` — paused,
+// or playing when `play` (a queue taken over from another device).
+export function loadQueue(tracks, start = 0, seconds = 0, play = false) {
+  const songs = asSongs(tracks);
+  if (!songs.length) { return; }
+  const p = P();
+  const dj = p.playerStats.autoDJ;
+  if (dj) { p.playerStats.autoDJ = false; }
+  if (p.playerStats.playing) { p.playPause(); }
+  p.clearPlaylist();
+  songs.forEach((s) => p.addSong(s, true));
+  if (dj) { p.playerStats.autoDJ = true; }
+  p.cueSongAtPosition(Math.max(0, Math.min(start, songs.length - 1)), seconds);
+  if (play) { p.playPause(); }
+  bump();
+  songs.forEach(enrich);
+}
+
 export function shufflePlay(tracks) {
   const copy = [...tracks];
   for (let i = copy.length - 1; i > 0; i--) {

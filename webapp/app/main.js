@@ -5,7 +5,10 @@ import { restorePlayerPrefs, toast } from './player.js';
 import * as lib from './library.js';
 import { Sidebar, Queue, PlayerBar } from './shell.js';
 import { MenuLayer, DialogLayer, ToastLayer, Empty } from './ui.js';
-import { Home, Recent, Albums, Album, Artists, Artist, Tracks, Genres, Genre, Favorites, Search } from './screens/library.js';
+import { connect as connectDevices } from './devices.js';
+import { DeviceStrip } from './devices-ui.js';
+import { Recent, Albums, Album, Artists, Artist, Tracks, Genres, Genre, Favorites, Search } from './screens/library.js';
+import { Home, CustomizeHome } from './screens/home.js';
 import { Playlists, Playlist } from './screens/playlists.js';
 import { Folders } from './screens/folders.js';
 import { AutoDJ } from './screens/dj.js';
@@ -23,7 +26,7 @@ const SCREENS = {
   tracks: Tracks, genres: Genres, genre: Genre, fav: Favorites, search: Search,
   pl: Playlists, playlist: Playlist, folders: Folders, dj: AutoDJ, viz: Visualizer,
   dl: Downloads, settings: Settings, sonic: SonicPath, discover: Discover, jukebox: Jukebox,
-  lyrics: Lyrics, stats: Stats,
+  lyrics: Lyrics, stats: Stats, customize: CustomizeHome,
 };
 
 function App() {
@@ -42,6 +45,7 @@ function App() {
     ${showQueue ? html`<${Queue} />` : null}
     ${showQueue ? html`<div class="queue-scrim" onClick=${() => app.set({ queueOpen: false })}></div>` : null}
     <${PlayerBar} />
+    <${DeviceStrip} />
     <${MenuLayer} />
     <${DialogLayer} />
     <${ToastLayer} />
@@ -100,6 +104,8 @@ async function boot() {
     .catch(() => {});
   lib.loadCounts().catch(() => {});
   lib.loadLikedCount();
+  // This tab as a playback device (devices.js); a server without accounts has none.
+  if (s.token) { connectDevices(); }
 
   // A share link handed to /?... from the old UI, or a stale hash: land on Home.
   if (!location.hash) { history.replaceState(null, '', '#/home'); }

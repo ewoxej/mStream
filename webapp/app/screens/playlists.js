@@ -7,7 +7,7 @@ import { Btn, Header, Cover, Empty, Spinner, TrackTable, useAsync, prompt, confi
 import { fmtTime, plural, sumDuration, trackCover } from '../util.js';
 
 // 2×2 mosaic of the first distinct covers.
-function Mosaic({ name }) {
+export function Mosaic({ name }) {
   const state = useAsync(() => lib.playlistSongs(name), [name]);
   const covers = [...new Set((state.data || []).map((t) => trackCover(t)).filter(Boolean))].slice(0, 4);
   const n = state.data?.length;

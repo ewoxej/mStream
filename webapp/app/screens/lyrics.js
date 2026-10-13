@@ -74,11 +74,11 @@ export function Lyrics() {
       ${track ? html`<div class="ly-track"><${Cover} file=${trackCover(track)} class="mini-cover" />
         <div class="mini-text"><span>${trackTitle(track)}</span><small>${trackArtist(track)}</small></div></div>` : null}
     </${Header}>
-    ${!track ? html`<div class="scroll"><${Empty} icon="mic" title="Nothing playing">Lyrics of the playing track show here.</${Empty}></div>`
+    ${!track ? html`<div class="scroll"><${Empty} icon="queue_music" title="Nothing playing">Lyrics of the playing track show here.</${Empty}></div>`
       : state.loading ? html`<${Spinner} />`
       : state.error ? html`<div class="scroll"><${Empty} icon="error_outline" title="Could not load the lyrics" /></div>`
       : d?.lines?.length ? html`<${Synced} lines=${d.lines} />`
       : d?.plain ? html`<div class="scroll ly-scroll"><div class="ly-plain">${d.plain}</div></div>`
-      : html`<div class="scroll"><${Empty} icon="mic" title="No lyrics yet">The server picks them up from .lrc files, tags and LRCLIB as it scans.</${Empty}></div>`}
+      : html`<div class="scroll"><${Empty} icon="queue_music" title="No lyrics yet">The server picks them up from .lrc files, tags and LRCLIB as it scans.</${Empty}></div>`}
   </div>`;
 }

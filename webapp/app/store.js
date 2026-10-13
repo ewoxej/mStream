@@ -65,7 +65,18 @@ export const app = createStore({
   narrow: narrowQuery.matches,
   queueOpen: narrowQuery.matches ? false : prefs.queueOpen !== false,
   albumView: prefs.albumView || 'grid',
-  albumSort: prefs.albumSort || { key: 'name', dir: 'asc' },
+  artistView: prefs.artistView || 'grid',
+  // Per-page sort: { albums: { key, dir }, artists: …, tracks: …, folders: … }.
+  // Albums kept theirs under albumSort before the other pages had one.
+  sorts: { ...(prefs.albumSort ? { albums: prefs.albumSort } : {}), ...(prefs.sorts || {}) },
+  // Track table columns, in order (ids from ui.js TRACK_COLUMNS); null = default.
+  trackCols: Array.isArray(prefs.trackCols) ? prefs.trackCols : null,
+  // Home sections in order with how each shows: [{ id, mode }]; null = default.
+  home: Array.isArray(prefs.home) ? prefs.home : null,
+  // The folder the browser opens on and its Home button leads to ("music/Rock"), '' = the libraries.
+  homeFolder: typeof prefs.homeFolder === 'string' ? prefs.homeFolder : '',
+  // Sidebar items per group, in order, with on / off (nav.js); null = default.
+  sidebar: prefs.sidebar && typeof prefs.sidebar === 'object' ? prefs.sidebar : null,
   // Library facts filled in after boot (server/ping + counts).
   server: null,
   // What the server offers (its ping): Discover, Sonic Path, Stats, …
@@ -82,13 +93,17 @@ narrowQuery.addEventListener('change', (e) => {
   app.set({ narrow: e.matches, queueOpen: e.matches ? false : wideQueueOpen });
 });
 
+// Set app state that is a preference and keep it.
+export function setPref(patch) { app.set(patch); savePrefs(); }
+
 export function savePrefs() {
   const s = app.get();
   // The drawer opening and closing in a small window isn't a preference.
   if (!s.narrow) { wideQueueOpen = s.queueOpen; }
   try {
     localStorage.setItem(LS_KEY, JSON.stringify({
-      queueOpen: wideQueueOpen, albumView: s.albumView, albumSort: s.albumSort,
+      queueOpen: wideQueueOpen, albumView: s.albumView, artistView: s.artistView, sorts: s.sorts,
+      trackCols: s.trackCols, home: s.home, homeFolder: s.homeFolder, sidebar: s.sidebar,
     }));
   } catch (_) { /* private mode */ }
 }

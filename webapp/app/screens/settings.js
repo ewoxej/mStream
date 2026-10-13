@@ -1,15 +1,17 @@
 // Settings: what this player controls (playback, transcoding) plus the
 // server facts a listener needs. Server administration stays in /admin.
 import { html, useState } from '../vendor/preact-htm.js';
-import { app, useStore, href } from '../store.js';
+import { app, useStore, href, setPref } from '../store.js';
+import { sidebarLayout, sidebarPrefs } from '../nav.js';
 import * as P from '../player.js';
 import { playback } from '../player.js';
 import * as lib from '../library.js';
-import { Header, Seg, Toggle, Btn, Icon, confirm } from '../ui.js';
+import { Header, Seg, Toggle, Btn, Icon, Plate, confirm } from '../ui.js';
 import { fmtCount, server } from '../util.js';
 
 const TABS = [
   ['playback', 'Playback'],
+  ['interface', 'Interface'],
   ['transcoding', 'Transcoding'],
   ['library', 'Library'],
   ['server', 'Server'],
@@ -93,6 +95,56 @@ function Library() {
   </${Card}>`;
 }
 
+// Sidebar: show / hide and order the items inside each group (drag, or
+// the arrows). Settings always shows, so it stays reachable.
+function Interface() {
+  const stored = useStore(app, (x) => x.sidebar);
+  const features = useStore(app, (x) => x.features);
+  const layout = sidebarLayout(stored);
+  const [drag, setDrag] = useState(null);   // { group, from, over }
+  const save = (next) => setPref({ sidebar: sidebarPrefs(next) });
+  const update = (gid, fn) => save(layout.map((g) => (g.id === gid ? { ...g, items: fn(g.items) } : g)));
+  const move = (gid, from, to) => update(gid, (items) => {
+    if (to < 0 || to >= items.length || from === to) { return items; }
+    const next = [...items];
+    next.splice(to, 0, next.splice(from, 1)[0]);
+    return next;
+  });
+  return html`<${Card} title="Sidebar" note="Show, hide and reorder the sidebar's items. Settings always stays, so it can be reached.">
+    ${layout.map((g) => html`<div class="sb-group" key=${g.id}>
+      <div class="sb-head micro">${g.label || 'GENERAL'}</div>
+      ${g.items.map((i, n) => {
+        const offered = !i.when || i.when(features);
+        const dragHere = drag && drag.group === g.id;
+        return html`<div key=${i.id} class=${`sb-row ${i.on ? '' : 'off'} ${dragHere && drag.from === n ? 'dragging' : ''} ${dragHere && drag.over === n && drag.from !== n ? (drag.from < n ? 'drop-after' : 'drop-before') : ''}`}
+          draggable="true"
+          onDragStart=${(e) => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', i.id); setDrag({ group: g.id, from: n, over: n }); }}
+          onDragOver=${(e) => { if (dragHere) { e.preventDefault(); if (drag.over !== n) { setDrag({ ...drag, over: n }); } } }}
+          onDrop=${(e) => { e.preventDefault(); if (dragHere) { move(g.id, drag.from, n); } setDrag(null); }}
+          onDragEnd=${() => setDrag(null)}>
+          <span class="ch-handle" title="Drag to reorder"><${Icon} name="drag_indicator" size=${18} /></span>
+          <${Plate} icon=${i.icon} size=${26} iconSize=${14} tone=${i.on ? 'accent' : 'muted'} />
+          <span class="sb-name">${i.label}${!offered ? html`<small>Not on this server</small>` : i.fixed ? html`<small>Always shown</small>` : null}</span>
+          <span class="ch-move">
+            <button type="button" title="Move up" disabled=${n === 0} onClick=${() => move(g.id, n, n - 1)}><${Icon} name="arrow_upward" size=${14} /></button>
+            <button type="button" title="Move down" disabled=${n === g.items.length - 1} onClick=${() => move(g.id, n, n + 1)}><${Icon} name="arrow_downward" size=${14} /></button>
+          </span>
+          ${i.fixed ? html`<span class="sb-fixed"><${Toggle} on=${true} onChange=${() => {}} title="Settings always shows" /></span>`
+            : html`<${Toggle} on=${i.on} title=${i.on ? 'Hide' : 'Show'} onChange=${(v) => update(g.id, (items) => items.map((x) => (x.id === i.id ? { ...x, on: v } : x)))} />`}
+        </div>`;
+      })}
+    </div>`)}
+    <${Row} title="Reset sidebar" sub="Every item shown, in the original order">
+      <${Btn} icon="restart_alt" onClick=${() => setPref({ sidebar: null })}>Reset</${Btn}>
+    </${Row}>
+  </${Card}>
+  <${Card} title="Home" note="Sections on Home, how each shows (shortcut, grid or list card) and their order.">
+    <${Row} title="Customize home">
+      <a class="btn btn-outline" href=${href('customize')}><${Icon} name="tune" size=${15} />Customize</a>
+    </${Row}>
+  </${Card}>`;
+}
+
 async function logOut() {
   if (await confirm({ title: 'Log out of mStream?', text: 'You will need to sign in again to listen.', okLabel: 'Log out' })) { MSTREAMAPI.logout(); }
 }
@@ -114,7 +166,7 @@ function Server() {
 
 export function Settings({ args }) {
   const tab = TABS.find((t) => t[0] === args[0]) ? args[0] : 'playback';
-  const body = { playback: Playback, transcoding: Transcoding, library: Library, server: Server }[tab];
+  const body = { playback: Playback, interface: Interface, transcoding: Transcoding, library: Library, server: Server }[tab];
   return html`<div class="screen">
     <${Header} title="Settings" />
     <div class="settings">

@@ -1,12 +1,12 @@
 // Shared building blocks for the screens.
 import { html, useEffect, useMemo, useRef, useState } from './vendor/preact-htm.js';
 import { ICONS } from './icons.js';
-import { app, useStore, href, go } from './store.js';
+import { app, useStore, href, go, setPref } from './store.js';
 import { playback, playTracks, playNext, addToQueue, toggleLike, isLiked, playSimilar } from './player.js';
 import { sonicPathAdd } from './screens/sonicpath.js';
 import * as lib from './library.js';
 import {
-  coverUrl, trackTitle, trackArtist, trackAlbum, formatLabel, gainLabel, fmtTime,
+  coverUrl, trackTitle, trackArtist, trackAlbum, formatLabel, gainLabel, fmtTime, fmtBytes,
 } from './util.js';
 
 // ── Primitives ──────────────────────────────────────────────────────────
@@ -32,8 +32,12 @@ export function Cover({ file, size = 's', round = false, class: cls = '', childr
   </div>`;
 }
 
+// In a screen header an outline button with an icon shows the icon only
+// (app.css); its label becomes the tooltip.
+const textOf = (c) => (typeof c === 'string' || typeof c === 'number' ? String(c) : Array.isArray(c) ? c.map(textOf).join('') : '');
 export function Btn({ icon, children, onClick, kind = 'outline', title, disabled, class: cls = '', iconSize = 15 }) {
-  return html`<button type="button" class=${`btn btn-${kind} ${cls}`} onClick=${onClick} title=${title} disabled=${disabled}>
+  const label = title || textOf(children).trim() || undefined;
+  return html`<button type="button" class=${`btn btn-${kind} ${cls}`} onClick=${onClick} title=${label} aria-label=${label} disabled=${disabled}>
     ${icon ? html`<${Icon} name=${icon} size=${iconSize} />` : null}${children}
   </button>`;
 }
@@ -74,7 +78,7 @@ export function Chip({ on, onClick, children, icon }) {
   </button>`;
 }
 
-export function SearchField({ value, onInput, placeholder, width, hotkey, autoFocus, inputRef }) {
+export function SearchField({ value, onInput, placeholder = 'Search', width, hotkey, autoFocus, inputRef }) {
   const own = useRef();
   const ref = inputRef || own;
   useEffect(() => { if (autoFocus && ref.current) { ref.current.focus(); } }, []);
@@ -88,9 +92,10 @@ export function SearchField({ value, onInput, placeholder, width, hotkey, autoFo
 }
 
 // Screen header: big title over a mono caption, actions on the right.
-export function Header({ title, sub, back, children, crumbs }) {
+export function Header({ title, sub, back, children, crumbs, lead }) {
   return html`<header class="screen-head">
     ${back ? html`<${IconBtn} icon="arrow_back" size=${18} title="Back" onClick=${() => history.back()} class="back" />` : null}
+    ${lead}
     ${crumbs ? html`<div class="crumbs">${crumbs}</div>` : html`<div class="titles">
       <h1>${title}</h1>${sub ? html`<span class="micro">${sub}</span>` : null}
     </div>`}
@@ -134,9 +139,13 @@ export function useAsync(fn, deps) {
 export function openMenu(e, items) {
   e.preventDefault();
   e.stopPropagation();
-  const r = e.currentTarget?.getBoundingClientRect?.();
+  const anchor = e.currentTarget;
+  const r = anchor?.getBoundingClientRect?.();
   const fromButton = e.type === 'click' && r;
-  app.set({ menu: { x: fromButton ? r.right : e.clientX, y: fromButton ? r.bottom + 4 : e.clientY, alignRight: !!fromButton, items } });
+  // The ⋮ button that opened the menu closes it again.
+  const open = app.get().menu;
+  if (fromButton && open && open.anchor === anchor) { closeMenu(); return; }
+  app.set({ menu: { x: fromButton ? r.right : e.clientX, y: fromButton ? r.bottom + 4 : e.clientY, alignRight: !!fromButton, items, anchor: fromButton ? anchor : null } });
 }
 export const closeMenu = () => app.set({ menu: null });
 
@@ -159,7 +168,8 @@ export function MenuLayer() {
   }, [menu]);
   useEffect(() => {
     if (!menu) { return undefined; }
-    const close = (e) => { if (!ref.current?.contains(e.target)) { closeMenu(); } };
+    // A press on the button that opened it is left to its click (which closes it).
+    const close = (e) => { if (!ref.current?.contains(e.target) && !menu.anchor?.contains(e.target)) { closeMenu(); } };
     const key = (e) => { if (e.key === 'Escape') { closeMenu(); } };
     setTimeout(() => document.addEventListener('mousedown', close), 0);
     document.addEventListener('keydown', key);
@@ -315,6 +325,98 @@ export function LikeButton({ track, size = 16, always = false }) {
 // ── Track table ─────────────────────────────────────────────────────────
 // groups: [{ label, tracks }] (label optional). Clicking a row plays the
 // whole list from that row. Long lists are windowed.
+//
+// Columns: # and the title always, the rest chosen and ordered by the user
+// (the ⧉ button in the header; prefs `trackCols`). A narrow table drops
+// the chosen columns by `keep` (lowest first) until the title has room.
+
+const mono = (v) => (v === null || v === undefined || v === '' ? '' : v);
+const addedLabel = (s) => {
+  const t = s ? Date.parse(String(s).replace(' ', 'T') + (/[zZ+]/.test(s) ? '' : 'Z')) : NaN;
+  return Number.isFinite(t) ? new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+};
+export const TRACK_COLUMNS = [
+  { id: 'artist', label: 'Artist', head: 'ARTIST', cls: 'c-a', w: 'minmax(0, 1.3fr)', min: 110, keep: 9, cell: (t) => trackArtist(t) },
+  { id: 'album', label: 'Album', head: 'ALBUM', cls: 'c-al', w: 'minmax(0, 1.5fr)', min: 110, keep: 6, cell: (t) => trackAlbum(t) },
+  { id: 'genre', label: 'Genre', head: 'GENRE', cls: 'c-al', w: 'minmax(0, 1fr)', min: 90, keep: 3, cell: (t) => (t.metadata?.genres || []).join(', ') || mono(t.metadata?.genre) },
+  { id: 'composer', label: 'Composer', head: 'COMPOSER', cls: 'c-al', w: 'minmax(0, 1fr)', min: 90, keep: 2, cell: (t) => mono(t.metadata?.composer) },
+  { id: 'like', label: 'Favorite', head: '', cls: 'c-like', w: '36px', min: 36, keep: 8, cell: (t) => html`<${LikeButton} track=${t} size=${15} />` },
+  { id: 'year', label: 'Year', head: 'YEAR', cls: 'c-x', w: '52px', min: 52, keep: 4, cell: (t) => mono(t.metadata?.year) },
+  { id: 'format', label: 'Format', head: 'FORMAT', cls: 'c-f', w: '92px', min: 92, keep: 5, cell: (t) => formatLabel(t.metadata) },
+  { id: 'rg', label: 'ReplayGain', head: 'RG', cls: 'c-rg', w: '70px', min: 70, keep: 3, cell: (t) => gainLabel(t.metadata) },
+  { id: 'bpm', label: 'BPM', head: 'BPM', cls: 'c-x r', w: '44px', min: 44, keep: 2, cell: (t) => (t.metadata?.bpm ? Math.round(t.metadata.bpm) : '') },
+  { id: 'key', label: 'Key', head: 'KEY', cls: 'c-x', w: '72px', min: 72, keep: 2, cell: (t) => mono(t.metadata?.['musical-key']) },
+  { id: 'plays', label: 'Plays', head: 'PLAYS', cls: 'c-x r', w: '50px', min: 50, keep: 3, cell: (t) => mono(t.metadata?.['play-count']) },
+  { id: 'added', label: 'Date added', head: 'ADDED', cls: 'c-x', w: '96px', min: 96, keep: 2, cell: (t) => addedLabel(t.metadata?.['created-at']) },
+  { id: 'size', label: 'Size', head: 'SIZE', cls: 'c-x r', w: '64px', min: 64, keep: 2, cell: (t) => (t.metadata?.['file-size'] ? fmtBytes(t.metadata['file-size']) : '') },
+  { id: 'time', label: 'Time', head: 'TIME', cls: 'c-d', w: '48px', min: 48, keep: 10, cell: (t) => fmtTime(t.metadata?.duration) },
+];
+export const DEFAULT_TRACK_COLS = ['artist', 'album', 'like', 'format', 'rg', 'time'];
+const COL = Object.fromEntries(TRACK_COLUMNS.map((c) => [c.id, c]));
+
+export function useTrackCols() {
+  const stored = useStore(app, (s) => s.trackCols);
+  return (stored || DEFAULT_TRACK_COLS).filter((id) => COL[id]);
+}
+
+// Which of the chosen columns fit `width` (the rows' inner width), and the grid template.
+function layoutColumns(ids, width) {
+  const n = width < 640 ? 32 : width < 900 ? 40 : 52;
+  const gap = width < 640 ? 10 : 12;
+  const fixed = n + 32 + 160;  // #, ⋮ and the title's minimum
+  let cols = ids.map((id) => COL[id]);
+  const need = (cs) => fixed + cs.reduce((a, c) => a + c.min, 0) + gap * (cs.length + 2);
+  while (cols.length && width > 0 && need(cols) > width) {
+    const drop = cols.reduce((lo, c) => (c.keep < lo.keep ? c : lo), cols[0]);
+    cols = cols.filter((c) => c !== drop);
+  }
+  const titleW = cols.some((c) => c.w.includes('fr')) ? 'minmax(0, 2fr)' : 'minmax(0, 1fr)';
+  return { cols, template: [n + 'px', titleW, ...cols.map((c) => c.w), '32px'].join(' '), gap };
+}
+
+function ColumnsPopover({ chosen, onClose }) {
+  const ref = useRef();
+  useEffect(() => {
+    // The columns button toggles it itself.
+    const close = (e) => { if (!ref.current?.contains(e.target) && !e.target.closest?.('.cols-btn')) { onClose(); } };
+    const key = (e) => { if (e.key === 'Escape') { onClose(); } };
+    setTimeout(() => document.addEventListener('mousedown', close), 0);
+    document.addEventListener('keydown', key);
+    return () => { document.removeEventListener('mousedown', close); document.removeEventListener('keydown', key); };
+  }, []);
+  const save = (ids) => setPref({ trackCols: ids });
+  // From the store, not the render: two quick clicks must both count.
+  const now = () => (app.get().trackCols || DEFAULT_TRACK_COLS).filter((id) => COL[id]);
+  const toggle = (id) => { const c = now(); save(c.includes(id) ? c.filter((x) => x !== id) : [...c, id]); };
+  const move = (id, d) => {
+    const cur = now();
+    const i = cur.indexOf(id);
+    const j = i + d;
+    if (i < 0 || j < 0 || j >= cur.length) { return; }
+    const next = [...cur];
+    [next[i], next[j]] = [next[j], next[i]];
+    save(next);
+  };
+  // Chosen columns first, in their order, then the others.
+  const rows = [...chosen.map((id) => COL[id]), ...TRACK_COLUMNS.filter((c) => !chosen.includes(c.id))];
+  return html`<div class="popover cols-pop" ref=${ref} onClick=${(e) => e.stopPropagation()}>
+    <div class="cols-head"><span class="micro">COLUMNS</span>
+      <button type="button" class="cols-reset" onClick=${() => save(null)}>Reset</button></div>
+    <div class="cols-fixed"><${Icon} name="check" size=${14} /><span>#, Title</span><span class="micro">ALWAYS</span></div>
+    ${rows.map((c) => {
+      const on = chosen.includes(c.id);
+      const i = chosen.indexOf(c.id);
+      return html`<div class=${`cols-row ${on ? 'on' : ''}`} key=${c.id}>
+        <label><input type="checkbox" checked=${on} onChange=${() => toggle(c.id)} /><span>${c.label}</span></label>
+        ${on ? html`<span class="cols-move">
+          <button type="button" title="Move left" disabled=${i === 0} onClick=${() => move(c.id, -1)}><${Icon} name="arrow_upward" size=${14} /></button>
+          <button type="button" title="Move right" disabled=${i === chosen.length - 1} onClick=${() => move(c.id, 1)}><${Icon} name="arrow_downward" size=${14} /></button>
+        </span>` : null}
+      </div>`;
+    })}
+    <div class="cols-note">Columns that don’t fit a narrow window are hidden, least important first.</div>
+  </div>`;
+}
 
 const ROW_H = 44;
 const HEAD_H = 36;
@@ -322,6 +424,8 @@ const HEAD_H = 36;
 export function TrackTable({ groups, firstCol = '#', firstValue, rail = false, rowMenu, empty, hideAlbum = false }) {
   const currentPath = useStore(playback, (s) => s.currentPath);
   const playing = useStore(playback, (s) => s.playing);
+  const chosen = useTrackCols();
+  const [colsOpen, setColsOpen] = useState(false);
   const flat = useMemo(() => groups.flatMap((g) => g.tracks), [groups]);
   const items = useMemo(() => {
     const out = [];
@@ -337,17 +441,25 @@ export function TrackTable({ groups, firstCol = '#', firstValue, rail = false, r
   const height = items.length ? items[items.length - 1].top + (items[items.length - 1].head ? HEAD_H : ROW_H) : 0;
 
   const scroller = useRef();
-  const [view, setView] = useState({ top: 0, h: 800 });
+  const [view, setView] = useState({ top: 0, h: 800, w: 0 });
   useEffect(() => {
     const el = scroller.current;
     if (!el) { return undefined; }
-    const onScroll = () => setView({ top: el.scrollTop, h: el.clientHeight });
+    const onScroll = () => {
+      const cs = getComputedStyle(el);
+      const w = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - 24;
+      setView({ top: el.scrollTop, h: el.clientHeight, w });
+    };
     onScroll();
     el.addEventListener('scroll', onScroll, { passive: true });
     const ro = new ResizeObserver(onScroll);
     ro.observe(el);
     return () => { el.removeEventListener('scroll', onScroll); ro.disconnect(); };
-  }, []);
+  }, [!flat.length && !!empty]);  // the scroller appears once there are rows
+
+  const layout = useMemo(() => layoutColumns(chosen.filter((id) => !(hideAlbum && id === 'album')), view.w),
+    [chosen.join(), hideAlbum, Math.round(view.w / 8)]);
+  const gridStyle = { gridTemplateColumns: layout.template, columnGap: layout.gap + 'px' };
 
   const windowed = items.length > 200;
   const visible = windowed
@@ -371,31 +483,27 @@ export function TrackTable({ groups, firstCol = '#', firstValue, rail = false, r
   const row = (it) => {
     const t = it.track;
     const cur = t.filepath === currentPath;
-    const meta = t.metadata || {};
     const menu = (e) => openMenu(e, rowMenu ? rowMenu(t, it.index) : trackMenuItems([t]));
-    return html`<div key=${it.key} class=${`tr ${cur ? 'cur' : ''}`}
-      style=${windowed ? { position: 'absolute', top: it.top + 'px', left: 0, right: 0 } : null}
+    const pos = windowed ? { position: 'absolute', top: it.top + 'px', left: 0, right: 0 } : {};
+    return html`<div key=${it.key} class=${`tr ${cur ? 'cur' : ''}`} style=${{ ...gridStyle, ...pos }}
       onClick=${() => playTracks(flat, it.index)} onContextMenu=${menu}>
       <span class="c-n">${cur ? html`<${Icon} name=${playing ? 'graphic_eq' : 'pause'} size=${14} />`
         : firstValue ? firstValue(t, it.index) : it.index + 1}</span>
       <span class="c-t">${trackTitle(t)}</span>
-      <span class="c-a">${trackArtist(t)}</span>
-      ${hideAlbum ? null : html`<span class="c-al">${trackAlbum(t)}</span>`}
-      <span class="c-like"><${LikeButton} track=${t} size=${15} /></span>
-      <span class="c-f">${formatLabel(meta)}</span>
-      <span class="c-rg">${gainLabel(meta)}</span>
-      <span class="c-d">${fmtTime(meta.duration)}</span>
+      ${layout.cols.map((c) => html`<span class=${c.cls}>${c.cell(t)}</span>`)}
       <span class="c-m"><button type="button" class="row-more" title="More" onClick=${menu}><${Icon} name="more_vert" size=${16} /></button></span>
     </div>`;
   };
 
-  return html`<div class=${`track-table ${hideAlbum ? 'no-album' : ''}`}>
+  return html`<div class="track-table">
     <div class="tt-scroll" ref=${scroller}>
-      <div class="tr th">
-        <span class="c-n">${firstCol}</span><span class="c-t">TITLE</span><span class="c-a">ARTIST</span>
-        ${hideAlbum ? null : html`<span class="c-al">ALBUM</span>`}
-        <span class="c-like"></span><span class="c-f">FORMAT</span><span class="c-rg">RG</span><span class="c-d">TIME</span><span class="c-m"></span>
+      <div class="tr th" style=${gridStyle}>
+        <span class="c-n">${firstCol}</span><span class="c-t">TITLE</span>
+        ${layout.cols.map((c) => html`<span class=${c.cls}>${c.head}</span>`)}
+        <span class="c-m"><button type="button" class=${`cols-btn ${colsOpen ? 'on' : ''}`} title="Columns"
+          onClick=${(e) => { e.stopPropagation(); setColsOpen(!colsOpen); }}><${Icon} name="view_column" size=${15} /></button></span>
       </div>
+      ${colsOpen ? html`<${ColumnsPopover} chosen=${chosen} onClose=${() => setColsOpen(false)} />` : null}
       <div class="tt-body" style=${windowed ? { height: height + 'px', position: 'relative' } : null}>
         ${visible.map((it) => it.head
           ? html`<div key=${it.key} class="tg" style=${windowed ? { position: 'absolute', top: it.top + 'px', left: 0, right: 0 } : null}>${it.label}</div>`

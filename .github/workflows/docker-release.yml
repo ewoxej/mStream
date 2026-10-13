@@ -1,0 +1,109 @@
+name: Docker release
+
+# Manual: Actions → Docker release → Run workflow. The version is the VERSION
+# file at the repo root: bump it, commit, then run this. It runs the unit
+# tests, pushes ghcr.io/<owner>/mstream-zenelo tagged `<version>`,
+# `<major>.<minor>` and `latest` (amd64 + arm64), tags the commit
+# zenelo-v<version> and publishes a GitHub release. It fails when that tag
+# exists, i.e. VERSION wasn't bumped. (zenelo-v…, not v…: the v… tags are
+# upstream mStream's.)
+
+on:
+  workflow_dispatch:
+    inputs:
+      prerelease:
+        description: "Pre-release (no `latest` tag)"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  packages: write
+
+concurrency:
+  group: docker-release
+  cancel-in-progress: false
+
+env:
+  IMAGE_NAME: mstream-zenelo
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check version
+        run: |
+          VERSION=$(tr -d '[:space:]' < VERSION)
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::VERSION must look like 1.2.3, got '$VERSION'"
+            exit 1
+          fi
+          if git ls-remote --exit-code --tags origin "refs/tags/zenelo-v$VERSION" >/dev/null; then
+            echo "::error::Tag zenelo-v$VERSION already exists: bump the VERSION file"
+            exit 1
+          fi
+          UPSTREAM=$(node -p "require('./package.json').version")
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "MINOR=${VERSION%.*}" >> "$GITHUB_ENV"
+          echo "UPSTREAM=$UPSTREAM" >> "$GITHUB_ENV"
+          echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/$IMAGE_NAME" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run test:unit
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+          flavor: latest=false
+          tags: |
+            type=raw,value=${{ env.VERSION }}
+            type=raw,value=${{ env.MINOR }},enable=${{ !inputs.prerelease }}
+            type=raw,value=latest,enable=${{ !inputs.prerelease }}
+          labels: |
+            org.opencontainers.image.title=mstream-zenelo
+            org.opencontainers.image.version=${{ env.VERSION }}
+            io.mstream.upstream-version=${{ env.UPSTREAM }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            VERSION=${{ env.VERSION }}
+            REVISION=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Tag and release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git tag "zenelo-v$VERSION"
+          git push origin "zenelo-v$VERSION"
+          NOTES="Image: \`$IMAGE:$VERSION\` (linux/amd64, linux/arm64), based on mStream $UPSTREAM.
+
+          \`\`\`
+          docker pull $IMAGE:$VERSION
+          \`\`\`"
+          gh release create "zenelo-v$VERSION" --title "mstream-zenelo $VERSION" --notes "$NOTES" \
+            ${{ inputs.prerelease && '--prerelease' || '' }}
