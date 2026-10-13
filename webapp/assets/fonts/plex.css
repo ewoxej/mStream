@@ -1,0 +1,10 @@
+/* IBM Plex Sans / Mono (SIL OFL 1.1, see plex/LICENSE.txt) — the Zenelo
+   typefaces. One woff2 per weight, each covering latin, latin-ext, cyrillic,
+   cyrillic-ext, greek and vietnamese. Plex Mono has no bold (synthesized). */
+@font-face { font-family: 'IBM Plex Sans'; font-style: normal; font-weight: 400; font-display: swap; src: url(plex/plex-sans-regular.woff2) format('woff2'); }
+@font-face { font-family: 'IBM Plex Sans'; font-style: normal; font-weight: 500; font-display: swap; src: url(plex/plex-sans-medium.woff2) format('woff2'); }
+@font-face { font-family: 'IBM Plex Sans'; font-style: normal; font-weight: 600; font-display: swap; src: url(plex/plex-sans-semibold.woff2) format('woff2'); }
+@font-face { font-family: 'IBM Plex Sans'; font-style: normal; font-weight: 700; font-display: swap; src: url(plex/plex-sans-bold.woff2) format('woff2'); }
+@font-face { font-family: 'IBM Plex Mono'; font-style: normal; font-weight: 400; font-display: swap; src: url(plex/plex-mono-regular.woff2) format('woff2'); }
+@font-face { font-family: 'IBM Plex Mono'; font-style: normal; font-weight: 500; font-display: swap; src: url(plex/plex-mono-medium.woff2) format('woff2'); }
+@font-face { font-family: 'IBM Plex Mono'; font-style: normal; font-weight: 600; font-display: swap; src: url(plex/plex-mono-semibold.woff2) format('woff2'); }

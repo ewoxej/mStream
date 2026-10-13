@@ -36,9 +36,11 @@ describe('config: retired settings are stripped on boot', () => {
     const r = await fetch(`${srv.baseUrl}/`);
     assert.equal(r.status, 200);
     const html = await r.text();
-    assert.ok(html.includes('alpha/m.js'), 'default UI index.html is served');
-    const js = await fetch(`${srv.baseUrl}/alpha/m.js`);
+    assert.ok(html.includes('app/main.js'), 'default UI index.html is served');
+    const js = await fetch(`${srv.baseUrl}/app/main.js`);
     assert.equal(js.status, 200, 'default UI assets resolve from webapp/');
+    const classic = await fetch(`${srv.baseUrl}/classic/`);
+    assert.ok((await classic.text()).includes('alpha/m.js'), 'the classic player is still served');
   });
 
   test('config.json is rewritten without the retired keys', async () => {

@@ -1,5 +1,5 @@
 /**
- * /server-remote serves webapp/index.html with the browser player swapped for
+ * /server-remote serves webapp/classic/index.html with the browser player swapped for
  * the server-audio client (src/api/server-playback.js
  * rewriteIndexForServerAudio).
  *
@@ -20,7 +20,7 @@ import { fileURLToPath } from 'node:url';
 import { rewriteIndexForServerAudio } from '../../src/api/server-playback.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const indexHtml = fs.readFileSync(path.join(here, '..', '..', 'webapp', 'index.html'), 'utf8');
+const indexHtml = fs.readFileSync(path.join(here, '..', '..', 'webapp', 'classic', 'index.html'), 'utf8');
 
 describe('rewriteIndexForServerAudio', () => {
   const out = rewriteIndexForServerAudio(indexHtml);

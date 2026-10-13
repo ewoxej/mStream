@@ -511,7 +511,9 @@ export async function serveIt(configFile, { relisten = null } = {}) {
     next();
   });
 
-  mstream.get('/', (req, res, next) => {
+  // The player (/) and the classic player it replaced (/classic/) share the
+  // same gate: a session cookie, or public mode.
+  mstream.get(['/', '/classic', '/classic/'], (req, res, next) => {
     if (dbManager.getAllUsers().length === 0) {
       return next();
     }

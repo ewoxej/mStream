@@ -562,8 +562,11 @@ const MSTREAMAPI = (() => {
 
   mstreamModule.logout = () => {
     localStorage.removeItem('token');
-    Cookies.remove('x-access-token');
-    document.location.assign(window.location.href + (window.location.href.slice(-1) === '/' ? '' : '/') + 'login');
+    if (typeof Cookies !== 'undefined') { Cookies.remove('x-access-token'); }
+    else { document.cookie = 'x-access-token=; Max-Age=0; path=/'; }
+    // Resolved against the base URL so it works from /classic/ (which sets
+    // <base href="../">) and from the new player's #/… routes alike.
+    document.location.assign(new URL('login', document.baseURI).href);
   }
 
   return mstreamModule;

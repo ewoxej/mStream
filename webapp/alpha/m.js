@@ -204,7 +204,7 @@ function artUrl(artFile, compress) {
 // the panel's server, or the bundled default cover.
 function artImgAttr(artFile, compress) {
   const url = artUrl(artFile, compress);
-  return url ? `src="${url}"` : 'src="assets/img/default.png"';
+  return url ? `src="${url}"` : 'src="assets/img/zenelo-cover.svg"';
 }
 
 // Album-art URL for a specific SONG (queue row / now-playing card), which may
@@ -303,7 +303,7 @@ function renderArtist(artist) {
 function renderGenre(genre, trackCount) {
   return `<li class="collection-item">
     <div data-genre="${escapeHtml(genre)}"${peerAttr()} class="artistz" onclick="getGenreSongsList(this)">
-      ${escapeHtml(genre)} <span style="color:#888;font-size:13px;">(${escapeHtml(trackCount)})</span>
+      ${escapeHtml(genre)} <span style="color:var(--z-muted);font-size:13px;">(${escapeHtml(trackCount)})</span>
     </div>
   </li>`;
 }
@@ -311,7 +311,7 @@ function renderGenre(genre, trackCount) {
 function renderFileWithMetadataHtml(filepath, lokiId, metadata) {
   return `<li data-lokiid="${lokiId}" class="collection-item">
     <div data-file_location="${escapeHtml(filepath)}" class="filez flex" onclick="onFileClick(this);">
-      <img class="album-art-box" loading="lazy" ${metadata['album-art'] ? `src="${MSTREAMAPI.currentServer.host}album-art/${escapeHtml(metadata['album-art'])}?compress=s&token=${MSTREAMAPI.currentServer.token}"` : 'src="assets/img/default.png"'}>
+      <img class="album-art-box" loading="lazy" ${metadata['album-art'] ? `src="${MSTREAMAPI.currentServer.host}album-art/${escapeHtml(metadata['album-art'])}?compress=s&token=${MSTREAMAPI.currentServer.token}"` : 'src="assets/img/zenelo-cover.svg"'}>
       <div>
         <b><span>${escapeHtml((!metadata || !metadata.title) ? filepath.split("/").pop() : metadata.title)}</span></b>
         ${metadata.artist ? `</b><br><span style="font-size:15px;">${escapeHtml(metadata.artist)}</span>` : ''}
@@ -1498,8 +1498,8 @@ function _renderPartialMatches(statusElId, matches, acceptHandlerName) {
       <div style="margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
         <div style="flex:1; min-width:0;">
           <div><b>${escapeHtml(String(m.matched))}/${escapeHtml(String(m.total))} (${pct}%)</b> files in
-            <code style="color:#a5d6a7;">${safeVpath}</code> at
-            <code style="color:#a5d6a7;">${safeDisplay}</code></div>
+            <code style="color:var(--z-celadon);">${safeVpath}</code> at
+            <code style="color:var(--z-celadon);">${safeDisplay}</code></div>
         </div>
         <button type="button" class="btn green" style="padding:6px 12px; font-size:0.85em;"
                 onclick="${acceptHandlerName}(${idx})">Use this path</button>
@@ -1557,8 +1557,8 @@ function _acceptPartialMatchSidebar(idx) {
   const el = document.getElementById('at_seed_status');
   if (el) {
     el.innerHTML = `
-      <div>Will add to <code style="color:#a5d6a7;">${escapeHtml(m.vpath)}</code>
-        at <code style="color:#a5d6a7;">${escapeHtml(m.relativePath || '(library root)')}</code>.
+      <div>Will add to <code style="color:var(--z-celadon);">${escapeHtml(m.vpath)}</code>
+        at <code style="color:var(--z-celadon);">${escapeHtml(m.relativePath || '(library root)')}</code>.
         Click <b>Add Torrent</b> to fetch the ${escapeHtml(String(m.total - m.matched))} missing file(s).</div>`;
   }
 }
@@ -1743,27 +1743,27 @@ function setupAddTorrentPanel() {
   const showVpathPicker = vpaths.length > 1;
 
   const newHtml = `
-    <div class="add-torrent-panel" style="max-width:680px;padding:18px;color:#fff;">
+    <div class="add-torrent-panel" style="max-width:680px;padding:18px;color:var(--z-text);">
 
       <!-- Feature-status banner — populated by the preflight call
            below. Hidden until preflight resolves; if the torrent
            feature is unavailable (no client configured, uploads
            disabled server-wide, user not whitelisted), this banner
            takes over and the form body is hidden. -->
-      <div id="at_feature_status" class="super-hide" style="background:rgba(255,87,87,0.15);padding:12px;border-radius:4px;margin-bottom:14px;font-size:0.9em;color:#e57373"></div>
+      <div id="at_feature_status" class="super-hide" style="background:rgba(255,87,87,0.15);padding:12px;border-radius:4px;margin-bottom:14px;font-size:0.9em;color:var(--z-danger)"></div>
 
       <div id="at_body">
 
       <div style="margin-bottom:18px">
-        <div style="font-size:0.85em;color:#fff;opacity:0.75;line-height:1.45;">
+        <div style="font-size:0.85em;color:var(--z-text);opacity:0.75;line-height:1.45;">
           Add a torrent to your library. Before downloading we check what's already on disk:
           <ul style="margin:6px 0 0 0;padding-left:20px;">
             <li style="display:list-item;list-style-type:disc;">If the files are already here, we set them up for seeding instead of re-downloading.</li>
             <li style="display:list-item;list-style-type:disc;">If the torrent is already in your client, we'll let you know.</li>
             <li style="display:list-item;list-style-type:disc;">For partial matches, we'll suggest where the existing files live so you can resume from there.</li>
           </ul>
-          <div style="margin-top:10px;font-size:0.95em;color:#80cbc4;">
-            On a phone? Use the mobile-friendly page at <a href="/torrent" target="_blank" style="color:#80cbc4;text-decoration:underline;">/torrent</a>.
+          <div style="margin-top:10px;font-size:0.95em;color:var(--z-celadon);">
+            On a phone? Use the mobile-friendly page at <a href="/torrent" target="_blank" style="color:var(--z-celadon);text-decoration:underline;">/torrent</a>.
           </div>
         </div>
       </div>
@@ -1787,7 +1787,7 @@ function setupAddTorrentPanel() {
       <div id="at_meta_section" class="at-step super-hide" style="margin-bottom:24px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
           <div style="font-weight:bold;opacity:0.85">2. Detected metadata</div>
-          <a id="at_autodetect_btn" class="btn-flat" style="color:#fff;font-size:0.85em;border:1px solid rgba(255,255,255,0.3);padding:4px 10px;border-radius:4px;cursor:pointer"
+          <a id="at_autodetect_btn" class="btn-flat" style="color:var(--z-text);font-size:0.85em;border:1px solid rgba(255,255,255,0.3);padding:4px 10px;border-radius:4px;cursor:pointer"
              onclick="onAutoDetectMetadata()">Auto-detect</a>
         </div>
         <div id="at_meta_warning" class="super-hide"
@@ -1796,11 +1796,11 @@ function setupAddTorrentPanel() {
         </div>
         <div style="display:grid;grid-template-columns:80px 1fr;gap:8px 12px;align-items:center">
           <label style="opacity:0.7">Artist</label>
-          <input id="at_artist" type="text" oninput="onAddTorrentMetaEdit()" autocomplete="off" style="color:#fff">
+          <input id="at_artist" type="text" oninput="onAddTorrentMetaEdit()" autocomplete="off" style="color:var(--z-text)">
           <label style="opacity:0.7">Album</label>
-          <input id="at_album"  type="text" oninput="onAddTorrentMetaEdit()" autocomplete="off" style="color:#fff">
+          <input id="at_album"  type="text" oninput="onAddTorrentMetaEdit()" autocomplete="off" style="color:var(--z-text)">
           <label style="opacity:0.7">Year</label>
-          <input id="at_year"   type="text" oninput="onAddTorrentMetaEdit()" autocomplete="off" maxlength="4" style="color:#fff;max-width:120px">
+          <input id="at_year"   type="text" oninput="onAddTorrentMetaEdit()" autocomplete="off" maxlength="4" style="color:var(--z-text);max-width:120px">
         </div>
       </div>
 
@@ -1809,21 +1809,21 @@ function setupAddTorrentPanel() {
         ${showVpathPicker ? `
           <div style="margin-bottom:12px;display:grid;grid-template-columns:80px 1fr;gap:8px 12px;align-items:center">
             <label style="opacity:0.7">Library</label>
-            <select id="at_vpath" class="browser-default" onchange="onAddTorrentVpathChange()" style="color:#fff;max-width:300px">
+            <select id="at_vpath" class="browser-default" onchange="onAddTorrentVpathChange()" style="color:var(--z-text);max-width:300px">
               ${vpaths.map(v => `<option value="${v}">${v}</option>`).join('')}
             </select>
           </div>
         ` : `<input type="hidden" id="at_vpath" value="${vpaths[0] || ''}">`}
         <div style="display:grid;grid-template-columns:80px 1fr;gap:8px 12px;align-items:center">
           <label style="opacity:0.7">Path</label>
-          <input id="at_path" type="text" oninput="onAddTorrentPathEdit()" autocomplete="off" style="color:#fff"
+          <input id="at_path" type="text" oninput="onAddTorrentPathEdit()" autocomplete="off" style="color:var(--z-text)"
                  placeholder="e.g. Artist Name/Album Title">
         </div>
         <!-- "Template applied" badge — shown when the selected vpath
              has a torrent_path_template (V41) configured AND the user
              hasn't manually edited the path. Hidden otherwise so it
              doesn't draw attention when there's no template. -->
-        <p id="at_template_hint" class="super-hide" style="margin-top:6px;font-size:0.78em;color:#80cbc4">
+        <p id="at_template_hint" class="super-hide" style="margin-top:6px;font-size:0.78em;color:var(--z-celadon)">
           Path auto-built from the library's template — edit to override.
         </p>
         <!-- Discoverability hint when no template is configured. Static
@@ -2590,7 +2590,7 @@ async function searchAlbumArt() {
       html += `<div style="cursor:pointer;text-align:center;width:130px;" data-url="${escapeHtml(r.url)}" onclick="selectAlbumArt(this.getAttribute('data-url'))">
         <img src="${escapeHtml(r.url)}" style="width:120px;height:120px;object-fit:cover;border-radius:4px;border:2px solid transparent;"
              onerror="this.parentElement.style.display='none'" loading="lazy">
-        <div style="font-size:11px;color:#aaa;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(r.label)}</div>
+        <div style="font-size:11px;color:var(--z-text-2);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(r.label)}</div>
       </div>`;
     });
 
@@ -5359,11 +5359,11 @@ function setupJukeboxPanel() {
     newHtml = `
       <div class="pad-6">
         <h5>${t('jukebox.title')}</h5>
-        <p style="color:#aaa;">${t('jukebox.description')}</p>
+        <p style="color:var(--z-text-2);">${t('jukebox.description')}</p>
         <input class="btn green" value="${t('jukebox.connect')}" type="button" onclick="connectToJukeBox(this)">
-        <div style="margin-top:28px; padding-top:20px; border-top:1px solid #444;">
+        <div style="margin-top:28px; padding-top:20px; border-top:1px solid var(--z-line);">
           <h5>${t('jukebox.serverAudio')}</h5>
-          <p style="color:#aaa;">${t('jukebox.serverAudioDescription')}</p>
+          <p style="color:var(--z-text-2);">${t('jukebox.serverAudioDescription')}</p>
           <a class="btn blue" href="/server-remote" target="_blank">${t('jukebox.openServerAudio')}</a>
         </div>
       </div>`;

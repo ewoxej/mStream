@@ -555,7 +555,7 @@ const VUEPLAYERCORE = (() => {
     computed: {
       albumArtPath: function () {
         if (!this.meta['album-art']) {
-          return 'assets/img/default.png';
+          return 'assets/img/zenelo-cover.svg';
         }
         // The playing track may live on a peer while the app is pointed home;
         // songArtUrl branches on the song's own federation, not peerContext.
@@ -2172,7 +2172,7 @@ const VUEPLAYERCORE = (() => {
       },
       albumArtPath: function () {
         if (!this.meta['album-art']) {
-          return 'assets/img/default.png';
+          return 'assets/img/zenelo-cover.svg';
         }
         // The playing track may live on a peer while the app is pointed home;
         // songArtUrl branches on the song's own federation, not peerContext.
@@ -2796,12 +2796,17 @@ const VUEPLAYERCORE = (() => {
     const barW   = W / data.length;
     const drawW  = Math.max(1, barW > 2 ? barW - 1 : barW);
 
-    // Pass 1: played region (left of splitX) — orange
+    // Colours come from the theme tokens (alpha/zenelo.css).
+    const rootStyle = getComputedStyle(document.documentElement);
+    const playedColor = rootStyle.getPropertyValue('--z-accent').trim() || '#d4a24c';
+    const unplayedColor = rootStyle.getPropertyValue('--z-placeholder').trim() || 'rgba(255,255,255,0.18)';
+
+    // Pass 1: played region (left of splitX) — accent
     ctx.save();
     ctx.beginPath();
     ctx.rect(0, 0, splitX, H);
     ctx.clip();
-    ctx.fillStyle = '#fa832b';
+    ctx.fillStyle = playedColor;
     for (let i = 0; i < data.length; i++) {
       const x    = (i / data.length) * W;
       const barH = Math.max(2, (data[i] / 255) * midY * 1.8);
@@ -2814,7 +2819,7 @@ const VUEPLAYERCORE = (() => {
     ctx.beginPath();
     ctx.rect(splitX, 0, W - splitX, H);
     ctx.clip();
-    ctx.fillStyle = 'rgba(255,255,255,0.18)';
+    ctx.fillStyle = unplayedColor;
     for (let i = 0; i < data.length; i++) {
       const x    = (i / data.length) * W;
       const barH = Math.max(2, (data[i] / 255) * midY * 1.8);

@@ -1,0 +1,5 @@
+{
+  "private": true,
+  "type": "module",
+  "description": "The web player (ES modules, no build step). Marks this tree as ESM for Node tooling; the browser ignores it."
+}

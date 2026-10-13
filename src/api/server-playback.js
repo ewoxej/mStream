@@ -292,7 +292,9 @@ export function setup(mstream) {
     }
 
     try {
-      const page = await fsPromises.readFile(path.join(config.program.webAppDirectory, 'index.html'), 'utf-8');
+      // Server-audio mode is a variant of the classic player (its markup and
+      // scripts); the new player at / has no server-audio client.
+      const page = await fsPromises.readFile(path.join(config.program.webAppDirectory, 'classic', 'index.html'), 'utf-8');
       res.send(rewriteIndexForServerAudio(page));
     } catch (err) {
       winston.warn(`[server-audio] failed to serve /server-remote: ${err.message}`);

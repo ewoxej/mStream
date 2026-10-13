@@ -21,11 +21,11 @@
   align-items: center;
   gap: 8px;
   padding: 6px 10px;
-  background-color: #262a33;
-  color: #F5F7FA;
-  border: 1px solid #444c56;
+  background-color: var(--z-bar);
+  color: var(--z-text);
+  border: 1px solid var(--z-line);
   border-radius: 4px;
-  font-family: 'Jura', sans-serif;
+  font-family: var(--z-sans);
   font-size: 14px;
   font-weight: bold;
   cursor: pointer;
@@ -35,7 +35,7 @@
 
 .nav-lang-toggle:hover,
 .nav-lang-toggle[aria-expanded="true"] {
-  border-color: #6684b2;
+  border-color: var(--z-accent);
 }
 
 .nav-lang-current {
@@ -51,7 +51,7 @@
 .nav-lang-flag {
   display: inline-block;
   flex-shrink: 0;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(244,244,238, 0.12);
   border-radius: 1px;
   overflow: hidden;
   line-height: 0;
@@ -79,8 +79,8 @@
   margin: 0;
   padding: 4px 0;
   list-style: none;
-  background-color: #262a33;
-  border: 1px solid #6684b2;
+  background-color: var(--z-bar);
+  border: 1px solid var(--z-accent);
   border-radius: 4px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
   z-index: 2000;
@@ -91,21 +91,21 @@
   align-items: center;
   gap: 8px;
   padding: 6px 12px;
-  color: #dddee4;
+  color: var(--z-text);
   cursor: pointer;
-  font-family: 'Jura', sans-serif;
+  font-family: var(--z-sans);
   font-size: 14px;
   font-weight: bold;
 }
 
 .nav-lang-menu li:hover {
-  background-color: #31353d;
-  color: #fff;
+  background-color: var(--z-placeholder);
+  color: var(--z-text);
 }
 
 .nav-lang-menu li[aria-selected="true"] {
-  background-color: #3a4054;
-  color: #fff;
+  background-color: var(--z-line);
+  color: var(--z-text);
 }
 
 .nav-lang-menu .nav-lang-flag svg {
@@ -136,9 +136,9 @@ body.top-bar-hidden .sidenav-lang-wrap {
   min-height: 32px;
   padding-left: 12px;
   font-size: 13px;
-  color: #aaa;
+  color: var(--z-text-2);
   font-weight: bold;
-  font-family: 'Jura', sans-serif;
+  font-family: var(--z-sans);
   align-items: center;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -155,11 +155,11 @@ body.top-bar-hidden .sidenav-lang-wrap {
   align-items: center;
   gap: 8px;
   padding: 6px 10px;
-  background-color: #1a1e25;
-  color: #F5F7FA;
-  border: 1px solid #444c56;
+  background-color: var(--z-inset);
+  color: var(--z-text);
+  border: 1px solid var(--z-line);
   border-radius: 4px;
-  font-family: 'Jura', sans-serif;
+  font-family: var(--z-sans);
   font-size: 14px;
   font-weight: bold;
   cursor: pointer;
@@ -168,7 +168,7 @@ body.top-bar-hidden .sidenav-lang-wrap {
 
 .sidenav-lang-toggle:hover,
 .sidenav-lang-toggle[aria-expanded="true"] {
-  border-color: #6684b2;
+  border-color: var(--z-accent);
 }
 
 .sidenav-lang-current {
@@ -184,7 +184,7 @@ body.top-bar-hidden .sidenav-lang-wrap {
 .sidenav-lang-flag {
   display: inline-block;
   flex-shrink: 0;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(244,244,238, 0.12);
   border-radius: 1px;
   overflow: hidden;
   line-height: 0;
@@ -212,8 +212,8 @@ body.top-bar-hidden .sidenav-lang-wrap {
   margin: 0 0 4px 0;
   padding: 4px 0;
   list-style: none;
-  background-color: #262a33;
-  border: 1px solid #6684b2;
+  background-color: var(--z-bar);
+  border: 1px solid var(--z-accent);
   border-radius: 4px;
   box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.5);
   z-index: 3000;
@@ -224,21 +224,21 @@ body.top-bar-hidden .sidenav-lang-wrap {
   align-items: center;
   gap: 8px;
   padding: 6px 12px;
-  color: #dddee4;
+  color: var(--z-text);
   cursor: pointer;
-  font-family: 'Jura', sans-serif;
+  font-family: var(--z-sans);
   font-size: 14px;
   font-weight: bold;
 }
 
 .sidenav-lang-menu li:hover {
-  background-color: #31353d;
-  color: #fff;
+  background-color: var(--z-placeholder);
+  color: var(--z-text);
 }
 
 .sidenav-lang-menu li[aria-selected="true"] {
-  background-color: #3a4054;
-  color: #fff;
+  background-color: var(--z-line);
+  color: var(--z-text);
 }
 
 .sidenav-lang-menu .sidenav-lang-flag svg {

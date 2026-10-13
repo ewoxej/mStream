@@ -84,7 +84,8 @@ describe('GET /stats', () => {
     for (const asset of ['stats-view.js', 'index.js', 'index.css']) {
       assert.equal((await fetch(`${server.baseUrl}/stats/${asset}`)).status, 200, asset);
     }
-    const player = await (await fetch(`${server.baseUrl}/`)).text();
+    // The Stats entry lives in the classic player's sidenav (/classic/).
+    const player = await (await fetch(`${server.baseUrl}/classic/`)).text();
     assert.ok(player.includes('id="nav-stats"') && player.includes('super-hide'), 'the sidenav entry exists, hidden until the ping reveals it');
     const strings = await (await fetch(`${server.baseUrl}/locales/en.json`)).json();
     assert.equal(strings['nav.stats'], 'Stats');

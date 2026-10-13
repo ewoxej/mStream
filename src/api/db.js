@@ -1204,6 +1204,59 @@ export function setup(mstream) {
     res.json(enrichRows(d(), rows).map(renderMetadataObj));
   });
 
+  // ── All Songs (paged) ───────────────────────────────────────────────────
+  // The web player's "All tracks" list: every visible track, sorted, one
+  // page at a time, with an optional substring filter over title / artist /
+  // album. `total` counts the whole filtered set so the client can page.
+
+  const SONG_SORTS = {
+    title: "COALESCE(t.title, t.filepath) COLLATE NOCASE",
+    artist: "COALESCE(a.name, '') COLLATE NOCASE",
+    album: "COALESCE(al.name, '') COLLATE NOCASE",
+    added: 't.created_at',
+  };
+
+  mstream.post('/api/v1/db/songs', (req, res) => {
+    const schema = Joi.object({
+      sort: Joi.string().valid(...Object.keys(SONG_SORTS)).default('title'),
+      dir: Joi.string().valid('asc', 'desc').default('asc'),
+      offset: Joi.number().integer().min(0).default(0),
+      limit: Joi.number().integer().min(1).max(1000).default(200),
+      filter: Joi.string().allow('').max(200).optional(),
+      ignoreVPaths: Joi.array().items(Joi.string()).optional()
+    });
+    const body = joiValidate(schema, req.body).value;
+
+    const filter = libraryFilter(req.user, body.ignoreVPaths);
+    const where = [filter.clause];
+    const params = [...filter.params];
+    if (body.filter) {
+      const like = `%${body.filter.replace(/[\\%_]/g, (c) => '\\' + c)}%`;
+      where.push("(t.title LIKE ? ESCAPE '\\' OR a.name LIKE ? ESCAPE '\\' OR al.name LIKE ? ESCAPE '\\')");
+      params.push(like, like, like);
+    }
+    const whereSql = `WHERE ${where.join(' AND ')}`;
+    const userParams = req.user?.id ? [req.user.id] : [];
+
+    const { total } = d().prepare(`
+      SELECT COUNT(*) AS total
+        FROM tracks t
+        LEFT JOIN artists a ON t.artist_id = a.id
+        LEFT JOIN albums al ON t.album_id = al.id
+      ${whereSql}
+    `).get(...params);
+
+    const dir = body.dir === 'desc' ? 'DESC' : 'ASC';
+    const rows = d().prepare(`
+      ${trackQuery(req.user?.id, { includeGenres: false })}
+      ${whereSql}
+      ORDER BY ${SONG_SORTS[body.sort]} ${dir}, t.id ${dir}
+      LIMIT ? OFFSET ?
+    `).all(...userParams, ...params, body.limit, body.offset);
+
+    res.json({ total, songs: enrichRows(d(), rows).map(renderMetadataObj) });
+  });
+
   // ── Recently Played ─────────────────────────────────────────────────────
 
   mstream.post('/api/v1/db/stats/recently-played', (req, res) => {

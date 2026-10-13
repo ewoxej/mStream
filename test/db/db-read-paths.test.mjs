@@ -645,3 +645,64 @@ describe('V73 credits on the wire', () => {
     assert.equal(primary.body.length, 1, 'the primary artist still matches (by key)');
   });
 });
+
+// ── songs (the web player's paged "All tracks") ─────────────────────────────
+
+describe('songs', () => {
+  const ids = (body) => body.songs.map((s) => s.filepath);
+  function oracle(libIds, dir = 'ASC') {
+    const ph = libIds.map(() => '?').join(',');
+    return manager.getDB().prepare(
+      `SELECT l.name || '/' || t.filepath AS fp FROM tracks t JOIN libraries l ON l.id = t.library_id
+        WHERE t.library_id IN (${ph})
+        ORDER BY COALESCE(t.title, t.filepath) COLLATE NOCASE ${dir}, t.id ${dir}`).all(...libIds).map((r) => r.fp);
+  }
+
+  test('lists every visible track by title, with the total', async () => {
+    scopeTo(null);
+    const r = await post('/api/v1/db/songs', {});
+    assert.equal(r.status, 200);
+    assert.deepEqual(ids(r.body), oracle([LIB_A, LIB_B]));
+    assert.equal(r.body.total, r.body.songs.length);
+    assert.ok(r.body.songs[0].metadata, 'rows carry the usual metadata object');
+  });
+
+  test('pages are slices of the same order', async () => {
+    scopeTo(null);
+    const all = oracle([LIB_A, LIB_B]);
+    const p = await post('/api/v1/db/songs', { offset: 3, limit: 4 });
+    assert.deepEqual(ids(p.body), all.slice(3, 7));
+    assert.equal(p.body.total, all.length, 'total counts the whole set, not the page');
+  });
+
+  test('desc reverses the order', async () => {
+    scopeTo(null);
+    const r = await post('/api/v1/db/songs', { dir: 'desc' });
+    assert.deepEqual(ids(r.body), oracle([LIB_A, LIB_B], 'DESC'));
+  });
+
+  test('a scoped caller never sees another library', async () => {
+    scopeTo([LIB_A]);
+    const r = await post('/api/v1/db/songs', {});
+    assert.deepEqual(ids(r.body), oracle([LIB_A]));
+    assert.ok(r.body.songs.every((s) => s.filepath.startsWith('libA/')));
+    scopeTo(null);
+  });
+
+  test('filter matches title, artist or album, and LIKE wildcards are literal', async () => {
+    scopeTo(null);
+    const byArtist = await post('/api/v1/db/songs', { filter: 'tiebreak' });
+    assert.equal(byArtist.body.total, 3);
+    const byAlbum = await post('/api/v1/db/songs', { filter: 'Hidden Album' });
+    assert.equal(byAlbum.body.total, 1);
+    const wildcard = await post('/api/v1/db/songs', { filter: '%' });
+    assert.equal(wildcard.body.total, 0, '% is not a wildcard');
+  });
+
+  test('rejects an unknown sort', async () => {
+    // A Joi error: the real server's handler maps it to 400; this bare app
+    // has no handler, so it surfaces as 500. Either way, no rows.
+    const r = await post('/api/v1/db/songs', { sort: 'rating' });
+    assert.ok(r.status >= 400, `expected a rejection, got ${r.status}`);
+  });
+});

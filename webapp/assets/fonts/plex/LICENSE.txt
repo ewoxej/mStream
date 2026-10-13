@@ -1,0 +1,9 @@
+IBM Plex Sans and IBM Plex Mono
+Copyright © 2017 IBM Corp. with Reserved Font Name "Plex"
+
+These fonts are licensed under the SIL Open Font License, Version 1.1.
+The full license text is available at https://openfontlicense.org/open-font-license-official-text/
+and in the IBM Plex repository: https://github.com/IBM/plex/blob/master/LICENSE.txt
+
+The .woff2 files here are format conversions of the per-weight TTFs used by Zenelo
+(subsets: latin, latin-ext, cyrillic, cyrillic-ext, greek, vietnamese), unmodified otherwise.
