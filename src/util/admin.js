@@ -465,6 +465,15 @@ export async function editDiscoveryJobs(patch) {
   config.program.discoveryJobs = { ...(config.program.discoveryJobs || {}), ...patch };
 }
 
+// Patch the OIDC sign-in settings (api/oidc.js) — live: every request reads
+// config.program.oidc. The caller has Joi-validated `patch`.
+export async function editOidc(patch) {
+  const loadConfig = await loadFile(config.configFile);
+  loadConfig.oidc = { ...(loadConfig.oidc || {}), ...patch };
+  await saveFile(loadConfig, config.configFile);
+  config.program.oidc = { ...(config.program.oidc || {}), ...patch };
+}
+
 // Per-user half of the discovery acquisition gate (V74 users.allow_discovery_jobs).
 export async function editUserAllowDiscoveryJobs(username, allow) {
   const user = db.getUserByUsername(username);

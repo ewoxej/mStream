@@ -826,6 +826,33 @@ const lyricsOptions = Joi.object({
   backfillMaxPerRun: Joi.number().integer().min(1).max(10000).default(100),
 });
 
+// Sign-in through an OpenID Connect provider (Authelia, …) — the Zenelo
+// fork's (src/api/oidc.js). mode: off | optional (a button beside the
+// password form) | required (no password sign-in at all; switched on only
+// from an OIDC session, so the admin doing it has proved it works).
+// Users are never created: the provider's username claim must name an
+// existing mStream user. userGroup (optional) limits who may sign in,
+// adminGroup (optional) sets is_admin at each sign-in.
+const oidcOptions = Joi.object({
+  mode: Joi.string().valid('off', 'optional', 'required').default('off'),
+  issuer: Joi.string().uri({ scheme: ['http', 'https'] }).allow('').default(''),
+  clientId: Joi.string().allow('').default(''),
+  clientSecret: Joi.string().allow('').default(''),
+  tokenAuthMethod: Joi.string().valid('client_secret_basic', 'client_secret_post').default('client_secret_basic'),
+  scopes: Joi.string().default('openid profile email groups'),
+  usernameClaim: Joi.string().default('preferred_username'),
+  groupsClaim: Joi.string().default('groups'),
+  userGroup: Joi.string().allow('').default(''),
+  adminGroup: Joi.string().allow('').default(''),
+  // The address the provider sends the browser back to (…/api/v1/auth/oidc/callback);
+  // '' = the address the request came in on.
+  publicUrl: Joi.string().uri({ scheme: ['http', 'https'] }).allow('').default(''),
+  // /login goes straight to the provider (no form). /login/?local still shows it.
+  autoRedirect: Joi.boolean().default(false),
+  // Where a finished sign-in may hand an app back (custom URL schemes).
+  appRedirects: Joi.array().items(Joi.string()).default(['zenelo://oidc']),
+});
+
 const schema = Joi.object({
   address: Joi.string().ip({ cidr: 'forbidden' }).default('::'),
   port: Joi.number().default(3000),
@@ -925,6 +952,7 @@ const schema = Joi.object({
   dlna: dlnaOptions.default(dlnaOptions.validate({}).value),
   discovery: discoveryOptions.default(discoveryOptions.validate({}).value),
   torrent: torrentOptions.default(torrentOptions.validate({}).value),
+  oidc: oidcOptions.default(oidcOptions.validate({}).value),
   autoBootServerAudio: Joi.boolean().default(false),
   rustPlayerPort: Joi.number().integer().min(1).max(65535).default(3333),
   // true  - trust X-Forwarded-For header for client IP address

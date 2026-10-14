@@ -5,6 +5,7 @@ import Joi from 'joi';
 import cookieParser from 'cookie-parser';
 import { compression } from './util/compression.js';
 import jwt from 'jsonwebtoken';
+import * as oidc from './api/oidc.js';
 import http from 'http';
 import https from 'https';
 import net from 'net';
@@ -480,6 +481,7 @@ export async function serveIt(configFile, { relisten = null } = {}) {
     } catch (_err) {
       return res.redirect(302, '/login');
     }
+    if (!oidc.sessionAllowed(decoded)) { return res.redirect(302, '/login'); }
 
     // A valid token is NOT enough — verify the ROLE too. Every /api/v1/admin/*
     // call the panel makes is gated on req.user.admin, so serving the panel to
@@ -519,7 +521,8 @@ export async function serveIt(configFile, { relisten = null } = {}) {
     }
 
     try {
-      jwt.verify(req.cookies['x-access-token'], config.program.secret);
+      const decoded = jwt.verify(req.cookies['x-access-token'], config.program.secret);
+      if (!oidc.sessionAllowed(decoded)) { return res.redirect(302, '/login'); }
       next();
     } catch (_err) {
       return res.redirect(302, '/login');
@@ -534,12 +537,18 @@ export async function serveIt(configFile, { relisten = null } = {}) {
     if (dbManager.getAllUsers().length === 0) {
       return res.redirect(302, '..');
     }
+    // SSO set to take over the login page: straight to the provider, unless
+    // ?local asks for the form (a password fallback; the failure page links there).
+    const toProvider = () => (oidc.autoRedirect() && req.query.local === undefined
+      ? res.redirect(302, '/api/v1/auth/oidc/start') : next());
 
     try {
-      jwt.verify(req.cookies['x-access-token'], config.program.secret);
+      const decoded = jwt.verify(req.cookies['x-access-token'], config.program.secret);
+      // A password session in required mode: show the login page (it offers OIDC).
+      if (!oidc.sessionAllowed(decoded)) { return toProvider(); }
       return res.redirect(302, '..');
     } catch (_err) {
-      next();
+      toProvider();
     }
   });
 

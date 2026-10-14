@@ -4869,6 +4869,164 @@ const securityView = Vue.component('security-view', {
   }
 });
 
+// Sign-in through an OIDC provider (Authelia, …) — the Zenelo fork's
+// src/api/oidc.js. The client secret is write-only: the server says whether
+// one is set, never what it is.
+const ssoView = Vue.component('sso-view', {
+  data() {
+    return { s: null, form: null, secret: '', saving: false, check: null, checking: false, copied: '' };
+  },
+  mounted: function() { this.load(); },
+  computed: {
+    autheliaSnippet: function() {
+      if (!this.s) { return ''; }
+      const f = this.form;
+      return [
+        'identity_providers:',
+        '  oidc:',
+        '    clients:',
+        `      - client_id: '${f.clientId || 'mstream'}'`,
+        "        client_name: 'mStream'",
+        "        client_secret: '$pbkdf2-sha512$…'  # authelia crypto hash generate pbkdf2 --password '<the secret below>'",
+        '        public: false',
+        "        authorization_policy: 'two_factor'",
+        '        require_pkce: true',
+        "        pkce_challenge_method: 'S256'",
+        '        redirect_uris:',
+        `          - '${this.s.redirectUri}'`,
+        "        scopes: ['openid', 'profile', 'email', 'groups']",
+        `        token_endpoint_auth_method: '${f.tokenAuthMethod}'`,
+      ].join('\n');
+    },
+  },
+  template: `
+    <div v-if="!s" class="row">
+      <svg class="spinner" width="65px" height="65px" viewBox="0 0 66 66" xmlns="http://www.w3.org/2000/svg"><circle class="spinner-path" fill="none" stroke-width="6" stroke-linecap="round" cx="33" cy="33" r="30"></circle></svg>
+    </div>
+    <div v-else class="container">
+      <div class="row" style="margin-top:24px"><div class="col s12"><div class="card"><div class="card-content">
+        <span class="card-title">Single sign-on (OIDC)</span>
+        <p>Sign in through an OpenID Connect provider — Authelia, Keycloak, authentik… Only existing mStream users get in: the provider's username must match a user here. The Zenelo app signs in the same way.</p>
+        <table style="margin-top:12px"><tbody>
+          <tr><td style="width:220px"><b>Sign-in</b></td><td>
+            <z-seg :value="form.mode" :options="['off', 'optional', 'required']" v-on:pick="form.mode = $event"></z-seg>
+            <p class="grey-text" style="margin:8px 0 0">
+              <span v-if="form.mode === 'off'">Passwords only.</span>
+              <span v-else-if="form.mode === 'optional'">A “Sign in with SSO” button beside the password form.</span>
+              <span v-else>No password sign-in at all, and sessions from a password sign-in end (the app's too). If the provider breaks, set "oidc": {"mode": "off"} in the server's config file.</span>
+            </p>
+            <p v-if="form.mode === 'required' && !s.signedInWithOidc" style="margin:8px 0 0;color:var(--z-danger)">You signed in with a password: sign in through the provider once (optional mode) before making it required.</p>
+            <p v-if="!s.configured && form.mode !== 'off'" style="margin:8px 0 0;color:var(--z-danger)">Fill in the issuer, the client ID and the secret first.</p>
+          </td></tr>
+          <tr><td><b>Issuer URL</b></td><td><input type="text" v-model.trim="form.issuer" placeholder="https://auth.example.com" /></td></tr>
+          <tr><td><b>Client ID</b></td><td><input type="text" v-model.trim="form.clientId" placeholder="mstream" /></td></tr>
+          <tr><td><b>Client secret</b></td><td><div style="display:flex;gap:8px;align-items:center">
+            <input type="password" v-model="secret" autocomplete="new-password" style="flex:1;min-width:0" :placeholder="s.secretSet ? 'set — type to replace' : 'not set'" />
+            <a class="z-btn" style="flex:none" v-on:click="generate()">Generate one</a>
+          </div></td></tr>
+          <tr><td><b>Redirect URI</b><br><small class="grey-text">register it at the provider</small></td><td>
+            <code style="word-break:break-all">{{ s.redirectUri }}</code> <a class="z-btn" v-on:click="copy(s.redirectUri, 'uri')">{{ copied === 'uri' ? 'copied' : 'copy' }}</a>
+            <p class="grey-text" style="margin:6px 0 0">Built from the address this page is open at. Behind a proxy with another address, set the public URL:</p>
+            <input type="text" v-model.trim="form.publicUrl" placeholder="https://music.example.com (optional)" />
+          </td></tr>
+          <tr><td><b>Access group</b></td><td><input type="text" v-model.trim="form.userGroup" placeholder="mstream (empty: anyone with an account)" />
+            <p class="grey-text" style="margin:4px 0 0">Only members of this group may sign in.</p></td></tr>
+          <tr><td><b>Admin group</b></td><td><input type="text" v-model.trim="form.adminGroup" placeholder="mstream-admins (empty: admin flags are left alone)" />
+            <p class="grey-text" style="margin:4px 0 0">Members become admins at sign-in, others stop being admins — except the last admin.</p></td></tr>
+          <tr><td><b>Redirect to the provider</b></td><td>
+            <z-switch :on="form.autoRedirect" v-on:flip="form.autoRedirect = !form.autoRedirect"></z-switch>
+            <p class="grey-text" style="margin:6px 0 0">The login page goes straight to the provider, no form. A password sign-in (optional mode) is still at <code>/login/?local</code>.</p>
+          </td></tr>
+          <tr><td><b>Advanced</b></td><td class="sso-adv">
+            <label class="grey-text">Scopes</label><input type="text" v-model.trim="form.scopes" />
+            <label class="grey-text">Username claim</label><input type="text" v-model.trim="form.usernameClaim" />
+            <label class="grey-text">Groups claim</label><input type="text" v-model.trim="form.groupsClaim" />
+            <label class="grey-text">Client authentication</label>
+            <z-seg :value="form.tokenAuthMethod" :options="['client_secret_basic', 'client_secret_post']" v-on:pick="form.tokenAuthMethod = $event"></z-seg>
+            <label class="grey-text" style="display:block;margin-top:8px">App redirects (one per line)</label>
+            <textarea v-model="form.appRedirects" rows="2" style="width:100%;min-height:52px"></textarea>
+          </td></tr>
+        </tbody></table>
+        <div v-if="check" :style="{ marginTop: '12px', color: check.ok ? 'var(--z-celadon)' : 'var(--z-danger)' }">
+          {{ check.ok ? 'The provider answers: ' + check.issuer + (check.pkce && check.pkce.indexOf('S256') === -1 ? ' (no S256 PKCE advertised)' : '') : 'The provider did not answer: ' + check.error }}
+        </div>
+      </div>
+      <div class="card-action flow-root">
+        <a class="waves-effect waves-light btn right" :disabled="saving" v-on:click="save()">Save</a>
+        <a class="z-btn" :disabled="checking || !form.issuer" v-on:click="test()">Check the provider</a>
+        <a v-if="s.configured && s.effectiveMode !== 'off'" class="z-btn" href="/api/v1/auth/oidc/start" target="_blank" rel="noopener">Try signing in</a>
+      </div></div></div></div>
+      <div class="row"><div class="col s12"><div class="card"><div class="card-content">
+        <span class="card-title">Authelia</span>
+        <p>A client for mStream in Authelia's configuration. Hash the secret with the command in the comment; the Authelia user's groups go into the groups claim.</p>
+        <pre style="white-space:pre-wrap;font-size:12px;background:var(--z-placeholder);padding:12px;border-radius:8px">{{ autheliaSnippet }}</pre>
+        <a class="z-btn" v-on:click="copy(autheliaSnippet, 'yaml')">{{ copied === 'yaml' ? 'copied' : 'copy' }}</a>
+      </div></div></div></div>
+    </div>`,
+  methods: {
+    load: async function() {
+      const res = await API.axios({ method: 'GET', url: `${API.url()}/api/v1/admin/oidc` });
+      this.s = res.data;
+      const d = res.data;
+      this.form = {
+        mode: d.mode || 'off', issuer: d.issuer || '', clientId: d.clientId || '', publicUrl: d.publicUrl || '',
+        userGroup: d.userGroup || '', adminGroup: d.adminGroup || '', autoRedirect: d.autoRedirect === true,
+        scopes: d.scopes || 'openid profile email groups', usernameClaim: d.usernameClaim || 'preferred_username',
+        groupsClaim: d.groupsClaim || 'groups', tokenAuthMethod: d.tokenAuthMethod || 'client_secret_basic',
+        appRedirects: (d.appRedirects || ['zenelo://oidc']).join('\n'),
+      };
+      this.secret = '';
+    },
+    generate: function() {
+      const bytes = new Uint8Array(32);
+      crypto.getRandomValues(bytes);
+      this.secret = btoa(String.fromCharCode(...bytes)).replace(/[+/=]/g, '').slice(0, 40);
+      this.copy(this.secret, 'secret');
+      iziToast.info({ title: 'A new secret is in the field and the clipboard', message: 'Hash it for Authelia, then Save here.', position: 'topCenter', timeout: 5000 });
+    },
+    copy: function(text, what) {
+      navigator.clipboard?.writeText(text);
+      this.copied = what;
+      setTimeout(() => { if (this.copied === what) { this.copied = ''; } }, 1500);
+    },
+    test: async function() {
+      this.checking = true;
+      try {
+        if (this.form.issuer !== (this.s.issuer || '')) { await this.save(true); }
+        this.check = (await API.axios({ method: 'POST', url: `${API.url()}/api/v1/admin/oidc/check`, data: {} })).data;
+      } catch (err) {
+        this.check = { ok: false, error: err.response?.data?.error || err.message };
+      } finally { this.checking = false; }
+    },
+    save: async function(quiet) {
+      this.saving = true;
+      const f = this.form;
+      const data = {
+        mode: f.mode, issuer: f.issuer, clientId: f.clientId, publicUrl: f.publicUrl, userGroup: f.userGroup,
+        adminGroup: f.adminGroup, autoRedirect: f.autoRedirect, scopes: f.scopes, usernameClaim: f.usernameClaim,
+        groupsClaim: f.groupsClaim, tokenAuthMethod: f.tokenAuthMethod,
+        appRedirects: f.appRedirects.split('\n').map((x) => x.trim()).filter(Boolean),
+      };
+      if (this.secret) { data.clientSecret = this.secret; }
+      // The provider check saves what it needs to reach the provider, nothing else.
+      const sent = quiet ? { issuer: data.issuer } : data;
+      try {
+        await API.axios({ method: 'POST', url: `${API.url()}/api/v1/admin/oidc`, data: sent });
+        if (quiet) {
+          // The check saved the issuer only: keep the rest of the form as typed.
+          this.s = (await API.axios({ method: 'GET', url: `${API.url()}/api/v1/admin/oidc` })).data;
+        } else {
+          iziToast.success({ title: 'Saved', position: 'topCenter', timeout: 2500 });
+          await this.load();
+        }
+      } catch (err) {
+        iziToast.error({ title: escHtml(err.response?.data?.error || err.message), position: 'topCenter', timeout: 5000 });
+        if (quiet) { throw err; }
+      } finally { this.saving = false; }
+    },
+  },
+});
+
 const dlnaView = Vue.component('dlna-view', {
   data() {
     return {

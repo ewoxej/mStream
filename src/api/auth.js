@@ -9,6 +9,7 @@ import { isActiveJukeboxToken } from '../api/remote.js';
 import * as federationAuth from './federation-auth.js';
 import * as federationGuest from '../state/federation-guest.js';
 import WebError from '../util/web-error.js';
+import * as oidc from './oidc.js';
 
 export function setup(mstream) {
   // When admin API is locked, force all server-level write permissions off.
@@ -19,7 +20,14 @@ export function setup(mstream) {
     config.program.noFileModify = true;
   }
 
+  // Sign-in through the OIDC provider (the Zenelo fork, api/oidc.js).
+  oidc.setupBeforeAuth(mstream);
+
   mstream.post('/api/v1/auth/login', async (req, res) => {
+    // OIDC required: no password sign-in at all.
+    if (!oidc.passwordAllowed()) {
+      return res.status(403).json({ error: 'Password sign-in is turned off on this server: sign in with SSO' });
+    }
     try {
       const schema = Joi.object({
         username: Joi.string().required(),
@@ -93,6 +101,12 @@ export function setup(mstream) {
     if (decoded.jukebox === true && decoded.username) {
       req.user = buildJukeboxUser(decoded, token);
       return next();
+    }
+
+    // OIDC required: a session from a password sign-in is over (share
+    // links are not sessions).
+    if (!oidc.sessionAllowed(decoded) && decoded.shareToken !== true) {
+      throw new WebError('Authentication Error', 401);
     }
 
     req.user = buildRealUser(decoded);

@@ -3,6 +3,7 @@ import child from 'child_process';
 import os from 'os';
 import fs from 'fs/promises';
 import Joi from 'joi';
+import jwt from 'jsonwebtoken';
 import winston from 'winston';
 import { ZipArchive } from 'archiver';
 import * as fileExplorer from '../util/file-explorer.js';
@@ -12,6 +13,7 @@ import * as dbQueue from '../db/task-queue.js';
 import * as imageCompress from '../db/image-compress-manager.js';
 import * as transcode from './transcode.js';
 import * as updateCheck from '../util/update-check.js';
+import * as oidc from './oidc.js';
 import * as db from '../db/manager.js';
 import * as discoveryDb from '../db/discovery-db.js';
 import * as discoveryExport from '../db/discovery-export.js';
@@ -1948,6 +1950,50 @@ export function setup(mstream) {
   mstream.post("/api/v1/admin/transcode/download", async (req, res) => {
     await transcode.downloadedFFmpeg();
     res.json({});
+  });
+
+  // ── Sign-in through an OIDC provider (api/oidc.js) ─────────────────────
+  // The client secret never leaves the server: GET says whether one is set.
+  mstream.get("/api/v1/admin/oidc", (req, res) => {
+    const { clientSecret, ...rest } = oidc.settings();
+    const decoded = req.token ? jwt.decode(req.token) : null;
+    res.json({
+      ...rest, secretSet: !!clientSecret, configured: oidc.isConfigured(), effectiveMode: oidc.mode(),
+      redirectUri: oidc.callbackUrl(req), signedInWithOidc: decoded?.oidc === true,
+    });
+  });
+
+  mstream.post("/api/v1/admin/oidc", async (req, res) => {
+    const schema = Joi.object({
+      mode: Joi.string().valid('off', 'optional', 'required'),
+      issuer: Joi.string().uri({ scheme: ['http', 'https'] }).allow(''),
+      clientId: Joi.string().max(200).allow(''),
+      clientSecret: Joi.string().max(500).allow(''),
+      tokenAuthMethod: Joi.string().valid('client_secret_basic', 'client_secret_post'),
+      scopes: Joi.string().max(300).pattern(/\bopenid\b/),
+      usernameClaim: Joi.string().max(100),
+      groupsClaim: Joi.string().max(100),
+      userGroup: Joi.string().max(200).allow(''),
+      adminGroup: Joi.string().max(200).allow(''),
+      publicUrl: Joi.string().uri({ scheme: ['http', 'https'] }).allow(''),
+      autoRedirect: Joi.boolean(),
+      appRedirects: Joi.array().items(Joi.string().max(200)).max(10),
+    }).min(1);
+    joiValidate(schema, req.body);
+    // Required turns every password session off, the admin's own included:
+    // only from an OIDC session, which proves the sign-in works.
+    if (req.body.mode === 'required') {
+      const decoded = req.token ? jwt.decode(req.token) : null;
+      if (decoded?.oidc !== true) {
+        throw new WebError('Sign in through the provider once (optional mode) before making it required', 409);
+      }
+    }
+    await admin.editOidc(req.body);
+    res.json({});
+  });
+
+  mstream.post("/api/v1/admin/oidc/check", async (req, res) => {
+    res.json(await oidc.check());
   });
 
   // ── Release updates (util/update-check.js) ──────────────────────────────

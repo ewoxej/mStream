@@ -373,3 +373,7 @@ td:last-child:not(:first-child):has(> .z-switch, > .z-btn, > .z-seg) > .z-btn:la
 .z-discord { display: inline-flex; align-items: center; justify-content: center; width: 200px; height: 35px; box-sizing: border-box; border-radius: 6px; background: #21262d; box-shadow: inset 0 0 0 1px #30363d; transition: background .15s; }
 .z-discord:hover { background: #30363d; }
 .z-discord svg { height: 20px; width: auto; }
+
+/* Single sign-on page (sso-view): the advanced fields stacked. */
+.sso-adv label { display: block; margin-top: 8px; }
+.sso-adv label:first-child { margin-top: 0; }
