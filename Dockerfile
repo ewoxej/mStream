@@ -26,10 +26,12 @@ FROM node:${NODE_VERSION}-bookworm-slim
 ARG VERSION=dev
 ARG REVISION=unknown
 
-# ca-certificates: the ffmpeg / player downloads are https; tini reaps the
-# child processes mStream spawns (ffmpeg, the sidecars) and forwards signals.
+# ca-certificates: the ffmpeg / player downloads are https; xz-utils: the
+# ffmpeg download is a .tar.xz (without it: "tar failed (2): xz: Cannot
+# exec"); tini reaps the child processes mStream spawns (ffmpeg, the
+# sidecars) and forwards signals.
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends ca-certificates tini \
+  && apt-get install -y --no-install-recommends ca-certificates xz-utils tini \
   && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

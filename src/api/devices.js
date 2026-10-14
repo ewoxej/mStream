@@ -63,9 +63,15 @@ export function setup(mstream) {
       'Cache-Control': 'no-cache, no-transform',
       Connection: 'keep-alive',
       'X-Accel-Buffering': 'no',
+      // Proxies that compress (Cloudflare, nginx gzip, Caddy encode) hold a
+      // gzip stream until their buffer fills: behind them not a byte of the
+      // stream came through, so devices never saw each other. An encoding
+      // already set is left alone.
+      'Content-Encoding': 'none',
     });
     res.flushHeaders?.();
-    res.write('retry: 3000\n\n');
+    // Some proxies still hold the first few KB of a response: get past that.
+    res.write(`:${' '.repeat(2048)}\n\nretry: 3000\n\n`);
 
     const send = (event, data) => { res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`); };
     const close = hub.connect(user, { id: value.id, name: value.name, type: value.type }, send);
