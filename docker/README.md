@@ -42,7 +42,7 @@ server has no login).
 | Tag | What |
 | --- | --- |
 | `latest`, `1.2`, `1.2.3` | releases (Docker release workflow) |
-| `edge` | the last build of `master` |
+| `edge` | the last manual Docker build of `master` |
 | `sha-<commit>` | every build of `master` |
 
 ## Versioning
