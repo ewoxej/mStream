@@ -44,6 +44,7 @@
 // two builders below — one source of truth, zero drift.
 
 import packageJson from '../../package.json' with { type: 'json' };
+import { FORK } from '../util/fork.js';
 import * as config from '../state/config.js';
 import * as db from '../db/manager.js';
 import * as fedDb from '../db/federation.js';
@@ -188,6 +189,8 @@ export function setup(mstream) {
     // ── Base ───────────────────────────────────────────────────────────
     const info = {
       server: packageJson.version,
+      // The Zenelo fork's own version (util/fork.js); `server` stays upstream's.
+      fork: { name: FORK.name, version: FORK.version, repo: FORK.repo },
       apiVersions: ["1"],
       features: buildFeatures(),
     };

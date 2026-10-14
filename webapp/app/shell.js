@@ -69,6 +69,9 @@ export function Sidebar() {
     albums: c(counts.albums), artists: c(counts.artists), tracks: c(counts.tracks), genres: c(counts.genres),
     fav: c(counts.liked), pl: c(plCount), dj: dj ? 'ON' : '',
   };
+  // The tab bar of a phone-sized window scrolls sideways: keep the page's tab in view.
+  const navRef = useRef();
+  useEffect(() => { navRef.current?.querySelector('.nav-item.on')?.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }, [screen]);
   const groups = sidebarLayout(stored)
     .map((g) => ({ ...g, items: g.items.filter((i) => i.on && (!i.when || i.when(features))) }))
     .filter((g) => g.items.length);
@@ -77,7 +80,7 @@ export function Sidebar() {
       <div class="brand-mark"><${Icon} name="graphic_eq" size=${18} /></div>
       <span>mStream</span>
     </a>
-    <nav class="nav">
+    <nav class="nav" ref=${navRef}>
       ${groups.map((g) => html`<div class="nav-group" key=${g.id}>
         ${g.label ? html`<div class="nav-head">${g.label}</div>` : null}
         ${g.items.map((i) => html`<${NavItem} key=${i.id} id=${i.id} label=${i.label} icon=${i.icon} screen=${screen}
@@ -145,6 +148,7 @@ function RemoteQueue({ d }) {
     <div class="q-head">
       <span class="q-title">Queue</span>
       <span class="micro-n">${songs.length ? ahead.length + (pos >= 0 ? 1 : 0) : ''}</span>
+      <${IconBtn} icon="close" title="Close" class="q-close" onClick=${() => app.set({ queueOpen: false })} size=${17} />
     </div>
     <div class="q-on"><${Icon} name="devices" size=${13} /> On <b>${d.name}</b></div>
     <div class="q-list">
@@ -207,6 +211,7 @@ function LocalQueue() {
       <span class="micro-n">${upNext.length + (cur ? 1 : 0)}${autoDJ ? ' + AUTO' : ''}</span>
       <${IconBtn} icon="save" title="Save as playlist" onClick=${save} size=${15} />
       <${IconBtn} icon="delete_outline" title="Clear queue" onClick=${clear} size=${15} />
+      <${IconBtn} icon="close" title="Close" class="q-close" onClick=${() => app.set({ queueOpen: false })} size=${17} />
     </div>
     <div class="q-list" ref=${listRef}>
       ${!queueLen ? html`<div class="q-empty">
@@ -305,15 +310,15 @@ function Volume({ remote }) {
   </div>`;
 }
 
-export function PlayerBar() {
+// What the player shows and drives: this tab's playback, or the followed
+// device's (playing elsewhere, or played last there). The bar, the mini
+// player and the Now Playing sheet share it.
+function useNowPlaying() {
   const s = useStore(playback, (x) => ({
     current: x.current, playing: x.playing, shuffle: x.shuffle, loop: x.loop, loopOne: x.loopOne,
     autoDJ: x.autoDJ, rg: x.replayGain, pre: x.replayGainPreGainDb, title: x.current?.metadata?.title, rev: x.rev,
   }));
-  const screen = useStore(app, (x) => x.route.screen);
-  const queueOpen = useStore(app, (x) => x.queueOpen);
   const dev = useStore(devices, (x) => ({ list: x.list, self: x.self }));
-  // The device followed (playing elsewhere, or played last there): the bar shows and controls it.
   const remote = followed(dev.list, dev.self, s.playing);
   const song = s.current;
   const track = remote ? (remote.track ? { filepath: remote.track.filepath, metadata: {
@@ -337,6 +342,131 @@ export function PlayerBar() {
   };
   const rgText = !s.rg ? 'RG OFF' : meta['replaygain-track'] != null && meta['replaygain-track'] !== ''
     ? `RG ${gainLabel({ 'replaygain-track': Number(meta['replaygain-track']) + Number(s.pre || 0) })}` : 'RG · NO TAG';
+  return { remote, track, meta, playing, ctl, rep, rgText };
+}
+
+function Transport({ n, big = false }) {
+  const { rep, ctl, playing } = n;
+  const sz = big ? 26 : 19;
+  return html`<div class="pb-controls">
+    <${IconBtn} icon="shuffle" title=${rep.dj ? 'Shuffle (off while Auto DJ runs)' : 'Shuffle'} active=${rep.shuffle} onClick=${rep.toggleShuffle} size=${big ? 21 : 17} class=${`dim ${rep.idle ? 'idle' : ''}`} />
+    <${IconBtn} icon="skip_previous" title="Previous" onClick=${ctl.prev} size=${sz} />
+    <button type="button" class="play" onClick=${ctl.playPause} title=${playing ? 'Pause' : 'Play'}>
+      <${Icon} name=${playing ? 'pause' : 'play_arrow'} size=${big ? 30 : 19} fill />
+    </button>
+    <${IconBtn} icon="skip_next" title="Next" onClick=${ctl.next} size=${sz} />
+    <${IconBtn} icon=${rep.dj ? 'all_inclusive' : rep.mode === 'one' ? 'repeat_one' : 'repeat'} title=${rep.dj ? 'Auto DJ' : 'Repeat'}
+      active=${rep.mode !== 'off'} onClick=${rep.cycle} size=${big ? 21 : 17} class=${`dim ${rep.idle ? 'idle' : ''}`} />
+  </div>`;
+}
+
+const ArtistAlbum = ({ track, meta, onGo }) => html`
+  ${trackArtist(track) ? html`<a href=${href('artist', meta.artist || trackArtist(track))} onClick=${onGo}>${trackArtist(track)}</a>` : null}
+  ${trackAlbum(track) ? html` · <a href=${href('album', meta.album, { artist: meta['album-artist'] || '' })} onClick=${onGo}>${trackAlbum(track)}</a>` : null}`;
+
+// The playhead as a thin line along the mini player's top edge.
+function MiniProgress({ remote }) {
+  const local = useStore(playback, (s) => (remote ? 0 : (s.duration > 0 ? Math.min(1, s.currentTime / s.duration) : 0)));
+  const [, tick] = useState(0);
+  useEffect(() => {
+    if (!remote) { return undefined; }
+    const t = setInterval(() => tick((x) => x + 1), 1000);
+    return () => clearInterval(t);
+  }, [remote?.id]);
+  const dur = remote ? (remote.track?.durationMs || 0) : 0;
+  const pct = remote ? (dur > 0 ? Math.min(1, positionOf(remote) / dur) : 0) : local;
+  return html`<div class="pb-mini-line"><div style=${{ width: pct * 100 + '%' }}></div></div>`;
+}
+
+const openNow = () => app.set({ nowOpen: true, queueOpen: false });
+const closeNow = () => app.set({ nowOpen: false });
+
+// Small windows: the bar is a mini player (cover, title, play, next); a tap
+// opens Now Playing over the page, as in the app.
+function MiniPlayer({ n }) {
+  const { track, meta, playing, ctl, remote } = n;
+  return html`<div class="pb-mini" onClick=${(e) => { if (!e.target.closest('button, a')) { openNow(); } }}>
+    <${MiniProgress} remote=${remote} />
+    ${track ? html`<${Cover} file=${trackCover(track)} class="pb-cover" />` : html`<div class="pb-cover cover"></div>`}
+    <div class="pb-text">
+      ${track ? html`<span class="pb-t">${trackTitle(track)}</span>
+        <span class="pb-a">${remote ? html`<span class="pb-on"><${Icon} name="devices" size=${12} /> ${remote.name}</span>` : [trackArtist(track), trackAlbum(track)].filter(Boolean).join(' · ') || meta.title || ''}</span>`
+        : html`<span class="pb-t muted">Nothing playing</span>`}
+    </div>
+    ${track ? html`<${LikeButton} track=${track} size=${18} always />` : null}
+    <button type="button" class="play" onClick=${ctl.playPause} title=${playing ? 'Pause' : 'Play'}>
+      <${Icon} name=${playing ? 'pause' : 'play_arrow'} size=${19} fill />
+    </button>
+    <${IconBtn} icon="skip_next" title="Next" onClick=${ctl.next} size=${20} />
+  </div>`;
+}
+
+// Now Playing: the expanded mini player. Down arrow, Escape or a pull down
+// closes it; going to another page (lyrics, the artist, …) closes it too.
+function NowSheet({ n }) {
+  const { remote, track, meta } = n;
+  const screen = useStore(app, (x) => x.route.screen);
+  const sheet = useRef();
+  const [dy, setDy] = useState(0);
+  useEffect(() => {
+    const key = (e) => { if (e.key === 'Escape' && !app.get().menu && !app.get().dialog) { closeNow(); } };
+    document.addEventListener('keydown', key);
+    return () => document.removeEventListener('keydown', key);
+  }, []);
+  // Pull down to close: from anywhere but the sliders and buttons.
+  const down = (e) => {
+    if (e.button !== 0 || e.target.closest('button, a, .bar, input, .popover')) { return; }
+    const y0 = e.clientY;
+    const t0 = performance.now();
+    let last = 0;
+    const move = (ev) => { last = Math.max(0, ev.clientY - y0); setDy(last); };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+      const fast = last > 40 && last / Math.max(1, performance.now() - t0) > 0.5;
+      if (last > 120 || fast) { closeNow(); }
+      setDy(0);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+  };
+  const page = (to) => { closeNow(); if (screen === to) { return; } go(to); };
+  return html`<div class=${`now-sheet ${dy ? 'drag' : ''}`} ref=${sheet} onPointerDown=${down}
+    style=${dy ? { transform: `translateY(${dy}px)` } : null}>
+    <div class="ns-head">
+      <${IconBtn} icon="expand_more" title="Close" size=${24} onClick=${closeNow} />
+      <div class="ns-from micro">${remote ? html`${remote.playing ? 'PLAYING' : 'PAUSED'} ON <b>${remote.name}</b>` : 'NOW PLAYING'}</div>
+      ${track ? html`<${IconBtn} icon="more_vert" title="More" size=${20} onClick=${(e) => openMenu(e, trackMenuItems([track]))} />` : html`<span class="ns-pad"></span>`}
+    </div>
+    <div class="ns-art">${track ? html`<${Cover} file=${trackCover(track)} size="l" class="ns-cover" />` : html`<div class="ns-cover cover"></div>`}</div>
+    <div class="ns-info">
+      <div class="ns-text">
+        <span class=${`ns-t ${track ? '' : 'muted'}`}>${track ? trackTitle(track) : 'Nothing playing'}</span>
+        <span class="ns-a">${track ? html`<${ArtistAlbum} track=${track} meta=${meta} onGo=${closeNow} />` : null}</span>
+      </div>
+      ${track ? html`<${LikeButton} track=${track} size=${22} always />` : null}
+    </div>
+    ${remote ? html`<${RemoteSeek} d=${remote} />` : html`<${Seek} />`}
+    <${Transport} n=${n} big />
+    <div class="ns-tools">
+      <${IconBtn} icon="queue_music" title="Lyrics" size=${19} onClick=${() => page('lyrics')} />
+      <${IconBtn} icon="equalizer" title="Visualizer" size=${19} onClick=${() => page('viz')} />
+      <${IconBtn} icon="list" title="Queue" size=${19} onClick=${() => app.set({ nowOpen: false, queueOpen: true })} />
+      <${DevicesButton} />
+      <${Volume} remote=${remote} />
+    </div>
+    ${!remote && formatLabel(meta) ? html`<div class="ns-fmt micro">${formatLabel(meta)}${P.isTranscodingOn() ? ` → ${P.transcodeLabel()}` : ''} · ${n.rgText}</div>` : null}
+  </div>`;
+}
+
+export function PlayerBar() {
+  const n = useNowPlaying();
+  const { remote, track, meta } = n;
+  const screen = useStore(app, (x) => x.route.screen);
+  const queueOpen = useStore(app, (x) => x.queueOpen);
+  const nowOpen = useStore(app, (x) => x.nowOpen);
 
   return html`<footer class=${`playerbar ${remote ? 'remote' : ''}`}>
     <div class="pb-now">
@@ -344,32 +474,20 @@ export function PlayerBar() {
         <${Cover} file=${trackCover(track)} class="pb-cover" />
         <div class="pb-text">
           <span class="pb-t">${trackTitle(track)}</span>
-          <span class="pb-a">
-            ${trackArtist(track) ? html`<a href=${href('artist', meta.artist || trackArtist(track))}>${trackArtist(track)}</a>` : null}
-            ${trackAlbum(track) ? html` · <a href=${href('album', meta.album, { artist: meta['album-artist'] || '' })}>${trackAlbum(track)}</a>` : null}
-          </span>
+          <span class="pb-a"><${ArtistAlbum} track=${track} meta=${meta} /></span>
         </div>
         <${LikeButton} track=${track} size=${17} always />
         <${IconBtn} icon="more_vert" title="More" size=${17} onClick=${(e) => openMenu(e, trackMenuItems([track]))} />
       ` : html`<div class="pb-cover cover"></div><div class="pb-text"><span class="pb-t muted">Nothing playing</span></div>`}
     </div>
     <div class="pb-center">
-      <div class="pb-controls">
-        <${IconBtn} icon="shuffle" title=${rep.dj ? 'Shuffle (off while Auto DJ runs)' : 'Shuffle'} active=${rep.shuffle} onClick=${rep.toggleShuffle} size=${17} class=${`dim ${rep.idle ? 'idle' : ''}`} />
-        <${IconBtn} icon="skip_previous" title="Previous" onClick=${ctl.prev} size=${19} />
-        <button type="button" class="play" onClick=${ctl.playPause} title=${playing ? 'Pause' : 'Play'}>
-          <${Icon} name=${playing ? 'pause' : 'play_arrow'} size=${19} fill />
-        </button>
-        <${IconBtn} icon="skip_next" title="Next" onClick=${ctl.next} size=${19} />
-        <${IconBtn} icon=${rep.dj ? 'all_inclusive' : rep.mode === 'one' ? 'repeat_one' : 'repeat'} title=${rep.dj ? 'Auto DJ' : 'Repeat'}
-          active=${rep.mode !== 'off'} onClick=${rep.cycle} size=${17} class=${`dim ${rep.idle ? 'idle' : ''}`} />
-      </div>
+      <${Transport} n=${n} />
       ${remote ? html`<${RemoteSeek} d=${remote} />` : html`<${Seek} />`}
     </div>
     <div class="pb-right">
       ${remote ? null : html`<div class="pb-fmt">
         <span>${formatLabel(meta) || '—'}${P.isTranscodingOn() ? html` <em>→ ${P.transcodeLabel()}</em>` : null}</span>
-        <span>${rgText}</span>
+        <span>${n.rgText}</span>
       </div>`}
       <${IconBtn} icon="queue_music" title="Lyrics" active=${screen === 'lyrics'} size=${17} class="pager"
         onClick=${() => (screen === 'lyrics' ? history.back() : go('lyrics'))} />
@@ -380,5 +498,7 @@ export function PlayerBar() {
       <${DevicesButton} />
       <${Volume} remote=${remote} />
     </div>
+    <${MiniPlayer} n=${n} />
+    ${nowOpen ? html`<${NowSheet} n=${n} />` : null}
   </footer>`;
 }

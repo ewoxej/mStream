@@ -67,6 +67,7 @@ import { downloadToFile, computeFileChecksum } from './ffmpeg-bootstrap.js';
 import { appRoot, isBunStandalone, userDataHome, underSystemPrefix } from './esm-helpers.js';
 import { VERSION_RE, compareVersions, parseBundleName, HOLD_FILE, readHoldEntries } from './update-shared.js';
 import packageJson from '../../package.json' with { type: 'json' };
+import { FORK } from './fork.js';
 
 // The pure halves live in update-shared.js so the pre-boot headless guard
 // (boot-watchdog.js) can speak the same contract without importing this
@@ -77,6 +78,16 @@ export { compareVersions, parseBundleName } from './update-shared.js';
 const REPO = 'IrosTheBeggar/mStream';
 const LATEST_BASE = `https://github.com/${REPO}/releases/latest/download`;
 const RELEASES_PAGE = `https://github.com/${REPO}/releases/latest`;
+
+// The Zenelo fork (fork.js) checks ITS releases instead: the newest
+// `zenelo-v<version>` GitHub release of the fork against the VERSION file.
+// Upstream's feed would offer upstream builds, and installing one drops
+// the fork (its web UI, the devices API the Zenelo app uses). The fork
+// ships as a Docker image only, so its updates are never staged here: the
+// admin page says what to pull. MSTREAM_RELEASE_BASE (a mirror, the
+// integration tests) keeps upstream's manifest flow.
+const forkFeed = () => !process.env.MSTREAM_RELEASE_BASE && !!FORK.version;
+const FORK_RELEASES_API = `https://api.github.com/repos/${FORK.repo}/releases?per_page=30`;
 // manifest.json is ~15 lines; anything past this is not our manifest.
 const MANIFEST_MAX_BYTES = 64 * 1024;
 // setup.exe is ~45 MB, a .pkg ~150 MB. A pinned size is not in the release
@@ -138,10 +149,11 @@ export function detectInstallMethod({
   const home = userDataHome(platform, env, ...(homedir ? [homedir] : []));
   // Test / escape hatch: trust the operator, skip geometry.
   if (env.MSTREAM_UPDATE_ROOT) { return { method: 'managed', root: env.MSTREAM_UPDATE_ROOT }; }
-  if (!standalone) { return { method: 'npm-source' }; }
+  // Before the runtime check: the fork's image runs node, not a bundle.
   if (platform === 'linux') {
     try { fsx.accessSync('/.dockerenv'); return { method: 'docker' }; } catch { /* not docker */ }
   }
+  if (!standalone) { return { method: 'npm-source' }; }
   let real = execPath;
   try { real = fsx.realpathSync(execPath); } catch { /* keep the literal path */ }
   const realDir = path.dirname(real);
@@ -239,7 +251,10 @@ let _exiting = false;
 
 const state = {
   schema: 1,
-  current: packageJson.version,
+  current: forkFeed() ? FORK.version : packageJson.version,
+  // The fork's releases are the feed (see forkFeed): the admin page names
+  // the image to pull and the mStream this is based on.
+  fork: forkFeed() ? { repo: FORK.repo, image: FORK.image, upstream: FORK.upstream } : null,
   latest: null,
   available: false,
   method: null,
@@ -527,10 +542,48 @@ export function checkNow(force = false) {
   return _checking;
 }
 
+// The newest non-draft, non-pre-release `zenelo-v…` release of the fork.
+async function fetchForkRelease() {
+  const res = await fetch(FORK_RELEASES_API, {
+    headers: { Accept: 'application/vnd.github+json', 'User-Agent': `mstream-zenelo/${FORK.version}` },
+    signal: AbortSignal.timeout(20000),
+  });
+  if (!res.ok) { throw new Error(`GitHub answered ${res.status}`); }
+  const list = await res.json();
+  let best = null;
+  for (const r of Array.isArray(list) ? list : []) {
+    const m = !r.draft && !r.prerelease && FORK.tag.exec(String(r.tag_name || ''));
+    if (m && (!best || compareVersions(m[1], best.version) > 0)) { best = { version: m[1], url: r.html_url }; }
+  }
+  return best;
+}
+
+async function doForkCheck() {
+  try {
+    const rel = await fetchForkRelease();
+    state.lastCheckAt = new Date().toISOString();
+    state.error = null;
+    state.notifyOnly = false;
+    state.held = false;
+    state.latest = rel ? rel.version : null;
+    state.available = !!rel && compareVersions(rel.version, state.current) > 0;
+    state.skipped = state.available && isSkipped(rel.version);
+    state.downloadUrl = state.available ? rel.url : null;
+    if (state.available) {
+      winston.info(`[update] mstream-zenelo ${rel.version} is available (running ${state.current}): pull ${FORK.image}:${rel.version}`);
+    }
+  } catch (err) {
+    state.error = `Update check failed: ${err.message}`;
+    winston.warn(`[update] ${state.error}`);
+  }
+  return getStatus();
+}
+
 async function doCheck(force) {
   const cfg = updatesConfig();
   if (!cfg.check && !force) { return getStatus(); }
   detectInstall();
+  if (forkFeed()) { return doForkCheck(); }
   // Boot-failure holds first, and independent of the feed being reachable:
   // running this far past listen proves THIS version boots (prune), and a
   // `current` still aiming at a held version must be re-pointed even when
@@ -612,6 +665,7 @@ function downloadUrlFor(method, manifest) {
 // a second call while one runs joins it.
 export function stageNow(manifest = null) {
   const m = detectInstall();
+  if (forkFeed()) { return { error: `this fork updates through its image: docker pull ${FORK.image}:latest` }; }
   if (state.notifyOnly) { return { error: 'update format changed - re-run the install command' }; }
   if (state.latest && isSkipped(state.latest)) {
     return { error: `version ${state.latest} is held back by updates.skipVersion` };

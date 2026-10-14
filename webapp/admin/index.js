@@ -44,7 +44,7 @@ Vue.component('z-seg', {
 const ADMINDATA = (() => {
   const module = {};
 
-  module.version = { val: false };
+  module.version = { val: false, fork: null };
 
   // Used for handling the file explorer selection
   module.sharedSelect = { value: '' };
@@ -453,6 +453,7 @@ const ADMINDATA = (() => {
         url: `${API.url()}/api`
       });
       module.version.val = res.data.server;
+      module.version.fork = res.data.fork || null;
     }catch (err) {}
   }
 
@@ -3558,9 +3559,21 @@ const infoView = Vue.component('info-view', {
           <div class="card">
             <div class="card-content">
               <blockquote>
-                <h4><b>mStream v{{version.val}}</b></h4>
-                <h4>Developed By: Paul Sori</h4>
-                <h5><a href="mailto:paul.sori@pm.me">paul@mstream.io</a></h5>
+                <template v-if="version.fork">
+                  <h4><b>mStream · Zenelo fork v{{version.fork.version}}</b></h4>
+                  <p style="margin:6px 0 14px;color:var(--z-text-2);line-height:1.5;">
+                    A fork of mStream: the web player restyled after the Zenelo Android app, playback
+                    devices (play on, control and pick up from your other devices), and the server side the
+                    Zenelo app uses. Based on mStream v{{version.val}}.<br>
+                    <a v-bind:href="'https://github.com/' + version.fork.repo" target="_blank" rel="noopener">github.com/{{version.fork.repo}}</a>
+                  </p>
+                  <h5>mStream by Paul Sori &middot; <a href="mailto:paul.sori@pm.me">paul@mstream.io</a></h5>
+                </template>
+                <template v-else>
+                  <h4><b>mStream v{{version.val}}</b></h4>
+                  <h4>Developed By: Paul Sori</h4>
+                  <h5><a href="mailto:paul.sori@pm.me">paul@mstream.io</a></h5>
+                </template>
               </blockquote>
               <br>
               <div>
@@ -3583,14 +3596,14 @@ const infoView = Vue.component('info-view', {
               <table v-else>
                 <tbody>
                   <tr>
-                    <td><b>Installed:</b> v{{update.s.current}}<span v-if="!update.s.available && update.s.lastCheckAt"> &mdash; up to date</span></td>
+                    <td><b>Installed:</b> <span v-if="update.s.fork">mstream-zenelo </span>v{{update.s.current}}<span v-if="!update.s.available && update.s.lastCheckAt"> &mdash; up to date</span></td>
                     <td><a class="z-btn" v-on:click="updCheckNow()">check now</a></td>
                   </tr>
                   <tr v-if="update.s.available">
                     <td><b>Available:</b> v{{update.s.latest}} &mdash; {{updLine()}}</td>
                     <td>
                       <span v-if="updAction()"><a class="z-btn" v-on:click="updDoAction()">{{updAction()}}</a> </span>
-                      <a v-else-if="!update.s.skipped && !update.s.held && update.s.downloadUrl" class="z-btn" v-bind:href="update.s.downloadUrl" target="_blank" rel="noopener">Downloads page</a>
+                      <a v-else-if="!update.s.skipped && !update.s.held && update.s.downloadUrl" class="z-btn" v-bind:href="update.s.downloadUrl" target="_blank" rel="noopener">{{update.s.fork ? 'Release notes' : 'Downloads page'}}</a>
                       <span v-if="update.s.held" title="This version was rolled back after it failed to start. Clearing the hold lets the next check download and try it again."><a class="z-btn" v-on:click="updClearHold()">clear hold &amp; retry</a></span>
                       <span v-else-if="update.s.skipped"><a class="z-btn" v-on:click="updSetSkip('')">unskip</a></span>
                       <span v-else title="Hold this version back: never download or restart into it (e.g. after rolling back). Cleared by unskip or the next release."><a class="z-btn" v-on:click="updSetSkip(update.s.latest)">skip</a></span>
@@ -3599,12 +3612,12 @@ const infoView = Vue.component('info-view', {
                   <tr v-if="update.s.error">
                     <td colspan="2" style="color:var(--z-danger);">{{update.s.error}}</td>
                   </tr>
-                  <tr>
+                  <tr v-if="!update.s.fork">
                     <td><b title="notify: report only. stage: download updates in the background; applying still takes a restart or a click. auto (default): additionally restart into the update once the server is idle - nothing streaming, no scan, and a quiet stretch since the last request. Headless installs self-apply only when a supervisor that restarts mStream is detected; otherwise auto downloads and waits for the next restart.">Mode:</b></td>
                     <td><z-seg :value="update.s.mode" :options="['notify', 'stage', 'auto']" v-on:pick="updSetMode($event)"></z-seg></td>
                   </tr>
                   <tr>
-                    <td><b title="One request a day to the release feed on GitHub. Off = never phones home; 'check now' still works.">Daily check:</b></td>
+                    <td><b v-bind:title="updCheckTitle()">Daily check:</b></td>
                     <td><z-switch :on="!!(update.s.check)" v-on:flip="updToggleCheck()"></z-switch></td>
                   </tr>
                 </tbody>
@@ -3622,8 +3635,18 @@ const infoView = Vue.component('info-view', {
     clearInterval(this.updPoll);
   },
   methods: {
+    updCheckTitle: function() {
+      const feed = this.update.s.fork ? `the releases of the fork (github.com/${this.update.s.fork.repo})` : 'the release feed on GitHub';
+      return `One request a day to ${feed}. Off = never phones home; "check now" still works.`;
+    },
     updLine: function() {
       const s = this.update.s;
+      if (s.fork) {
+        if (s.skipped) { return 'held back (skipped)'; }
+        return s.method === 'docker'
+          ? `pull ${s.fork.image}:${s.latest} (or :latest) and recreate the container`
+          : `update the checkout: git pull in your clone of github.com/${s.fork.repo}`;
+      }
       if (s.notifyOnly) { return 'this build is too old to self-update; re-run the install command'; }
       if (s.skipped) { return 'held back (skipped) - it will not be downloaded or applied'; }
       if (s.held) { return 'held back - it failed to start after a previous update and was rolled back; a newer release clears this automatically'; }

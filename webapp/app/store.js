@@ -53,7 +53,7 @@ function loadPrefs() {
 }
 const prefs = loadPrefs();
 
-// Small windows (not phones — those have the app): below this width the
+// Small windows: below this width the
 // queue is a drawer over the page instead of a column, closed by default.
 // The wide-window choice (open / closed) is kept apart and comes back when
 // the window grows again.
@@ -64,6 +64,8 @@ export const app = createStore({
   route: parseHash(),
   narrow: narrowQuery.matches,
   queueOpen: narrowQuery.matches ? false : prefs.queueOpen !== false,
+  // Phone-sized windows (app.css, max-width 640px): Now Playing opened from the mini player.
+  nowOpen: false,
   albumView: prefs.albumView || 'grid',
   artistView: prefs.artistView || 'grid',
   // Per-page sort: { albums: { key, dir }, artists: …, tracks: …, folders: … }.
@@ -134,5 +136,5 @@ export function go(screen, ...args) { location.hash = href(screen, ...args).slic
 
 window.addEventListener('hashchange', () => {
   // Going somewhere closes the queue drawer of a small window.
-  app.set({ route: parseHash(), menu: null, ...(app.get().narrow ? { queueOpen: false } : {}) });
+  app.set({ route: parseHash(), menu: null, nowOpen: false, ...(app.get().narrow ? { queueOpen: false } : {}) });
 });

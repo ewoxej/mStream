@@ -554,8 +554,13 @@ export async function serveIt(configFile, { relisten = null } = {}) {
     }
   });
 
-  // Give access to public folder.
-  mstream.use('/', express.static(config.program.webAppDirectory));
+  // Give access to public folder. `no-cache`: the browser keeps its copy but
+  // asks (ETag → 304) every time, so a new version is picked up on the next
+  // load. Without a Cache-Control of our own a proxy may set one: Cloudflare
+  // gave the web app `max-age=14400`, and tabs ran the old code for 4 h.
+  mstream.use('/', express.static(config.program.webAppDirectory, {
+    setHeaders: (res) => { res.setHeader('Cache-Control', 'no-cache'); },
+  }));
 
   // Public APIs
   remoteApi.setupBeforeAuth(mstream, server);
