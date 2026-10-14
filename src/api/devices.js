@@ -3,6 +3,9 @@
 //   GET    /api/v1/devices/events?id=&name=&type=  the device's stream (SSE): `devices` (the
 //                                                  list, on connect), `device` (one changed),
 //                                                  `removed`, `command`, `replaced`
+//   GET    /api/v1/devices/poll?id=&name=&type=&session=&ack=
+//                                                  the same events by long polling:
+//                                                  { cursor, events: [{ event, data }] }
 //   POST   /api/v1/devices/state                   { id, status, queue? }
 //   POST   /api/v1/devices/command                 { from, to, command, args? }
 //   POST   /api/v1/devices/transfer                { from, to, caller, play? }
@@ -10,6 +13,13 @@
 //   GET    /api/v1/devices/:id/queue               a device's queue (library paths)
 //   POST   /api/v1/devices/:id/name                { name }
 //   DELETE /api/v1/devices/:id                     forget an offline device
+//
+// The clients long-poll: behind some proxies (Cloudflare in front of the
+// demo server, gzip / buffering ones) not a byte of an SSE stream came
+// through, so devices never saw each other; a poll is an ordinary response
+// that ends. A session is one client's run of polls (its own mailbox: a
+// connection in the hub); `ack` = the cursor of the last answer it got, so
+// an answer lost on the way is sent again. No poll for POLL_GONE_MS = gone.
 //
 // Server-Sent Events rather than a WebSocket: plain HTTP (no upgrade next to
 // the Jukebox socket, fine through reverse proxies), and the compression
@@ -23,6 +33,10 @@ import { createHub, COMMANDS, MAX_QUEUE } from '../state/devices.js';
 
 const hub = createHub();
 const HEARTBEAT_MS = 25000;
+const POLL_WAIT_MS = 25000;
+const POLL_GONE_MS = 45000;
+const MAILBOX_MAX = 2000;
+const mailboxes = new Map();   // user \0 id \0 session → mailbox
 
 function userKey(req) {
   if (!req.user?.id || req.user.federation) { throw new WebError('Forbidden', 403); }
@@ -63,14 +77,9 @@ export function setup(mstream) {
       'Cache-Control': 'no-cache, no-transform',
       Connection: 'keep-alive',
       'X-Accel-Buffering': 'no',
-      // Proxies that compress (Cloudflare, nginx gzip, Caddy encode) hold a
-      // gzip stream until their buffer fills: behind them not a byte of the
-      // stream came through, so devices never saw each other. An encoding
-      // already set is left alone.
-      'Content-Encoding': 'none',
     });
     res.flushHeaders?.();
-    // Some proxies still hold the first few KB of a response: get past that.
+    // Some proxies hold the first few KB of a response: get past that.
     res.write(`:${' '.repeat(2048)}\n\nretry: 3000\n\n`);
 
     const send = (event, data) => { res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`); };
@@ -80,6 +89,63 @@ export function setup(mstream) {
     const end = () => { if (done) { return; } done = true; clearInterval(beat); close(); };
     req.on('close', end);
     res.on('error', end);
+  });
+
+  mstream.get('/api/v1/devices/poll', (req, res) => {
+    const user = userKey(req);
+    const { value } = joiValidate(Joi.object({
+      id: id.required(),
+      name: Joi.string().max(80).allow(''),
+      type: Joi.string().valid('web', 'android', 'desktop', 'other').default('other'),
+      session: id.required(),
+      ack: Joi.number().integer().min(0).default(0),
+      token: Joi.any(),
+    }), req.query);
+
+    const key = `${user}\0${value.id}\0${value.session}`;
+    let box = mailboxes.get(key);
+    const fresh = !box;
+    if (!box) {
+      box = { base: 0, events: [], waiter: null, timer: null, close: null };
+      mailboxes.set(key, box);
+      box.close = hub.connect(user, { id: value.id, name: value.name, type: value.type }, (event, data) => {
+        box.events.push({ event, data });
+        if (box.events.length > MAILBOX_MAX) { box.events.shift(); box.base++; }
+        // A burst (a report fans out to everyone) goes in one answer.
+        if (box.waiter) { setTimeout(box.waiter, 30); }
+      });
+    }
+    clearTimeout(box.timer);
+    box.timer = null;
+    // Delivered up to the cursor the client acknowledges (a new mailbox — the
+    // old one expired — starts over: the client takes its cursor from the answer).
+    const drop = fresh ? 0 : Math.min(Math.max(0, value.ack - box.base), box.events.length);
+    box.events.splice(0, drop);
+    box.base += drop;
+
+    let done = false;
+    let wait = null;
+    const answer = () => {
+      if (done) { return; }
+      done = true;
+      clearTimeout(wait);
+      if (box.waiter === answer) { box.waiter = null; }
+      clearTimeout(box.timer);
+      box.timer = setTimeout(() => {
+        if (mailboxes.get(key) !== box) { return; }
+        mailboxes.delete(key);
+        box.close();
+      }, POLL_GONE_MS);
+      if (!res.writableEnded) {
+        res.set('Cache-Control', 'no-store');
+        res.json({ cursor: box.base + box.events.length, events: box.events });
+      }
+    };
+    if (box.events.length) { return answer(); }
+    box.waiter?.();   // an older poll of this session still waiting: it answers empty
+    box.waiter = answer;
+    wait = setTimeout(answer, POLL_WAIT_MS);
+    res.on('close', answer);
   });
 
   mstream.post('/api/v1/devices/state', (req, res) => {

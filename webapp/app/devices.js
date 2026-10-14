@@ -337,8 +337,6 @@ export async function forget(id) {
 
 // ── The stream ──────────────────────────────────────────────────────────
 
-let es = null;
-let retry = null;
 
 // A playing device's playhead runs on this browser's clock: a report keeps
 // the running anchor unless it shows a jump (seek, another track, play /
@@ -358,15 +356,12 @@ function upsert(d) {
   devices.set((s) => ({ list: s.list.some((x) => x.id === d.id) ? s.list.map((x) => (x.id === d.id ? row : x)) : [...s.list, row] }));
 }
 
-export function connect() {
-  const s = server();
-  if (es || !s) { return; }
-  const d = devices.get();
-  const q = new URLSearchParams({ id: d.self, name: d.name, type: 'web' });
-  if (s.token) { q.set('token', s.token); }
-  es = new EventSource(`${s.host}api/v1/devices/events?${q}`);
-  es.addEventListener('devices', (e) => {
-    const data = JSON.parse(e.data);
+// Long polling (src/api/devices.js says why not the SSE stream): each answer
+// carries the events since the last one; `ack` tells the server what arrived.
+let polling = 0;   // the current loop's number: an old loop sees it changed and stops
+
+function dispatch(event, data) {
+  if (event === 'devices') {
     devices.set({ connected: true, list: data.devices.map((x) => smoothed(byId(x.id), x)) });
     sentQueue = null;
     lastStatusSig = '';
@@ -374,31 +369,47 @@ export function connect() {
       startedUp = true;
       setTimeout(async () => { try { await maybePickUp(); } finally { startupDone = true; report(true); } }, 300);
     } else { report(true); }
-  });
-  es.addEventListener('device', (e) => { upsert(JSON.parse(e.data)); maybePickUp(); });
-  es.addEventListener('removed', (e) => {
-    const { id } = JSON.parse(e.data);
-    devices.set((st) => ({ list: st.list.filter((x) => x.id !== id) }));
-  });
-  es.addEventListener('command', (e) => run(JSON.parse(e.data)));
-  // A duplicated tab came with this tab's id: this one becomes a new device.
-  es.addEventListener('replaced', () => {
-    es.close();
-    es = null;
+  } else if (event === 'device') {
+    upsert(data);
+    maybePickUp();
+  } else if (event === 'removed') {
+    devices.set((st) => ({ list: st.list.filter((x) => x.id !== data.id) }));
+  } else if (event === 'command') {
+    run(data);
+  } else if (event === 'replaced') {
+    // A duplicated tab came with this tab's id: this one becomes a new device.
     devices.set({ self: newId(), connected: false, list: [] });
-    connect();
-  });
-  es.onerror = () => {
-    devices.set({ connected: false });
-    // EventSource retries by itself, unless the server answered with an error.
-    if (es && es.readyState === EventSource.CLOSED) {
-      es = null;
-      clearTimeout(retry);
-      retry = setTimeout(async () => {
-        try { await api('GET', 'api/v1/devices'); connect(); } catch (err) {
-          if (err.status === 403 || err.status === 404) { devices.set({ available: false }); } else { retry = setTimeout(connect, 15000); }
-        }
-      }, 3000);
+    connect(true);
+  }
+}
+
+export async function connect(restart = false) {
+  const s = server();
+  if (!s || (polling && !restart)) { return; }
+  const loop = ++polling;
+  const session = [...crypto.getRandomValues(new Uint8Array(8))].map((x) => x.toString(16).padStart(2, '0')).join('');
+  let ack = 0;
+  let backoff = 2000;
+  while (loop === polling) {
+    const d = devices.get();
+    const q = new URLSearchParams({ id: d.self, name: d.name, type: 'web', session, ack: String(ack) });
+    try {
+      const res = await fetch(`${s.host}api/v1/devices/poll?${q}`, { headers: { 'x-access-token': s.token || '' }, cache: 'no-store' });
+      if (res.status === 403 || res.status === 404) { devices.set({ available: false, connected: false }); polling = 0; return; }
+      if (!res.ok) { throw new Error(`poll ${res.status}`); }
+      const { cursor, events } = await res.json();
+      if (loop !== polling) { return; }
+      ack = cursor;
+      backoff = 2000;
+      for (const e of events) {
+        dispatch(e.event, e.data);
+        if (loop !== polling) { return; }   // replaced: a new loop runs
+      }
+    } catch (_) {
+      if (loop !== polling) { return; }
+      devices.set({ connected: false });
+      await new Promise((r) => { setTimeout(r, backoff); });
+      backoff = Math.min(backoff * 2, 30000);
     }
-  };
+  }
 }
