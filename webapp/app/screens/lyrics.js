@@ -22,7 +22,7 @@ export function parseLrc(text) {
   return out.sort((a, b) => a.t - b.t);
 }
 
-async function fetchLyrics(path) {
+export async function fetchLyrics(path) {
   const s = server();
   const res = await fetch(`${s.host}api/v1/lyrics?path=${encodeURIComponent(String(path).replace(/^\/+/, ''))}`, { headers: { 'x-access-token': s.token } });
   if (res.status === 404) { return null; }

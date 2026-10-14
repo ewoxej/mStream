@@ -66,6 +66,8 @@ export const app = createStore({
   queueOpen: narrowQuery.matches ? false : prefs.queueOpen !== false,
   // Phone-sized windows (app.css, max-width 640px): Now Playing opened from the mini player.
   nowOpen: false,
+  // The floating (picture-in-picture) player window is open (pip.js).
+  pipOpen: false,
   albumView: prefs.albumView || 'grid',
   artistView: prefs.artistView || 'grid',
   // Per-page sort: { albums: { key, dir }, artists: …, tracks: …, folders: … }.

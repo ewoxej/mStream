@@ -7,6 +7,7 @@ import * as lib from './library.js';
 import { sidebarLayout } from './nav.js';
 import { devices, followed, positionOf, command as devCommand, remoteQueue, loadRemoteQueue } from './devices.js';
 import { DevicesButton } from './devices-ui.js';
+import { PipButton } from './pip.js';
 import { Icon, IconBtn, Cover, LikeButton, openMenu, trackMenuItems, prompt } from './ui.js';
 import { fmtTime, fmtCount, trackTitle, trackArtist, trackAlbum, trackCover, formatLabel, gainLabel, serverAudio } from './util.js';
 
@@ -231,13 +232,13 @@ function LocalQueue() {
 
 // ── Player bar ──────────────────────────────────────────────────────────
 
-function Seek() {
+export function Seek() {
   const { currentTime, duration } = useStore(playback, (s) => ({ currentTime: Math.floor(s.currentTime * 4) / 4, duration: s.duration }));
   return html`<${SeekBar} currentTime=${currentTime} duration=${duration} onSeek=${P.seekPct} />`;
 }
 
 // Another device's playhead, moving on between its reports.
-function RemoteSeek({ d }) {
+export function RemoteSeek({ d }) {
   const [, tick] = useState(0);
   useEffect(() => { const t = setInterval(() => tick((n) => n + 1), 250); return () => clearInterval(t); }, []);
   const duration = (d.track?.durationMs || 0) / 1000;
@@ -257,15 +258,17 @@ function SeekBar({ currentTime, duration, onSeek }) {
     if (!(duration > 0)) { return; }
     e.preventDefault();
     setDrag(at(e));
+    // The window the bar is in: the page, or the picture-in-picture player.
+    const win = e.currentTarget.ownerDocument.defaultView;
     const move = (ev) => setDrag(at(ev));
     const up = (ev) => {
-      window.removeEventListener('pointermove', move);
-      window.removeEventListener('pointerup', up);
+      win.removeEventListener('pointermove', move);
+      win.removeEventListener('pointerup', up);
       onSeek(at(ev));
       setDrag(null);
     };
-    window.addEventListener('pointermove', move);
-    window.addEventListener('pointerup', up);
+    win.addEventListener('pointermove', move);
+    win.addEventListener('pointerup', up);
   };
   return html`<div class="seek">
     <span>${fmtTime(drag != null ? drag * duration : currentTime)}</span>
@@ -277,7 +280,7 @@ function SeekBar({ currentTime, duration, onSeek }) {
   </div>`;
 }
 
-function Volume({ remote }) {
+export function Volume({ remote }) {
   const local = useStore(playback, (s) => s.volume);
   const volume = remote ? (remote.volume ?? 100) : local;
   const setVol = (v) => {
@@ -295,9 +298,10 @@ function Volume({ remote }) {
   const down = (e) => {
     e.preventDefault();
     set(e);
-    const up = () => { window.removeEventListener('pointermove', set); window.removeEventListener('pointerup', up); };
-    window.addEventListener('pointermove', set);
-    window.addEventListener('pointerup', up);
+    const win = e.currentTarget.ownerDocument.defaultView;
+    const up = () => { win.removeEventListener('pointermove', set); win.removeEventListener('pointerup', up); };
+    win.addEventListener('pointermove', set);
+    win.addEventListener('pointerup', up);
   };
   return html`<div class="volume">
     <${IconBtn} icon=${volume === 0 ? 'volume_off' : volume < 50 ? 'volume_down' : 'volume_up'} title=${volume === 0 ? 'Unmute' : 'Mute'}
@@ -313,7 +317,7 @@ function Volume({ remote }) {
 // What the player shows and drives: this tab's playback, or the followed
 // device's (playing elsewhere, or played last there). The bar, the mini
 // player and the Now Playing sheet share it.
-function useNowPlaying() {
+export function useNowPlaying() {
   const s = useStore(playback, (x) => ({
     current: x.current, playing: x.playing, shuffle: x.shuffle, loop: x.loop, loopOne: x.loopOne,
     autoDJ: x.autoDJ, rg: x.replayGain, pre: x.replayGainPreGainDb, title: x.current?.metadata?.title, rev: x.rev,
@@ -345,7 +349,7 @@ function useNowPlaying() {
   return { remote, track, meta, playing, ctl, rep, rgText };
 }
 
-function Transport({ n, big = false }) {
+export function Transport({ n, big = false }) {
   const { rep, ctl, playing } = n;
   const sz = big ? 26 : 19;
   return html`<div class="pb-controls">
@@ -495,6 +499,7 @@ export function PlayerBar() {
         onClick=${() => (screen === 'viz' ? history.back() : go('viz'))} />`}
       <${IconBtn} icon="list" title=${queueOpen ? 'Hide queue' : 'Show queue'} active=${queueOpen} size=${17} class="pager"
         onClick=${() => { app.set({ queueOpen: !queueOpen }); savePrefs(); }} />
+      <${PipButton} />
       <${DevicesButton} />
       <${Volume} remote=${remote} />
     </div>
