@@ -1133,10 +1133,16 @@ export function setup(mstream) {
 
   // ── Rated Songs ─────────────────────────────────────────────────────────
 
+  // Liked tracks, newest like first (likes from before liked_at was kept
+  // follow, by rating); each row carries `likedAt` (ISO, or null).
   function getRatedSongs(req) {
     if (!req.user?.id) { return []; }
     const filter = libraryFilter(req.user, req.body?.ignoreVPaths);
-    return userStatRows(req.user, 'rating', 'rating > 0', filter, null);
+    const rows = userStatRows(req.user, "COALESCE(liked_at, '') || '|' || printf('%02d', rating)", 'rating > 0', filter, null);
+    const likedAt = new Map(d().prepare(
+      'SELECT track_hash, liked_at FROM user_metadata WHERE user_id = ? AND rating > 0 AND liked_at IS NOT NULL'
+    ).all(req.user.id).map((r) => [r.track_hash, r.liked_at]));
+    return rows.map((row) => ({ ...row, likedAt: likedAt.get(row.metadata?.['audio-hash'] || row.metadata?.hash) ?? null }));
   }
 
   mstream.get('/api/v1/db/rated', (req, res) => res.json(getRatedSongs(req)));
@@ -1166,11 +1172,18 @@ export function setup(mstream) {
     // null would surface as a 500 constraint throw.
     if (!track.audio_hash && !track.file_hash) { throw new WebError('File Not Found', 404); }
 
+    // liked_at (fork-schema.js): set when the track becomes liked, kept
+    // while it stays liked (a re-rate is not a new like), cleared with it.
+    const liked = req.body.rating > 0;
     d().prepare(`
-      INSERT INTO user_metadata (user_id, track_hash, rating)
-      VALUES (?, ?, ?)
-      ON CONFLICT(user_id, track_hash) DO UPDATE SET rating = excluded.rating
-    `).run(req.user.id, track.audio_hash || track.file_hash, req.body.rating);
+      INSERT INTO user_metadata (user_id, track_hash, rating, liked_at)
+      VALUES (?, ?, ?, ?)
+      ON CONFLICT(user_id, track_hash) DO UPDATE SET
+        rating = excluded.rating,
+        liked_at = CASE WHEN excluded.rating > 0
+          THEN COALESCE(CASE WHEN user_metadata.rating > 0 THEN user_metadata.liked_at END, excluded.liked_at)
+          ELSE NULL END
+    `).run(req.user.id, track.audio_hash || track.file_hash, req.body.rating, liked ? new Date().toISOString() : null);
 
     res.json({});
   });

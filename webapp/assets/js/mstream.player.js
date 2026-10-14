@@ -170,11 +170,9 @@ const MSTREAMPLAYER = (() => {
 
     audioData.error = false;
 
-    // Handle shuffle
-    if (mstreamModule.playerStats.shuffle === true) {
-      const pos = Math.floor(Math.random() * (shuffleCache.length + 1));
-      shuffleCache.splice(pos, 0, audioData);
-    }
+    // Shuffled, the queue is already in its random order: a new song goes
+    // to its end, and to the end of the order shuffle-off comes back to.
+    if (unshuffled) { unshuffled.push(audioData); }
 
     return addSongToPlaylist(audioData, forceAutoPlayOff);
   }
@@ -920,6 +918,11 @@ const MSTREAMPLAYER = (() => {
 
     song.error = false;
 
+    if (unshuffled) {
+      const cur = mstreamModule.playlist[mstreamModule.positionCache.val];
+      const at = cur ? unshuffled.indexOf(cur) : -1;
+      unshuffled.splice(at >= 0 ? at + 1 : unshuffled.length, 0, song);
+    }
     mstreamModule.playlist.splice(position, 0, song);
 
     if (playNow) {
@@ -942,11 +945,8 @@ const MSTREAMPLAYER = (() => {
 
     clearEnd();
 
-    // Clear shuffle as well
-    if (mstreamModule.playerStats.shuffle === true) {
-      // Clear Shuffle Cache
-      while (shuffleCache.length > 0) { shuffleCache.pop(); }
-    }
+    // A new queue: shuffle-off has nothing older to go back to.
+    if (unshuffled) { unshuffled = []; }
 
     // clearPlaylist also drops the cascade — re-bootstrap with two
     // songs so the post-clear playback has the same lookahead as a
@@ -1012,29 +1012,15 @@ const MSTREAMPLAYER = (() => {
     // Remove song
     mstreamModule.playlist.splice(position, 1);
 
-    if (mstreamModule.playerStats.shuffle === true) {
-      //  Remove song from shuffle Cache
-      for (var i = 0, len = shuffleCache.length; i < len; i++) {
-        // Check if this is the current song
-        if (removedSong === shuffleCache[i]) {
-          shuffleCache.splice(i, 1);
-        }
-      }
-      for (var i = 0, len = shufflePrevious.length; i < len; i++) {
-        // Check if this is the current song
-        if (removedSong === shufflePrevious[i]) {
-          shufflePrevious.splice(i, 1);
-        }
-      }
+    if (unshuffled) {
+      const at = unshuffled.indexOf(removedSong);
+      if (at >= 0) { unshuffled.splice(at, 1); }
     }
 
     // Handle case where user removes current song and it's the last song in the playlist
     if (position === mstreamModule.positionCache.val && position === mstreamModule.playlist.length) {
       clearEnd();
-      // Go to random song if random is set
-      if (mstreamModule.playerStats.shuffle === true) {
-        goToNextSong();
-      } else if (mstreamModule.playerStats.shouldLoop === true) { // loop is set
+      if (mstreamModule.playerStats.shouldLoop === true) { // loop is set
         mstreamModule.positionCache.val = 0;
         goToSong(mstreamModule.positionCache.val);
       } else { // Reset to start is nothing is set
@@ -1043,13 +1029,7 @@ const MSTREAMPLAYER = (() => {
     } else if (position === mstreamModule.positionCache.val) { // User removes currently playing song
       // Go to next song
       clearEnd();
-
-      // If random is set, go to random song
-      if (mstreamModule.playerStats.shuffle === true) {
-        goToNextSong();
-      } else {
-        goToSong(mstreamModule.positionCache.val);
-      }
+      goToSong(mstreamModule.positionCache.val);
 
     } else if (position < mstreamModule.positionCache.val) {
       // Lower position cache by 1 if necessary
@@ -1063,17 +1043,7 @@ const MSTREAMPLAYER = (() => {
       clearTimeout(cacheTimer);
       cacheTimer = setTimeout(function () {
         cacheTimer = undefined;
-        if(mstreamModule.playerStats.shuffle === true) {
-          // TODO: This doesn't actually get triggered if remove the next shuffle song
-          // if(shuffleCache[0]) {
-          //   for (var i = 0; i < mstreamModule.playlist.length; i++) {
-          //     if(mstreamModule.playlist[i] === shuffleCache[shuffleCache.length - 1]) {
-          //       setCachedSong(i);
-          //       break;
-          //     }
-          //   }
-          // }
-        } else if (mstreamModule.playerStats.shouldLoop === true) {
+        if (mstreamModule.playerStats.shouldLoop === true) {
           if (mstreamModule.positionCache.val === (mstreamModule.playlist.length - 1)) {
             setCachedSong(0);
           }  else {
@@ -1092,32 +1062,6 @@ const MSTREAMPLAYER = (() => {
   }
 
   function goToPreviousSong() {
-    // If random is set, go to previous song from cache
-    if (mstreamModule.playerStats.shuffle === true) {
-      // Check that there is a previous song to go back to
-      if (shufflePrevious.length <= 1) {
-        return;
-      }
-
-      // Pop a song and go to the last song
-      var nextSong = shufflePrevious.pop();
-      shuffleCache.push(nextSong);
-
-      var currentSong = shufflePrevious[shufflePrevious.length - 1];
-
-      // Reset position cache
-      for (var i = 0, len = mstreamModule.playlist.length; i < len; i++) {
-        // Check if this is the current song
-        if (currentSong === mstreamModule.playlist[i]) {
-          mstreamModule.positionCache.val = i;
-        }
-      }
-      clearEnd();
-
-      goToSong(mstreamModule.positionCache.val);
-      return;
-    }
-
     // Make sure there is a previous song
     if (mstreamModule.positionCache.val < 1) {
       return false;
@@ -1130,45 +1074,6 @@ const MSTREAMPLAYER = (() => {
   }
 
   function goToNextSong() {
-    // If random is set, go to random song
-    if (mstreamModule.playerStats.shuffle === true) {
-      // Chose a random value
-      var nextSong = shuffleCache.pop();
-
-      // Prevent same song from playing twice after a re-shuffle
-      if (nextSong === mstreamModule.getCurrentSong()) {
-        console.log('DUPEEEEE');
-        shuffleCache.unshift(nextSong);
-        nextSong = shuffleCache.pop();
-      }
-
-      if (shuffleCache.length === 0) {
-        newShuffle();
-      }
-
-      // Reset position cache
-      for (var i = 0, len = mstreamModule.playlist.length; i < len; i++) {
-        // Check if this is the current song
-        if (nextSong === mstreamModule.playlist[i]) {
-          mstreamModule.positionCache.val = i;
-        }
-      }
-      clearEnd();
-
-      goToSong(mstreamModule.positionCache.val);
-
-      // Remove duplicates from shuffle previous
-      for (var i = 0, len = shufflePrevious.length; i < len; i++) {
-        // Check if this is the current song
-        if (nextSong === shufflePrevious[i]) {
-          shufflePrevious.splice(i, 1);
-        }
-      }
-
-      shufflePrevious.push(nextSong);
-      return;
-    }
-
     // Check if the next song exists
     if (!mstreamModule.playlist[mstreamModule.positionCache.val + 1]) {
       // If loop is set and no other song, go back to first song
@@ -1295,16 +1200,7 @@ const MSTREAMPLAYER = (() => {
     clearTimeout(cacheTimer);
     cacheTimer = setTimeout(function () {
       cacheTimer = undefined;
-      if(mstreamModule.playerStats.shuffle === true) {
-        if(shuffleCache[0]) {
-          for (var i = 0; i < mstreamModule.playlist.length; i++) {
-            if(mstreamModule.playlist[i] === shuffleCache[shuffleCache.length - 1]) {
-              setCachedSong(i);
-              break;
-            }
-          }
-        }
-      } else if (mstreamModule.playerStats.shouldLoop === true) {
+      if (mstreamModule.playerStats.shouldLoop === true) {
         if (position === (mstreamModule.playlist.length - 1)) {
           setCachedSong(0);
         }  else {
@@ -1723,31 +1619,61 @@ const MSTREAMPLAYER = (() => {
     }
   }
 
-  // Random Song
-  var shuffleCache = []; // Cache the last 5 songs played to avoid repeats
-  var shufflePrevious = [];
+  // Shuffle reorders the queue itself, as the Zenelo app does: the playing
+  // song stays where it is and everything else follows in a new random
+  // order each time shuffle is turned on (so the queue shows what plays
+  // next, and other devices get that order). Off puts the queue back in
+  // the order it was built, songs added meanwhile where they were added.
+  // It runs alongside Auto DJ: the picks are appended to whatever order the
+  // queue is in.
+  var unshuffled = null;   // the queue's order before shuffling; null = not shuffled
   mstreamModule.setShuffle = (newValue) => {
     if (typeof newValue !== "boolean") { return; }
-    if (mstreamModule.playerStats.autoDJ === true) { return; }
-
-    mstreamModule.playerStats.shuffle = newValue;
-    mstreamModule.playerStats.shuffle === true ? newShuffle() : turnShuffleOff();
+    if (newValue === (mstreamModule.playerStats.shuffle === true)) { return; }
+    newValue ? shuffleOn() : shuffleOff();
   }
-  
+
   mstreamModule.toggleShuffle = () => {
-    if (mstreamModule.playerStats.autoDJ === true) { return; }
-    mstreamModule.playerStats.shuffle = !mstreamModule.playerStats.shuffle;
-    mstreamModule.playerStats.shuffle === true ? newShuffle() : turnShuffleOff();
+    mstreamModule.setShuffle(mstreamModule.playerStats.shuffle !== true);
     return mstreamModule.playerStats.shuffle;
   }
 
-  function newShuffle() {
-    shuffleCache = shuffle(mstreamModule.playlist.slice(0));
+  function shuffleOn() {
+    const list = mstreamModule.playlist;
+    const pos = mstreamModule.positionCache.val;
+    const current = pos >= 0 ? list[pos] : null;
+    unshuffled = list.slice(0);
+    const rest = shuffle(list.filter((s) => s !== current));
+    list.splice(0, list.length, ...(current ? [current] : []), ...rest);
+    if (current) { mstreamModule.positionCache.val = 0; }
+    mstreamModule.playerStats.shuffle = true;
+    recacheNext();
   }
 
-  function turnShuffleOff() {
-    shufflePrevious = [];
-    shuffleCache = [];
+  function shuffleOff() {
+    const list = mstreamModule.playlist;
+    const current = list[mstreamModule.positionCache.val] || null;
+    if (unshuffled) {
+      // The built order, without what was removed meanwhile; anything the
+      // record missed (reordered in by hand) keeps its place at the end.
+      const kept = unshuffled.filter((s) => list.includes(s));
+      const extra = list.filter((s) => !kept.includes(s));
+      list.splice(0, list.length, ...kept, ...extra);
+      if (current) { mstreamModule.positionCache.val = list.indexOf(current); }
+    }
+    unshuffled = null;
+    mstreamModule.playerStats.shuffle = false;
+    recacheNext();
+  }
+
+  // The song after the current one changed: preload that one instead.
+  function recacheNext() {
+    clearTimeout(cacheTimer);
+    cacheTimer = undefined;
+    const pos = mstreamModule.positionCache.val;
+    if (pos < 0) { return; }
+    if (mstreamModule.playlist[pos + 1]) { setCachedSong(pos + 1); }
+    else if (mstreamModule.playerStats.shouldLoop === true) { setCachedSong(0); }
   }
 
   function shuffle(array) {
@@ -1822,8 +1748,8 @@ const MSTREAMPLAYER = (() => {
   mstreamModule.toggleAutoDJ = () => {
     mstreamModule.playerStats.autoDJ = !mstreamModule.playerStats.autoDJ;
     if (mstreamModule.playerStats.autoDJ === true) {
-      // Turn off shuffle & loop
-      mstreamModule.playerStats.shuffle = false;
+      // Turn off loop (Auto DJ is the repeat button's last state); shuffle
+      // stays as it is: the picks join the queue's order.
       mstreamModule.playerStats.shouldLoop = false;
       mstreamModule.playerStats.shouldLoopOne = false;
 

@@ -111,12 +111,17 @@ export function playTracks(tracks, start = 0) {
   if (!songs.length) { return; }
   const p = P();
   const dj = p.playerStats.autoDJ;
+  // Shuffled: load the list in its own order, start the chosen song, then
+  // shuffle the rest behind it (and "off" comes back to the list's order).
+  const shuffled = p.playerStats.shuffle === true && !serverAudio;
+  if (shuffled) { p.setShuffle(false); }
   // clearPlaylist would bootstrap two Auto DJ picks into the empty queue.
   if (dj) { p.playerStats.autoDJ = false; }
   p.clearPlaylist();
   songs.forEach((s) => p.addSong(s, true));
   if (dj) { p.playerStats.autoDJ = true; }
   p.goToSongAtPosition(Math.min(start, songs.length - 1));
+  if (shuffled) { p.setShuffle(true); }
   bump();
   songs.forEach(enrich);
 }
@@ -231,7 +236,9 @@ export const seekPct = (pct) => {
   P().seek(Math.max(0, Math.min(0.999, pct)) * dur);
   publish();
 };
-export const toggleShuffle = () => { P().toggleShuffle(); publish(); };
+// Shuffle reorders the queue (assets/js/mstream.player.js): bump, so the
+// queue and other devices see the new order.
+export const toggleShuffle = () => { P().toggleShuffle(); bump(); };
 // The app's repeat button: off → all → one → ∞ Auto DJ → off. Auto DJ
 // clears the repeat flags when it starts; turning it off leaves repeat off.
 export const cycleRepeat = () => {
@@ -256,7 +263,7 @@ export function setRepeat(mode) {
   }
   publish();
 }
-export function setShuffle(on) { if (!!P().playerStats.shuffle !== !!on) { P().toggleShuffle(); } publish(); }
+export function setShuffle(on) { if (!!P().playerStats.shuffle !== !!on) { P().toggleShuffle(); } bump(); }
 
 export function setVolume(v) {
   const vol = Math.round(Math.max(0, Math.min(100, v)));

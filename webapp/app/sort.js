@@ -60,7 +60,14 @@ export const SORTS = {
     ],
   },
   tracks: { def: { key: 'name', dir: 'asc' }, fields: pick(TRACK, ['name', 'artist', 'album', 'year', 'added', 'duration', 'plays']) },
-  favorites: { def: { key: 'name', dir: 'asc' }, fields: pick(TRACK, ['name', 'artist', 'album', 'year', 'added', 'duration', 'plays']) },
+  // Newest like first: likes from before the date was kept (likedAt null) go last.
+  favorites: {
+    def: { key: 'liked', dir: 'desc' },
+    fields: [
+      { key: 'liked', label: 'Date liked', ...num((t) => ts(t.likedAt), 'Oldest first', 'Newest first') },
+      ...pick(TRACK, ['name', 'artist', 'album', 'year', 'added', 'duration', 'plays']),
+    ],
+  },
   genre: { def: { key: 'artist', dir: 'asc' }, fields: pick(TRACK, ['name', 'artist', 'album', 'year', 'added', 'duration', 'plays']) },
   // Folder entries: sub-folders by name (they have nothing else); files as tracks.
   folders: {

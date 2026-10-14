@@ -7,8 +7,9 @@ import * as lib from '../library.js';
 import * as P from '../player.js';
 import { playback } from '../player.js';
 import {
-  Icon, Btn, Cover, Header, SearchField, Seg, Empty, Spinner, TrackTable, AlbumTile, useAsync,
+  Icon, Btn, Cover, Header, SearchField, Seg, Empty, Spinner, TrackTable, AlbumTile, useAsync, openMenu, confirm, showInfo,
 } from '../ui.js';
+import { readM3u, saveM3u, foundNote } from './playlists.js';
 import {
   fmtCount, fmtTime, plural, sumDuration, dayBucket, clockLabel, trackTitle,
   trackArtist, trackCover,
@@ -287,6 +288,10 @@ export function Genre({ args }) {
   return html`<div class="screen">
     <${Header} back title=${name} sub=${state.data ? `GENRE · ${plural(tracks.length, 'track').toUpperCase()} · ${sort.label}` : ''}>
       <${SortButton} sort=${sort} />
+      <${Btn} icon="more_vert" title="More" onClick=${(e) => openMenu(e, [
+        { label: 'Import M3U…', icon: 'upload', onClick: () => importFavorites(() => setRev((n) => n + 1)) },
+        { label: 'Export M3U', icon: 'download', onClick: () => saveM3u('Favorites', tracks.filter((t) => likes[t.filepath] !== false)) },
+      ])} />
       <${Btn} icon="shuffle" onClick=${() => P.shufflePlay(tracks)} disabled=${!tracks.length}>Shuffle</${Btn}>
       <${Btn} kind="primary" icon="play_arrow" iconSize=${14} onClick=${() => P.playTracks(tracks)} disabled=${!tracks.length}>Play all</${Btn}>
     </${Header}>
@@ -296,9 +301,28 @@ export function Genre({ args }) {
 
 // ── Favorites ───────────────────────────────────────────────────────────
 
+// Like every track of an M3U the library has (those liked already stay as they are).
+async function importFavorites(reload) {
+  const r = await readM3u();
+  if (!r) { return; }
+  const isLiked = (t) => P.isLiked(t);
+  const fresh = r.tracks.filter((t, i, a) => !isLiked(t) && a.indexOf(t) === i);
+  if (!fresh.length) { showInfo({ title: 'Nothing new to like', text: foundNote(r) + (r.tracks.length ? ' They are all favorites already.' : '') }); return; }
+  const ok = await confirm({ title: `Like ${plural(fresh.length, 'track')}?`, text: foundNote(r), okLabel: 'Like them', danger: false });
+  if (!ok) { return; }
+  let done = 0;
+  for (const t of fresh) {
+    try { await MSTREAMAPI.rateSong(t.filepath, 10); done++; } catch (_) { /* counted below */ }
+  }
+  app.set((st) => ({ likes: { ...st.likes, ...Object.fromEntries(fresh.map((t) => [t.filepath, true])) } }));
+  P.toast(done === fresh.length ? `${plural(done, 'track')} added to favorites` : `${done} of ${fresh.length} added; the rest failed`, done ? 'success' : 'error');
+  reload();
+}
+
 export function Favorites() {
   const likes = useStore(app, (s) => s.likes);
-  const state = useAsync(() => { lib.invalidate('liked'); return lib.liked(); }, []);
+  const [rev, setRev] = useState(0);
+  const state = useAsync(() => { lib.invalidate('liked'); return lib.liked(); }, [rev]);
   // Tracks unliked on this screen stay until the next visit, dimmed by
   // their heart, so an accidental click is easy to undo.
   const sort = useSort('favorites');
@@ -311,7 +335,7 @@ export function Favorites() {
       <${Btn} icon="shuffle" onClick=${() => P.shufflePlay(tracks)} disabled=${!tracks.length}>Shuffle</${Btn}>
       <${Btn} kind="primary" icon="play_arrow" iconSize=${14} onClick=${() => P.playTracks(tracks)} disabled=${!tracks.length}>Play all</${Btn}>
     </${Header}>
-    <${Loading} state=${state}>${() => html`<${TrackTable} groups=${[{ tracks }]}
+    <${Loading} state=${state}>${() => html`<${TrackTable} groups=${[{ tracks }]} extraCols=${['liked']}
       empty=${html`<${Empty} icon="favorite_border" title="No favorites yet.">Tap the heart on a track, or use its ⋮ menu → Add to favorites.</${Empty}>`} />`}</${Loading}>
   </div>`;
 }

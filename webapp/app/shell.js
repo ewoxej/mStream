@@ -353,7 +353,7 @@ export function Transport({ n, big = false }) {
   const { rep, ctl, playing } = n;
   const sz = big ? 26 : 19;
   return html`<div class="pb-controls">
-    <${IconBtn} icon="shuffle" title=${rep.dj ? 'Shuffle (off while Auto DJ runs)' : 'Shuffle'} active=${rep.shuffle} onClick=${rep.toggleShuffle} size=${big ? 21 : 17} class=${`dim ${rep.idle ? 'idle' : ''}`} />
+    <${IconBtn} icon="shuffle" title="Shuffle" active=${rep.shuffle} onClick=${rep.toggleShuffle} size=${big ? 21 : 17} class=${`dim ${rep.idle ? 'idle' : ''}`} />
     <${IconBtn} icon="skip_previous" title="Previous" onClick=${ctl.prev} size=${sz} />
     <button type="button" class="play" onClick=${ctl.playPause} title=${playing ? 'Pause' : 'Play'}>
       <${Icon} name=${playing ? 'pause' : 'play_arrow'} size=${big ? 30 : 19} fill />

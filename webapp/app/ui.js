@@ -348,6 +348,8 @@ export const TRACK_COLUMNS = [
   { id: 'key', label: 'Key', head: 'KEY', cls: 'c-x', w: '72px', min: 72, keep: 2, cell: (t) => mono(t.metadata?.['musical-key']) },
   { id: 'plays', label: 'Plays', head: 'PLAYS', cls: 'c-x r', w: '50px', min: 50, keep: 3, cell: (t) => mono(t.metadata?.['play-count']) },
   { id: 'added', label: 'Date added', head: 'ADDED', cls: 'c-x', w: '96px', min: 96, keep: 2, cell: (t) => addedLabel(t.metadata?.['created-at']) },
+  // Favorites only (db/rated's likedAt): not offered in the column picker.
+  { id: 'liked', label: 'Date liked', head: 'LIKED', cls: 'c-x', w: '96px', min: 96, keep: 7, extra: true, cell: (t) => addedLabel(t.likedAt) },
   { id: 'size', label: 'Size', head: 'SIZE', cls: 'c-x r', w: '64px', min: 64, keep: 2, cell: (t) => (t.metadata?.['file-size'] ? fmtBytes(t.metadata['file-size']) : '') },
   { id: 'time', label: 'Time', head: 'TIME', cls: 'c-d', w: '48px', min: 48, keep: 10, cell: (t) => fmtTime(t.metadata?.duration) },
 ];
@@ -398,7 +400,7 @@ function ColumnsPopover({ chosen, onClose }) {
     save(next);
   };
   // Chosen columns first, in their order, then the others.
-  const rows = [...chosen.map((id) => COL[id]), ...TRACK_COLUMNS.filter((c) => !chosen.includes(c.id))];
+  const rows = [...chosen.map((id) => COL[id]), ...TRACK_COLUMNS.filter((c) => !chosen.includes(c.id) && !c.extra)];
   return html`<div class="popover cols-pop" ref=${ref} onClick=${(e) => e.stopPropagation()}>
     <div class="cols-head"><span class="micro">COLUMNS</span>
       <button type="button" class="cols-reset" onClick=${() => save(null)}>Reset</button></div>
@@ -437,7 +439,9 @@ export function railSlots(letters, max) {
   return out;
 }
 
-export function TrackTable({ groups, firstCol = '#', firstValue, rail = false, rowMenu, empty, hideAlbum = false }) {
+// `extraCols`: page-specific columns (TRACK_COLUMNS with `extra`), placed
+// before Time.
+export function TrackTable({ groups, firstCol = '#', firstValue, rail = false, rowMenu, empty, hideAlbum = false, extraCols = [] }) {
   const currentPath = useStore(playback, (s) => s.currentPath);
   const playing = useStore(playback, (s) => s.playing);
   const chosen = useTrackCols();
@@ -473,8 +477,12 @@ export function TrackTable({ groups, firstCol = '#', firstValue, rail = false, r
     return () => { el.removeEventListener('scroll', onScroll); ro.disconnect(); };
   }, [!flat.length && !!empty]);  // the scroller appears once there are rows
 
-  const layout = useMemo(() => layoutColumns(chosen.filter((id) => !(hideAlbum && id === 'album')), view.w),
-    [chosen.join(), hideAlbum, Math.round(view.w / 8)]);
+  const ids = useMemo(() => {
+    const base = chosen.filter((id) => !(hideAlbum && id === 'album') && !extraCols.includes(id));
+    const at = base.includes('time') ? base.indexOf('time') : base.length;
+    return [...base.slice(0, at), ...extraCols, ...base.slice(at)];
+  }, [chosen.join(), hideAlbum, extraCols.join()]);
+  const layout = useMemo(() => layoutColumns(ids, view.w), [ids, Math.round(view.w / 8)]);
   const gridStyle = { gridTemplateColumns: layout.template, columnGap: layout.gap + 'px' };
 
   const windowed = items.length > 200;

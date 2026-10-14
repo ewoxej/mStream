@@ -4,6 +4,7 @@ import { DatabaseSync } from './sqlite-driver.js';
 import winston from 'winston';
 import * as config from '../state/config.js';
 import { SCHEMA_VERSION, MIGRATIONS } from './schema.js';
+import { ensureForkSchema } from './fork-schema.js';
 import { shouldMigrate, migrate } from './migrate-from-loki.js';
 import { normalizeArtistName } from '../util/artist-normalize.js';
 import { albumKey } from './album-key.js';
@@ -92,6 +93,7 @@ export function initDB() {
   setSynchronous(config.program.db?.synchronous || 'FULL');
 
   runMigrations();
+  ensureForkSchema(db);
 
   // Check FTS5 compile-time support after migrations (V31 needs it).
   // Done once at boot; the result is read by the search route on every
