@@ -226,6 +226,22 @@ export const cycleRepeat = () => {
   publish();
 };
 
+// For other devices' commands: repeat as one value ('off' | 'all' | 'one' | 'autodj').
+export const repeatOf = (st) => (st.autoDJ ? 'autodj' : st.shouldLoopOne ? 'one' : st.shouldLoop ? 'all' : 'off');
+export function setRepeat(mode) {
+  const p = P();
+  const st = p.playerStats;
+  if (mode === 'autodj') {
+    if (!st.autoDJ) { p.toggleAutoDJ(); }
+  } else if (['off', 'all', 'one'].includes(mode)) {
+    if (st.autoDJ) { p.toggleAutoDJ(); }
+    st.shouldLoop = mode === 'all';
+    st.shouldLoopOne = mode === 'one';
+  }
+  publish();
+}
+export function setShuffle(on) { if (!!P().playerStats.shuffle !== !!on) { P().toggleShuffle(); } publish(); }
+
 export function setVolume(v) {
   const vol = Math.round(Math.max(0, Math.min(100, v)));
   P().changeVolume(vol);

@@ -43,6 +43,8 @@ const statusSchema = Joi.object({
   positionMs: Joi.number().min(0).required(),
   playing: Joi.boolean().required(),
   volume: Joi.number().min(0).max(100).allow(null),
+  shuffle: Joi.boolean(),
+  repeat: Joi.string().valid('off', 'all', 'one', 'autodj'),
   track: track.allow(null),
 });
 

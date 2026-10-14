@@ -17,7 +17,7 @@
 export const OFFLINE_KEEP_MS = 30 * 24 * 3600 * 1000;
 export const MAX_DEVICES = 20;
 export const MAX_QUEUE = 20000;
-export const COMMANDS = ['play', 'pause', 'playPause', 'next', 'previous', 'seek', 'goTo', 'setVolume', 'takeover'];
+export const COMMANDS = ['play', 'pause', 'playPause', 'next', 'previous', 'seek', 'goTo', 'setVolume', 'setShuffle', 'setRepeat', 'takeover'];
 
 export function createHub(now = () => Date.now()) {
   const users = new Map();   // userKey → Map(deviceId → device)
@@ -54,6 +54,8 @@ export function createHub(now = () => Date.now()) {
     return {
       id: d.id, name: d.name, type: d.type, online: !!d.conn, lastSeen: new Date(d.lastSeen).toISOString(),
       playing: !!(d.conn && s.playing), index: s.index ?? -1, positionMs: positionNow(d), volume: s.volume ?? null,
+      // null from a client that doesn't report them (its buttons can't be driven).
+      shuffle: typeof s.shuffle === 'boolean' ? s.shuffle : null, repeat: s.repeat ?? null,
       track: s.track || null, updatedAt: s.updatedAt ? new Date(s.updatedAt).toISOString() : null,
       queueLength: d.queue.length, queueRev: d.queueRev,
       // When it last reported playing: a pick-up takes the queue of the device

@@ -5,7 +5,7 @@ import * as P from './player.js';
 import { playback } from './player.js';
 import * as lib from './library.js';
 import { sidebarLayout } from './nav.js';
-import { devices, activeRemote, positionOf, command as devCommand } from './devices.js';
+import { devices, followed, positionOf, command as devCommand, remoteQueue, loadRemoteQueue } from './devices.js';
 import { DevicesButton } from './devices-ui.js';
 import { Icon, IconBtn, Cover, LikeButton, openMenu, trackMenuItems, prompt } from './ui.js';
 import { fmtTime, fmtCount, trackTitle, trackArtist, trackAlbum, trackCover, formatLabel, gainLabel } from './util.js';
@@ -119,7 +119,53 @@ function QueueRow({ song, index, cur, faded, playing, dragState }) {
   </div>`;
 }
 
+// The followed device's queue: read-only, a click plays that row there.
+function RemoteQueue({ d }) {
+  const q = useStore(remoteQueue, (x) => ({ id: x.id, songs: x.songs, loading: x.loading }));
+  useEffect(() => { loadRemoteQueue(d); }, [d.id, d.queueRev]);
+  const songs = q.id === d.id ? q.songs : [];
+  const pos = d.index ?? -1;
+  const row = (s, i, faded) => {
+    const track = { filepath: s.rawFilePath, metadata: s.metadata };
+    const cur = i === pos;
+    return html`<div key=${i + ':' + s.rawFilePath} class=${`q-row ${cur ? 'cur' : ''} ${faded ? 'faded' : ''}`}
+      onClick=${() => devCommand(d.id, 'goTo', { index: i })}
+      onContextMenu=${(e) => openMenu(e, [{ label: `Play on ${d.name}`, icon: 'play_arrow', tone: 'accent', onClick: () => devCommand(d.id, 'goTo', { index: i }) }, 'sep', ...trackMenuItems([track])])}>
+      <${Cover} file=${trackCover(track)} class="q-cover">
+        ${cur ? html`<span class="q-eq"><${Icon} name=${d.playing ? 'graphic_eq' : 'pause'} size=${16} /></span>` : null}
+      </${Cover}>
+      <div class="q-text"><span class="q-t">${trackTitle(track)}</span><span class="q-a">${trackArtist(track)}</span></div>
+      <span class="q-d">${fmtTime(s.metadata?.duration)}</span>
+    </div>`;
+  };
+  const before = pos > 0 ? songs.slice(0, pos) : [];
+  const ahead = songs.slice(pos + 1);
+  const [showHistory, setShowHistory] = useState(false);
+  return html`<aside class="queue">
+    <div class="q-head">
+      <span class="q-title">Queue</span>
+      <span class="micro-n">${songs.length ? ahead.length + (pos >= 0 ? 1 : 0) : ''}</span>
+    </div>
+    <div class="q-on"><${Icon} name="devices" size=${13} /> On <b>${d.name}</b></div>
+    <div class="q-list">
+      ${!songs.length ? html`<div class="q-empty"><${Icon} name="list" size=${22} /><span>${q.loading ? 'Loading…' : 'The queue is empty'}</span></div>` : null}
+      ${before.length ? html`<div class="q-group" key="played"><button type="button" class="q-section q-toggle" onClick=${() => setShowHistory(!showHistory)}>
+        PLAYED · ${before.length} <${Icon} name=${showHistory ? 'expand_more' : 'chevron_right'} size=${12} />
+      </button>${showHistory ? before.map((s, i) => row(s, i, true)) : null}</div>` : null}
+      ${songs[pos] ? html`<div class="q-group" key="now"><div class="q-section">NOW PLAYING</div>${row(songs[pos], pos, false)}</div>` : null}
+      ${ahead.length ? html`<div class="q-group" key="next"><div class="q-section">UP NEXT · ${ahead.length}</div>${ahead.map((s, i) => row(s, pos + 1 + i, false))}</div>` : null}
+    </div>
+  </aside>`;
+}
+
 export function Queue() {
+  const dev = useStore(devices, (x) => ({ list: x.list, self: x.self }));
+  const localPlaying = useStore(playback, (x) => x.playing);
+  const remote = followed(dev.list, dev.self, localPlaying);
+  return remote ? html`<${RemoteQueue} d=${remote} />` : html`<${LocalQueue} />`;
+}
+
+function LocalQueue() {
   const { queue, pos, autoDJ, playing, queueLen } = useStore(playback, (s) => ({
     queue: s.queue, pos: s.pos, autoDJ: s.autoDJ, playing: s.playing, queueLen: s.queueLen, rev: s.rev,
   }));
@@ -188,7 +234,7 @@ function Seek() {
 // Another device's playhead, moving on between its reports.
 function RemoteSeek({ d }) {
   const [, tick] = useState(0);
-  useEffect(() => { const t = setInterval(() => tick((n) => n + 1), 500); return () => clearInterval(t); }, []);
+  useEffect(() => { const t = setInterval(() => tick((n) => n + 1), 250); return () => clearInterval(t); }, []);
   const duration = (d.track?.durationMs || 0) / 1000;
   return html`<${SeekBar} currentTime=${positionOf(d) / 1000} duration=${duration}
     onSeek=${(pct) => devCommand(d.id, 'seek', { positionMs: Math.round(pct * duration * 1000) })} />`;
@@ -267,8 +313,8 @@ export function PlayerBar() {
   const screen = useStore(app, (x) => x.route.screen);
   const queueOpen = useStore(app, (x) => x.queueOpen);
   const dev = useStore(devices, (x) => ({ list: x.list, self: x.self }));
-  // Another device playing while this one doesn't: the bar shows and controls it.
-  const remote = activeRemote(dev.list, dev.self, s.playing);
+  // The device followed (playing elsewhere, or played last there): the bar shows and controls it.
+  const remote = followed(dev.list, dev.self, s.playing);
   const song = s.current;
   const track = remote ? (remote.track ? { filepath: remote.track.filepath, metadata: {
     title: remote.track.title, artist: remote.track.artist, album: remote.track.album, 'album-art': remote.track.art || null,
@@ -279,6 +325,16 @@ export function PlayerBar() {
   const ctl = remote ? {
     prev: () => devCommand(remote.id, 'previous'), playPause: () => devCommand(remote.id, 'playPause'), next: () => devCommand(remote.id, 'next'),
   } : { prev: P.prev, playPause: P.playPause, next: P.next };
+  // Shuffle / repeat: this tab's, or the followed device's (sent to it; idle when it doesn't report them).
+  const REPEAT_NEXT = { off: 'all', all: 'one', one: 'autodj', autodj: 'off' };
+  const rep = !remote ? {
+    shuffle: s.shuffle, mode: s.autoDJ ? 'autodj' : s.loopOne ? 'one' : s.loop ? 'all' : 'off', dj: s.autoDJ,
+    toggleShuffle: P.toggleShuffle, cycle: P.cycleRepeat, idle: false,
+  } : {
+    shuffle: !!remote.shuffle, mode: remote.repeat || 'off', dj: remote.repeat === 'autodj', idle: remote.repeat == null,
+    toggleShuffle: () => { if (remote.shuffle != null) { devCommand(remote.id, 'setShuffle', { shuffle: !remote.shuffle }); } },
+    cycle: () => { if (remote.repeat != null) { devCommand(remote.id, 'setRepeat', { mode: REPEAT_NEXT[remote.repeat] || 'off' }); } },
+  };
   const rgText = !s.rg ? 'RG OFF' : meta['replaygain-track'] != null && meta['replaygain-track'] !== ''
     ? `RG ${gainLabel({ 'replaygain-track': Number(meta['replaygain-track']) + Number(s.pre || 0) })}` : 'RG · NO TAG';
 
@@ -299,14 +355,14 @@ export function PlayerBar() {
     </div>
     <div class="pb-center">
       <div class="pb-controls">
-        <${IconBtn} icon="shuffle" title=${s.autoDJ ? 'Shuffle (off while Auto DJ runs)' : 'Shuffle'} active=${!remote && s.shuffle} onClick=${P.toggleShuffle} size=${17} class=${`dim ${remote ? 'idle' : ''}`} />
+        <${IconBtn} icon="shuffle" title=${rep.dj ? 'Shuffle (off while Auto DJ runs)' : 'Shuffle'} active=${rep.shuffle} onClick=${rep.toggleShuffle} size=${17} class=${`dim ${rep.idle ? 'idle' : ''}`} />
         <${IconBtn} icon="skip_previous" title="Previous" onClick=${ctl.prev} size=${19} />
         <button type="button" class="play" onClick=${ctl.playPause} title=${playing ? 'Pause' : 'Play'}>
           <${Icon} name=${playing ? 'pause' : 'play_arrow'} size=${19} fill />
         </button>
         <${IconBtn} icon="skip_next" title="Next" onClick=${ctl.next} size=${19} />
-        <${IconBtn} icon=${s.autoDJ ? 'all_inclusive' : s.loopOne ? 'repeat_one' : 'repeat'} title=${s.autoDJ ? 'Auto DJ' : 'Repeat'}
-          active=${!remote && (s.autoDJ || s.loop || s.loopOne)} onClick=${P.cycleRepeat} size=${17} class=${`dim ${remote ? 'idle' : ''}`} />
+        <${IconBtn} icon=${rep.dj ? 'all_inclusive' : rep.mode === 'one' ? 'repeat_one' : 'repeat'} title=${rep.dj ? 'Auto DJ' : 'Repeat'}
+          active=${rep.mode !== 'off'} onClick=${rep.cycle} size=${17} class=${`dim ${rep.idle ? 'idle' : ''}`} />
       </div>
       ${remote ? html`<${RemoteSeek} d=${remote} />` : html`<${Seek} />`}
     </div>

@@ -4,7 +4,7 @@ import { html, useEffect, useRef, useState } from './vendor/preact-htm.js';
 import { useStore } from './store.js';
 import { playback } from './player.js';
 import { Icon, IconBtn, prompt } from './ui.js';
-import { devices, playOn, rename, forget, playingElsewhere, activeRemote } from './devices.js';
+import { devices, playOn, rename, forget, playingElsewhere, followed } from './devices.js';
 import { clockLabel } from './util.js';
 
 const typeIcon = (t) => (t === 'android' ? 'smartphone' : t === 'web' || t === 'desktop' ? 'computer' : 'devices_other');
@@ -21,16 +21,15 @@ function DevicesMenu({ onClose, anchor }) {
     document.addEventListener('keydown', key);
     return () => { document.removeEventListener('mousedown', close); document.removeEventListener('keydown', key); };
   }, []);
-  const remote = activeRemote(d.list, d.self, localPlaying);
-  // Where the sound is: this tab while it plays, else the device playing.
-  const current = localPlaying ? d.self : remote?.id || null;
+  // Lit: where the sound is — this tab while it plays, the devices playing.
+  const isOn = (x, self) => (self ? localPlaying : x.playing);
   const others = d.list.filter((x) => x.id !== d.self && x.online)
     .sort((a, b) => Number(b.playing) - Number(a.playing) || a.name.localeCompare(b.name));
   const offline = d.list.filter((x) => x.id !== d.self && !x.online && x.lastPlayedAt)
     .sort((a, b) => String(b.lastPlayedAt).localeCompare(String(a.lastPlayedAt))).slice(0, 4);
 
   const row = (x, self) => {
-    const on = current === x.id;
+    const on = isOn(x, self);
     const status = self ? (localPlaying ? 'Playing' : 'This tab')
       : x.playing ? `Playing · ${x.track?.title || ''}` : x.track ? `Paused · ${x.track.title}` : 'Idle';
     return html`<button type="button" class=${`dev-row ${on ? 'on' : ''}`} key=${x.id}
@@ -55,7 +54,7 @@ function DevicesMenu({ onClose, anchor }) {
       <span class="dev-text"><span>${x.name}</span><small>${x.track ? `${x.track.title} · ` : ''}${clockLabel(ts(x.lastPlayedAt))}</small></span>
       <span class="dev-act" role="button" title="Remove from the list" onClick=${() => forget(x.id)}><${Icon} name="close" size=${14} /></span>
     </div>`)}` : null}
-    <div class="dev-hint">Pick a device to move the playback there. A queue paused on one device is picked up on the next.</div>
+    <div class="dev-hint">Pick a device to move the playback there. The player follows the device the music is on, paused too: its controls and queue act there.</div>
   </div>`;
 }
 
@@ -71,17 +70,19 @@ export function DevicesButton() {
   </div>`;
 }
 
-// "Playing on …" under the player bar while another device plays.
+// "Playing on …" under the player bar while the bar follows another device
+// (paused there too), or while another one plays besides this one.
 export function DeviceStrip() {
   const d = useStore(devices, (x) => ({ list: x.list, self: x.self }));
   const localPlaying = useStore(playback, (x) => x.playing);
-  const elsewhere = playingElsewhere(d.list, d.self);
-  if (!elsewhere.length) { return null; }
-  const first = elsewhere[0];
-  const names = elsewhere.map((x) => x.name).join(', ');
+  const f = followed(d.list, d.self, localPlaying);
+  const shown = f ? [f] : playingElsewhere(d.list, d.self);
+  if (!shown.length) { return null; }
+  const first = shown[0];
+  const names = shown.map((x) => x.name).join(', ');
   return html`<div class="device-strip">
     <${Icon} name=${typeIcon(first.type)} size=${15} />
-    <span>${localPlaying ? 'Also playing on' : 'Playing on'} <b>${names}</b></span>
+    <span>${localPlaying ? 'Also playing on' : f && !f.playing ? 'Paused on' : 'Playing on'} <b>${names}</b></span>
     ${!localPlaying ? html`<button type="button" class="strip-btn" onClick=${() => playOn(d.self)}><${Icon} name="computer" size=${14} />Play here</button>` : null}
   </div>`;
 }

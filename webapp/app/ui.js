@@ -421,6 +421,22 @@ function ColumnsPopover({ chosen, onClose }) {
 const ROW_H = 44;
 const HEAD_H = 36;
 
+// The rail's letters in at most `max` slots: when they don't fit, evenly
+// picked letters (first and last kept) with a dot for each run left out
+// between them (its letters in `hidden`; a click jumps to the middle one).
+const RAIL_SLOT_H = 14;
+export function railSlots(letters, max) {
+  if (!(max > 0) || letters.length <= max) { return letters; }
+  const k = Math.max(2, Math.floor((max + 1) / 2));
+  const picked = [...new Set(Array.from({ length: k }, (_, i) => Math.round((i * (letters.length - 1)) / (k - 1))))];
+  const out = [];
+  picked.forEach((idx, i) => {
+    if (i > 0 && idx - picked[i - 1] > 1) { out.push({ dot: true, hidden: letters.slice(picked[i - 1] + 1, idx) }); }
+    out.push(letters[idx]);
+  });
+  return out;
+}
+
 export function TrackTable({ groups, firstCol = '#', firstValue, rail = false, rowMenu, empty, hideAlbum = false }) {
   const currentPath = useStore(playback, (s) => s.currentPath);
   const playing = useStore(playback, (s) => s.playing);
@@ -477,6 +493,17 @@ export function TrackTable({ groups, firstCol = '#', firstValue, rail = false, r
     return [...latin, ...other, '#'].map((l) => ({ l, top: seen.get(l) }));
   }, [items, rail]);
   const activeLetter = rail ? [...items].reverse().find((it) => it.head && it.top <= view.top + 4)?.label : null;
+  const railRef = useRef();
+  const [railH, setRailH] = useState(0);
+  useEffect(() => {
+    const el = railRef.current;
+    if (!el) { return undefined; }
+    const ro = new ResizeObserver(() => setRailH(el.clientHeight));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [rail, !flat.length && !!empty]);
+  const slots = useMemo(() => railSlots(letters, Math.floor((railH - 76) / RAIL_SLOT_H)), [letters, railH]);
+  const jump = (top) => { if (top !== undefined) { scroller.current.scrollTop = top + 34; } };
 
   if (!flat.length && empty) { return empty; }
 
@@ -510,9 +537,12 @@ export function TrackTable({ groups, firstCol = '#', firstValue, rail = false, r
           : row(it))}
       </div>
     </div>
-    ${rail ? html`<nav class="rail">${letters.map(({ l, top }) => html`<button type="button"
-      class=${`${top === undefined ? 'off' : ''} ${l === activeLetter ? 'on' : ''}`}
-      onClick=${() => { if (top !== undefined) { scroller.current.scrollTop = top + 34; } }}>${l}</button>`)}</nav>` : null}
+    ${rail ? html`<nav class="rail" ref=${railRef}>${slots.map((sl) => (sl.dot
+      ? html`<button type="button" class=${`dot ${sl.hidden.every((x) => x.top === undefined) ? 'off' : ''} ${sl.hidden.some((x) => x.l === activeLetter) ? 'on' : ''}`}
+          title=${sl.hidden.map((x) => x.l).join(' ')}
+          onClick=${() => jump((sl.hidden[Math.floor(sl.hidden.length / 2)].top ?? sl.hidden.find((x) => x.top !== undefined)?.top))}>•</button>`
+      : html`<button type="button" class=${`${sl.top === undefined ? 'off' : ''} ${sl.l === activeLetter ? 'on' : ''}`}
+          onClick=${() => jump(sl.top)}>${sl.l}</button>`))}</nav>` : null}
   </div>`;
 }
 
