@@ -1,5 +1,5 @@
 // Globals the shared playback engine (assets/js/mstream.player.js) reaches
-// for. They belonged to the classic UI; here they forward to the new app,
+// for (they were the old Vue UI's); here they forward to the app,
 // which fills in the handlers once app/main.js has loaded. Classic script,
 // loaded before the engine so the bare identifiers exist when it runs.
 

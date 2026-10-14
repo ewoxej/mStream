@@ -2,7 +2,7 @@
  * Album-view track ordering — /api/v1/db/album-songs.
  *
  * The webapp's album view renders this endpoint's rows in the order it
- * receives them (webapp/alpha/m.js getAlbumSongs — no client-side sort), so
+ * receives them (the web player sorts nothing on its side), so
  * this response IS the order the user sees.
  *
  * The ordering used to be a plain `t.disc_number, t.track_number, t.filepath`,

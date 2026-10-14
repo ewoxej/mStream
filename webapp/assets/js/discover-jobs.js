@@ -3,10 +3,10 @@
 // download or a collection copy will land for the layout being typed, what
 // a download record looks like as a row (the Downloads view, the admin's
 // Downloads tab), and what has to leave the queue when a download is
-// removed. No DOM, no Vue, no fetch — vp.js and m.js wire it to the app;
-// the unit test (test/unit/webapp-discover-jobs.test.mjs) drives it on node
-// and holds the layout half to the server's engine. Same UMD shape as
-// alpha/auto-dj.js.
+// removed. No DOM, no fetch — app/jobs.js, app/screens/discover-get.js and
+// the admin's Downloads tab wire it up; the unit test
+// (test/unit/webapp-discover-jobs.test.mjs) drives it on node and holds the
+// layout half to the server's engine. Same UMD shape as assets/js/auto-dj.js.
 //
 // Text never leaves here as English: a row carries i18n KEYS with their
 // params ({ key, params }) and the caller translates. Server text (a job's
@@ -430,7 +430,7 @@
   // What "Get it" would fetch, before anything is fetched: an acquire
   // plug-in's lookup answer (candidates best first, the score bar, or
   // `owned`) as the row shows it. `lookup` is the window's state for the
-  // plug-in (vp.js dmLookup):
+  // plug-in (app/screens/discover-get.js):
   //   { status: 'idle' | 'loading' | 'ready' | 'none' | 'owned' | 'error',
   //     query, minScore, candidates, chosen (a url), owned, error }
   const LOOKUP_CAPABILITY = 'lookup';

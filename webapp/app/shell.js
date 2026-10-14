@@ -8,7 +8,7 @@ import { sidebarLayout } from './nav.js';
 import { devices, followed, positionOf, command as devCommand, remoteQueue, loadRemoteQueue } from './devices.js';
 import { DevicesButton } from './devices-ui.js';
 import { Icon, IconBtn, Cover, LikeButton, openMenu, trackMenuItems, prompt } from './ui.js';
-import { fmtTime, fmtCount, trackTitle, trackArtist, trackAlbum, trackCover, formatLabel, gainLabel } from './util.js';
+import { fmtTime, fmtCount, trackTitle, trackArtist, trackAlbum, trackCover, formatLabel, gainLabel, serverAudio } from './util.js';
 
 // ── Sidebar ─────────────────────────────────────────────────────────────
 
@@ -452,7 +452,7 @@ function NowSheet({ n }) {
     <${Transport} n=${n} big />
     <div class="ns-tools">
       <${IconBtn} icon="queue_music" title="Lyrics" size=${19} onClick=${() => page('lyrics')} />
-      <${IconBtn} icon="equalizer" title="Visualizer" size=${19} onClick=${() => page('viz')} />
+      ${serverAudio ? null : html`<${IconBtn} icon="equalizer" title="Visualizer" size=${19} onClick=${() => page('viz')} />`}
       <${IconBtn} icon="list" title="Queue" size=${19} onClick=${() => app.set({ nowOpen: false, queueOpen: true })} />
       <${DevicesButton} />
       <${Volume} remote=${remote} />
@@ -491,8 +491,8 @@ export function PlayerBar() {
       </div>`}
       <${IconBtn} icon="queue_music" title="Lyrics" active=${screen === 'lyrics'} size=${17} class="pager"
         onClick=${() => (screen === 'lyrics' ? history.back() : go('lyrics'))} />
-      <${IconBtn} icon="equalizer" title="Visualizer" active=${screen === 'viz'} size=${17} class="pb-viz pager"
-        onClick=${() => (screen === 'viz' ? history.back() : go('viz'))} />
+      ${serverAudio ? null : html`<${IconBtn} icon="equalizer" title="Visualizer" active=${screen === 'viz'} size=${17} class="pb-viz pager"
+        onClick=${() => (screen === 'viz' ? history.back() : go('viz'))} />`}
       <${IconBtn} icon="list" title=${queueOpen ? 'Hide queue' : 'Show queue'} active=${queueOpen} size=${17} class="pager"
         onClick=${() => { app.set({ queueOpen: !queueOpen }); savePrefs(); }} />
       <${DevicesButton} />

@@ -1,6 +1,5 @@
-// Mobile-friendly /torrent page. Same backend contract as the sidebar
-// Add Torrent panel in webapp/alpha/m.js — see setupAddTorrentPanel
-// there for the desktop sibling. Both surfaces call:
+// Mobile-friendly /torrent page. Same backend contract as the web
+// player's Downloads screen (webapp/app/screens/downloads.js). Both call:
 //   GET  /api/v1/ping                     → vpaths
 //   GET  /api/v1/torrent/preflight        → feature-gate status
 //   GET  /api/v1/torrent/path-templates   → per-vpath path templates
@@ -52,8 +51,7 @@
     el.textContent = '';
   }
 
-  // ── Bencode `info.name` extractor — mirrors extractTorrentName in
-  // webapp/alpha/m.js. Forward-only, byte-level walk; we don't decode
+  // ── Bencode `info.name` extractor. Forward-only, byte-level walk; we don't decode
   // the full info dict (pieces blob is multi-MB and we don't need it).
   // Returns null if the structure doesn't look like a .torrent.
   function extractTorrentName(uint8Array) {

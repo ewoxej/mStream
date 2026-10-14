@@ -1,5 +1,5 @@
-// Butterchurn (Milkdrop) visualizer for the new player. Same contract the
-// playback engine expects from the classic t.js — VIZ.get() hands it the
+// Butterchurn (Milkdrop) visualizer for the player. The contract the
+// playback engine expects — VIZ.get() hands it the
 // AudioContext and VIZ.connect(node) gives us the analyser — but the canvas
 // belongs to the Visualizer screen, which mounts and unmounts it.
 // Classic script: the engine checks `typeof VIZ` when a song starts.

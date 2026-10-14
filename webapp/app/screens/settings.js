@@ -158,8 +158,6 @@ function Server() {
     <${Row} title="Signed in as"><${Value}>${info?.user || 'public'}</${Value}></${Row}>
     ${s.admin ? html`<${Row} title="Administration" sub="Users, folders, scanning, transcoding, DLNA, federation">
       <a class="btn btn-outline" href="admin" target="_blank"><${Icon} name="open_in_new" size=${15} />Open admin</a></${Row}>` : null}
-    <${Row} title="Classic player" sub="The previous interface, with Sonic Path, Discover, Jukebox and stats">
-      <a class="btn btn-outline" href="classic/"><${Icon} name="open_in_new" size=${15} />Open</a></${Row}>
     ${s.token ? html`<${Row} title="Log out"><${Btn} onClick=${logOut}><${Icon} name="logout" size=${15} />Log out</${Btn}></${Row}>` : null}
   </${Card}>`;
 }

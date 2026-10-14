@@ -512,9 +512,8 @@ export async function serveIt(configFile, { relisten = null } = {}) {
     next();
   });
 
-  // The player (/) and the classic player it replaced (/classic/) share the
-  // same gate: a session cookie, or public mode.
-  mstream.get(['/', '/classic', '/classic/'], (req, res, next) => {
+  // The player (/): a session cookie, or public mode.
+  mstream.get('/', (req, res, next) => {
     if (dbManager.getAllUsers().length === 0) {
       return next();
     }
@@ -527,20 +526,10 @@ export async function serveIt(configFile, { relisten = null } = {}) {
     }
   });
 
-  // The listening page (webapp/stats/): the signed-in user's own stats, so
-  // the same gate as the player — a session cookie, or public mode. No
-  // admin role and no IP gate: every account may see its own listening.
-  mstream.get('/stats', (req, res, next) => {
-    if (dbManager.getAllUsers().length === 0) {
-      return next();
-    }
-    try {
-      jwt.verify(req.cookies['x-access-token'], config.program.secret);
-      next();
-    } catch (_err) {
-      return res.redirect(302, '/login');
-    }
-  });
+  // Pages of the old UI, gone: the classic player and the standalone
+  // listening page. Their bookmarks land on the player (its Stats screen).
+  mstream.get(['/classic', '/classic/', '/classic/index.html'], (req, res) => res.redirect(301, '/'));
+  mstream.get(['/stats', '/stats/', '/stats/index.html'], (req, res) => res.redirect(301, '/#/stats'));
   mstream.get('/login', (req, res, next) => {
     if (dbManager.getAllUsers().length === 0) {
       return res.redirect(302, '..');

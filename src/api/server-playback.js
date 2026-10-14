@@ -171,33 +171,24 @@ export function proxyRoute(proxy, method, rustPath, { mapBody, mapResult } = {})
 
 // ── /server-remote ──────────────────────────────────────────────────────────
 
-// The /server-remote page is index.html with the browser player swapped for
-// the server-audio client. Pure and exported so a unit test can pin it against
-// the REAL index.html: every step is an exact-string or regex match that
-// silently no-ops when the markup drifts (three visualizer-script strips sat
-// here as dead code for months for exactly that reason). Hiding the sidebar
-// items and buttons that make no sense in this mode is the client's job —
-// mstream.server-audio.js injects that CSS at parse time.
+// The /server-remote page is the web player (webapp/index.html) with the
+// browser engine swapped for the server-audio client. Pure and exported so a
+// unit test can pin it against the REAL index.html: each step is an
+// exact-string match that would silently no-op if the markup drifted. The
+// player hides what makes no sense in this mode (Auto DJ, the visualizer,
+// devices) when it sees serverAudioMode.
 export function rewriteIndexForServerAudio(page) {
   return page
-    // Swap mstream.player.js for mstream.server-audio.js, which implements the
-    // same MSTREAMPLAYER interface but routes every command through the
-    // server-playback API. The flag must be set before the client script runs.
+    // mstream.server-audio.js implements the same MSTREAMPLAYER interface but
+    // routes every command through the server-playback API. The flag must be
+    // set before the client script runs.
     .replace(
       '<script src="assets/js/mstream.player.js"></script>',
       '<script>var serverAudioMode = true;</script>\n  <script src="assets/js/mstream.server-audio.js"></script>'
     )
-    // Scripts with no role in server-audio mode: the jukebox remote, the QR
-    // pairing code, and the visualizer loader (the client stubs VIZ).
-    .replace('<script src="assets/js/mstream.jukebox.js"></script>', '')
-    .replace('<script defer src="assets/js/lib/qr.js"></script>', '')
-    .replace('<script src="assets/js/t.js"></script>', '')
-    // Replace the visualizer button (the equalizer SVG inside div.grow.flex-center)
-    // with a "Server Audio" badge so the player bar keeps its layout spacer.
-    .replace(
-      /(<div class="grow flex-center">)\s*<svg v-on:click="fadeOverlay"[^]*?<\/svg>\s*(<\/div>)/,
-      '$1<span style="background:#264679;color:#fff;padding:3px 10px;border-radius:4px;font-size:11px;opacity:0.85;">Server Audio</span>$2'
-    );
+    // The visualizer reads the browser's audio element; the client stubs VIZ.
+    .replace('<script src="app/viz.js"></script>', '')
+    .replace('<title>mStream</title>', '<title>mStream · Server audio</title>');
 }
 
 // What /server-remote answers while the engine is not up. The advice has to
@@ -292,9 +283,7 @@ export function setup(mstream) {
     }
 
     try {
-      // Server-audio mode is a variant of the classic player (its markup and
-      // scripts); the new player at / has no server-audio client.
-      const page = await fsPromises.readFile(path.join(config.program.webAppDirectory, 'classic', 'index.html'), 'utf-8');
+      const page = await fsPromises.readFile(path.join(config.program.webAppDirectory, 'index.html'), 'utf-8');
       res.send(rewriteIndexForServerAudio(page));
     } catch (err) {
       winston.warn(`[server-audio] failed to serve /server-remote: ${err.message}`);

@@ -4,9 +4,11 @@ import { app, useStore } from './store.js';
 import { restorePlayerPrefs, toast } from './player.js';
 import * as lib from './library.js';
 import { Sidebar, Queue, PlayerBar } from './shell.js';
-import { MenuLayer, DialogLayer, ToastLayer, Empty } from './ui.js';
+import { MenuLayer, DialogLayer, ToastLayer, Empty, Icon } from './ui.js';
 import { connect as connectDevices } from './devices.js';
 import { DeviceStrip } from './devices-ui.js';
+import { initJobs } from './jobs.js';
+import { serverAudio } from './util.js';
 import { Recent, Albums, Album, Artists, Artist, Tracks, Genres, Genre, Favorites, Search } from './screens/library.js';
 import { Home, CustomizeHome } from './screens/home.js';
 import { Playlists, Playlist } from './screens/playlists.js';
@@ -45,10 +47,19 @@ function App() {
     ${showQueue ? html`<${Queue} />` : null}
     ${showQueue ? html`<div class="queue-scrim" onClick=${() => app.set({ queueOpen: false })}></div>` : null}
     <${PlayerBar} />
-    <${DeviceStrip} />
+    ${serverAudio ? html`<${ServerAudioStrip} />` : html`<${DeviceStrip} />`}
     <${MenuLayer} />
     <${DialogLayer} />
     <${ToastLayer} />
+  </div>`;
+}
+
+// In place of the devices strip on /server-remote: where the sound is.
+function ServerAudioStrip() {
+  return html`<div class="device-strip">
+    <${Icon} name="speaker" size=${15} />
+    <span>Playing on the <b>server’s speakers</b></span>
+    <a class="strip-btn" href="./"><${Icon} name="computer" size=${14} />Play in this browser</a>
   </div>`;
 }
 
@@ -76,7 +87,8 @@ async function boot() {
   s.federationDiscovery = ping.federationDiscovery === true;
   app.set({ features: {
     discover: s.discovery, sonicPath: s.discoveryPath, stats: s.stats >= 2,
-    network: s.discoveryP2p, peers: s.federationDiscovery,
+    network: s.discoveryP2p, peers: s.federationDiscovery, plugins: ping.discoveryPlugins === true,
+    serverAudio,
   } });
   if (ping.transcode) {
     MSTREAMPLAYER.transcodeOptions.serverEnabled = true;
@@ -105,7 +117,8 @@ async function boot() {
   lib.loadCounts().catch(() => {});
   lib.loadLikedCount();
   // This tab as a playback device (devices.js); a server without accounts has none.
-  if (s.token) { connectDevices(); }
+  if (s.token && !serverAudio) { connectDevices(); }
+  initJobs();
 
   // A share link handed to /?... from the old UI, or a stale hash: land on Home.
   if (!location.hash) { history.replaceState(null, '', '#/home'); }

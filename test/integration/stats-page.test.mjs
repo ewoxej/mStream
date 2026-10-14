@@ -1,7 +1,9 @@
 /**
- * The /stats page: served like the player (public mode open; with users, a
- * session cookie or a redirect to /login), its assets reachable, the player's
- * sidenav carrying the entry the ping reveals, and the strings it needs.
+ * /stats: the old standalone listening page is gone — its address sends
+ * bookmarks to the player's Stats screen (/#/stats), which reads the same
+ * Stats API and charts with stats/stats-view.js. The player keeps its gate
+ * (public mode open; with users, a session cookie or /login), and a plain
+ * account may read its own listening.
  */
 
 import { describe, before, after, test } from 'node:test';
@@ -67,53 +69,36 @@ describe('GET /stats', () => {
     if (tmpDir) await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
   });
 
-  test('public mode: the page, its assets and the player entry', async () => {
-    const r = await get(`${server.baseUrl}/stats`);
-    assert.equal(r.status, 301, 'the directory redirect express.static adds, the same as /admin');
-    assert.match(r.headers.get('location') || '', /\/stats\/$/);
-    const page = await fetch(`${server.baseUrl}/stats/`);
-    assert.equal(page.status, 200);
-    const html = await page.text();
-    assert.ok(html.includes('id="stats"') && html.includes('stats-view.js') && html.includes('id="nav-bar"'), 'the page shell with the top bar');
-    assert.ok(!html.includes('id="sidenav"'), 'no sidenav on this page');
-    const playerLinks = [...html.matchAll(/<a\b[^>]*\bdata-player-link\b[^>]*>/g)].map((m) => (/href="([^"]*)"/.exec(m[0]) || [])[1]);
-    assert.equal(playerLinks.length, 2, 'the logo and the back link');
-    for (const href of playerLinks) {
-      assert.equal(new URL(href, `${server.baseUrl}/stats/`).pathname, '/', `${href} leads to the player, not back to this page`);
+  test('public mode: the old page sends you to the player\'s Stats screen', async () => {
+    for (const p of ['/stats', '/stats/', '/stats/index.html']) {
+      const r = await get(`${server.baseUrl}${p}`);
+      assert.equal(r.status, 301, p);
+      assert.equal(r.headers.get('location'), '/#/stats', p);
     }
-    for (const asset of ['stats-view.js', 'index.js', 'index.css']) {
-      assert.equal((await fetch(`${server.baseUrl}/stats/${asset}`)).status, 200, asset);
-    }
-    // The Stats entry lives in the classic player's sidenav (/classic/).
-    const player = await (await fetch(`${server.baseUrl}/classic/`)).text();
-    assert.ok(player.includes('id="nav-stats"') && player.includes('super-hide'), 'the sidenav entry exists, hidden until the ping reveals it');
-    const strings = await (await fetch(`${server.baseUrl}/locales/en.json`)).json();
-    assert.equal(strings['nav.stats'], 'Stats');
-    assert.equal(strings['stats.title'], 'Stats');
+    assert.equal((await fetch(`${server.baseUrl}/stats/stats-view.js`)).status, 200, 'the charts the player uses');
+    const player = await (await fetch(`${server.baseUrl}/`)).text();
+    assert.ok(player.includes('stats/stats-view.js'), 'the player loads them');
     const ping = await (await fetch(`${server.baseUrl}/api/v1/ping`)).json();
-    assert.equal(ping.stats, 2, 'the flag the entry follows');
+    assert.equal(ping.stats, 2, 'the flag the Stats screen follows');
   });
 
-  test('with users: no cookie → the login page; a session cookie → the page; a bad cookie → the login page', async () => {
+  test('with users: the player wants a session; a plain account reads its own listening', async () => {
     const mk = await fetch(`${server.baseUrl}/api/v1/admin/users`, {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username: 'ann', password: 'ann-pw', vpaths: ['testlib'], admin: false }),
     });
     assert.equal(mk.status, 200, await mk.text());
-    const anon = await get(`${server.baseUrl}/stats`);
+    const anon = await get(`${server.baseUrl}/`);
     assert.equal(anon.status, 302);
     assert.equal(anon.headers.get('location'), '/login');
-    const bad = await get(`${server.baseUrl}/stats/`, { cookie: 'x-access-token=not-a-token' });
-    assert.equal(bad.status, 302);
     const login = await fetch(`${server.baseUrl}/api/v1/auth/login`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: 'ann', password: 'ann-pw' }),
     });
     const { token } = await login.json();
     assert.ok(token);
-    const ok = await get(`${server.baseUrl}/stats/`, { cookie: `x-access-token=${token}` });
-    assert.equal(ok.status, 200, 'a plain account may see its own listening — no admin role needed');
-    assert.ok((await ok.text()).includes('id="stats"'));
+    const ok = await get(`${server.baseUrl}/`, { cookie: `x-access-token=${token}` });
+    assert.equal(ok.status, 200);
     const summary = await fetch(`${server.baseUrl}/api/v1/stats/summary?period=all`, { headers: { 'x-access-token': token } });
-    assert.equal(summary.status, 200, 'and the data the page reads answers for that account');
+    assert.equal(summary.status, 200, 'a plain account may see its own listening — no admin role needed');
   });
 });

@@ -30,8 +30,8 @@ export const NUM_BARS = 800;
 // are neither read nor honoured — sweepSupersededArtifacts() deletes them
 // and both engines regenerate.
 //
-// Bump this whenever the bars change meaning, and bump `_WF_LS_PREFIX` in
-// webapp/alpha/vp.js with it: browsers keep their own copy keyed by
+// Bump this whenever the bars change meaning, and bump the client-side cache
+// prefix of any client that keeps them: browsers keep their own copy keyed by
 // filepath with no version in the value, so a server-side change that
 // doesn't move that prefix never reaches anyone who already played the
 // track. Exported because the coverage counter matches names rather than

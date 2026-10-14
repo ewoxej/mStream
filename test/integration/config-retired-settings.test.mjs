@@ -39,8 +39,9 @@ describe('config: retired settings are stripped on boot', () => {
     assert.ok(html.includes('app/main.js'), 'default UI index.html is served');
     const js = await fetch(`${srv.baseUrl}/app/main.js`);
     assert.equal(js.status, 200, 'default UI assets resolve from webapp/');
-    const classic = await fetch(`${srv.baseUrl}/classic/`);
-    assert.ok((await classic.text()).includes('alpha/m.js'), 'the classic player is still served');
+    const classic = await fetch(`${srv.baseUrl}/classic/`, { redirect: 'manual' });
+    assert.equal(classic.status, 301, 'the old classic player sends its bookmarks to the player');
+    assert.equal(classic.headers.get('location'), '/');
   });
 
   test('config.json is rewritten without the retired keys', async () => {

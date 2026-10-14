@@ -685,7 +685,7 @@ describe('_validateSubPath', () => {
 // chain breaks. This test pins the contract: every relativePath the
 // server can emit must split into validator-accepted pieces.
 //
-// We mimic _splitSeedRelativePath from webapp/alpha/m.js (single
+// We mimic _splitSeedRelativePath from the old web UI's torrent panel (single
 // source of truth for the split logic; not importable from Node
 // directly without a JSDOM setup). The function under test is:
 //

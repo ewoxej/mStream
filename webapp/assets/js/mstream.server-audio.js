@@ -1,4 +1,5 @@
-// Server Audio Player — replaces mstream.player.js when served from /server-remote.
+// Server Audio Player — replaces mstream.player.js when served from /server-remote
+// (the web player at / with this engine swapped in, src/api/server-playback.js).
 // Implements the MSTREAMPLAYER interface by proxying all commands to the
 // server-playback API (which forwards to the Rust audio binary).
 //
@@ -148,10 +149,13 @@ var MSTREAMPLAYER = (function () {
     }
 
     song.error = false;
-    mstreamModule.playlist.splice(position, 0, song);
+    // The engine has no insert: the song goes to the end of its queue, so it
+    // goes to the end here too — a splice would leave this list and the
+    // engine's disagreeing about every index after it.
+    position = mstreamModule.playlist.length;
+    mstreamModule.playlist.push(song);
 
     if (filepath.charAt(0) === '/') { filepath = filepath.substr(1); }
-    // TODO: proper insert. For now add to end and play-index
     apiPost('/api/v1/server-playback/queue/add', { file: filepath });
 
     if (playNow) {
@@ -221,7 +225,7 @@ var MSTREAMPLAYER = (function () {
 
   // The volume belongs to the engine: it is the room's volume, shared by
   // every remote. While the webapp boots it restores "my last volume" from
-  // localStorage (vp.js created()) — right for a browser player, wrong here,
+  // localStorage (app/player.js restorePlayerPrefs) — right for a browser player, wrong here,
   // where it made merely OPENING the remote on another device yank the room
   // to whatever that device last used. Until the first status sync has told
   // this page what the engine's volume is, there is nothing of the user's to
@@ -254,6 +258,23 @@ var MSTREAMPLAYER = (function () {
     apiPost('/api/v1/server-playback/seek', { position: newPos });
   };
 
+  mstreamModule.seek = function (seconds) {
+    var pos = Math.max(0, Math.min(Number(seconds) || 0, mstreamModule.playerStats.duration || 0));
+    mstreamModule.playerStats.currentTime = pos;
+    apiPost('/api/v1/server-playback/seek', { position: pos });
+  };
+
+  // Load a song paused at `seconds` (the web player's queue restore).
+  mstreamModule.cueSongAtPosition = function (position, seconds) {
+    if (!mstreamModule.playlist[position]) { return false; }
+    mstreamModule.positionCache.val = position;
+    apiPost('/api/v1/server-playback/queue/play-index', { index: position })
+      .then(function () { return apiPost('/api/v1/server-playback/pause'); })
+      .then(function () { if (seconds > 0) { return apiPost('/api/v1/server-playback/seek', { position: seconds }); } })
+      .then(function () { syncStatus(); });
+    return true;
+  };
+
   mstreamModule.changePlaybackRate = function () {}; // Not supported server-side
 
   mstreamModule.toggleRepeat = function () {
@@ -272,6 +293,7 @@ var MSTREAMPLAYER = (function () {
 
   mstreamModule.toggleAutoDJ = function () {
     // Not supported in server audio mode
+    return false;
   };
 
   mstreamModule.getCurrentSong = function () {
@@ -440,29 +462,8 @@ var MSTREAMPLAYER = (function () {
     });
   }
 
-  // ── Hide irrelevant UI elements ───────────────────────────────────────
-  // Use CSS injection so elements are hidden immediately, even if Vue
-  // components mount after DOMContentLoaded. This is the one place that
-  // hides UI for server-audio mode: the /server-remote handler only swaps
-  // scripts and replaces the visualizer button with a badge.
-
-  var hideCSS = document.createElement('style');
-  hideCSS.textContent =
-    // Sidebar items
-    '[onclick*="setupJukeboxPanel"],' +
-    '[onclick*="autoDjPanel"],' +
-    '[onclick*="setupTranscodePanel"]' +
-    '{ display: none !important; }' +
-    // Visualizer overlay
-    '#main-overlay { display: none !important; }' +
-    // Replay Gain button
-    '.rpg { display: none !important; }' +
-    // Playback rate button
-    '[onclick*="openPlaybackModal"] { display: none !important; }' +
-    // Live Playlist button and modal
-    '[onclick*="openLivePlaylistModal"] { display: none !important; }' +
-    '#livePlaylist { display: none !important; }';
-  document.head.appendChild(hideCSS);
+  // What makes no sense here (Auto DJ, the visualizer, …) the web player
+  // hides itself when it sees serverAudioMode (app/util.js).
 
   // Stub out the visualizer
   window.VIZ = {
@@ -471,9 +472,8 @@ var MSTREAMPLAYER = (function () {
     get: function () { return null; }
   };
 
-  // Start polling when DOM is ready. The webapp's deferred scripts
-  // (alpha/api.js, alpha/m.js) have run by DOMContentLoaded, so MSTREAMAPI
-  // and its token are in place for the queue restore.
+  // Start polling when DOM is ready. The web player's boot (app/main.js)
+  // has put the token in place by then, so MSTREAMAPI can restore the queue.
   function init() {
     startPolling();
     syncStatus();   // adopt the engine's state now, not at the first 500 ms tick

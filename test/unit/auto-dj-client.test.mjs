@@ -1,5 +1,5 @@
 /**
- * Unit tests for webapp/alpha/auto-dj.js — the client-side helpers
+ * Unit tests for webapp/assets/js/auto-dj.js — the client-side helpers
  * + state model that drive the upcoming alpha-UI Auto-DJ panel and
  * player integration.
  *
@@ -47,7 +47,7 @@ globalThis.localStorage = {
   key: (i) => Array.from(_store.keys())[i] ?? null,
 };
 
-const AUTODJ = require('../../webapp/alpha/auto-dj.js');
+const AUTODJ = require('../../webapp/assets/js/auto-dj.js');
 
 beforeEach(() => {
   _store.clear();

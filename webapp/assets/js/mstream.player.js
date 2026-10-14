@@ -135,7 +135,7 @@ const MSTREAMPLAYER = (() => {
   }
   function pausePlaySession() { if (playSession) { MSTREAMPLAYSESSION.pause(playSession); } }
   function resumePlaySession() { if (playSession) { MSTREAMPLAYSESSION.resume(playSession); } }
-  // Called by alpha/m.js once the ping has answered (the token and server
+  // Called by app/main.js once the ping has answered (the token and server
   // are settled by then): post what an earlier page left behind, then keep
   // retrying quietly.
   mstreamModule.statsInit = () => {

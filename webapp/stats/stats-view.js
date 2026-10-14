@@ -2,7 +2,7 @@
 // charts, the row markup — everything that can be built from the Stats API's
 // answers without a DOM. index.js wires it to the page; the unit test
 // (test/unit/webapp-stats-view.test.mjs) drives it on node. Same UMD shape as
-// alpha/auto-dj.js and assets/js/mstream.play-session.js.
+// assets/js/auto-dj.js and assets/js/mstream.play-session.js.
 //
 // Chart rules (kept deliberately plain): one series, one hue; columns at most
 // 24px thick with a 4px rounded top and a square base; solid hairline grid;

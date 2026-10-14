@@ -5,7 +5,7 @@
  *
  * This module is INTENTIONALLY UI-free: no DOM access, no fetch, no
  * iziToast. The player layer (webapp/assets/js/mstream.player.js) and
- * the panel layer (webapp/alpha/m.js's autoDjPanel) both read from
+ * the panel layer (webapp/app/screens/dj.js) both read from
  * and write through this namespace. Keeping the logic isolated lets
  * us unit-test the tricky bits (Camelot maths, BPM-range octave
  * expansion, song-blocked tier checks) without booting a server or
@@ -328,7 +328,7 @@
   // Safe-ish localStorage shim — Node tests + private-mode browsers
   // can both end up without a real one. Returning `null` for misses
   // and silently swallowing write errors matches the same defensive
-  // try/catch pattern in webapp/alpha/m.js's settings load.
+  // try/catch pattern the web player's settings loads use.
   function _ls() {
     try {
       if (typeof localStorage !== 'undefined') { return localStorage; }
@@ -1423,7 +1423,7 @@
     setLimit,
     LIMIT_MAX: DJ_LIMIT_MAX,
 
-    // Library genres-list cache (5-min TTL; populated by m.js's
+    // Library genres-list cache (5-min TTL; populated by the Auto DJ screen's
     // panel-open lifecycle from /api/v1/db/genres).
     getCachedGenresList,
     setCachedGenresList,

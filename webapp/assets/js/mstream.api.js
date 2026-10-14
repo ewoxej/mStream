@@ -564,8 +564,8 @@ const MSTREAMAPI = (() => {
     localStorage.removeItem('token');
     if (typeof Cookies !== 'undefined') { Cookies.remove('x-access-token'); }
     else { document.cookie = 'x-access-token=; Max-Age=0; path=/'; }
-    // Resolved against the base URL so it works from /classic/ (which sets
-    // <base href="../">) and from the new player's #/… routes alike.
+    // Resolved against the base URL, so it works from any page that loads
+    // this (the player's #/… routes, /server-remote, the torrent page).
     document.location.assign(new URL('login', document.baseURI).href);
   }
 

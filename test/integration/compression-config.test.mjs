@@ -8,8 +8,9 @@
  *
  * The compression mode is read live by src/util/compression.js on every
  * request, so flipping it via the admin API takes effect on the next response
- * with no reboot. We assert against a large static asset (webapp/alpha/m.js,
- * ~190 KB, application/javascript → compressible, well over the 256-byte floor).
+ * with no reboot. We assert against a large static asset (the playback
+ * engine, webapp/assets/js/mstream.player.js, ~80 KB, application/javascript →
+ * compressible, well over the 256-byte floor).
  *
  * NOTE: Node's global fetch (undici) transparently decompresses responses and
  * STRIPS the Content-Encoding header, so it cannot observe the wire encoding.
@@ -28,7 +29,7 @@ import { startServer } from '../helpers/server.mjs';
 
 const ADMIN = { username: 'admin', password: 'pw-admin' };
 // Large, compressible, public static file served by the default UI (webapp/).
-const ASSET = '/alpha/m.js';
+const ASSET = '/assets/js/mstream.player.js';
 
 let server;
 let adminJwt;

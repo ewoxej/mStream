@@ -23,7 +23,7 @@ import { Mosaic } from './playlists.js';
 // `card`: which card modes a section has (none = shortcut only, like the app's Settings).
 // `when`: only while the server offers the feature.
 export const HOME_SECTIONS = [
-  { id: 'dj', label: 'Auto DJ', icon: 'auto_awesome', to: 'dj', card: ['list'] },
+  { id: 'dj', label: 'Auto DJ', icon: 'auto_awesome', to: 'dj', card: ['list'], when: (f) => !f.serverAudio },
   { id: 'downloads', label: 'Downloads', icon: 'download', to: 'dl', card: ['list'], when: (f) => f.torrent },
   { id: 'recent', label: 'Recently played', icon: 'history', to: 'recent', card: ['grid', 'list'] },
   { id: 'added', label: 'Recently added', icon: 'new_releases', card: ['grid', 'list'] },

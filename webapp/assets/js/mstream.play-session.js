@@ -11,7 +11,7 @@
 //
 // Pure: no DOM, no player globals. Storage and the request are injected, so
 // test/unit/webapp-play-session.test.mjs drives it on node — the same UMD
-// shape as alpha/auto-dj.js. The rules mirror the mobile app's fold:
+// shape as assets/js/auto-dj.js. The rules mirror the mobile app's fold:
 //   listened time   the sum of forward position deltas while playing; a
 //                   jump of more than SEEK_JUMP_S per tick, or backwards, is
 //                   a seek and adds nothing

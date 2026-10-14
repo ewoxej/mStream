@@ -1,5 +1,5 @@
 // Auto DJ: sources, filters and what it picked. Settings live in AUTODJ
-// (alpha/auto-dj.js, persisted to localStorage); the engine reads them on
+// (assets/js/auto-dj.js, persisted to localStorage); the engine reads them on
 // every pick, so changes apply from the next one.
 import { html, useState } from '../vendor/preact-htm.js';
 import { useStore } from '../store.js';

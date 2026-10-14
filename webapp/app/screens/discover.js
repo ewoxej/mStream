@@ -1,19 +1,27 @@
 // Discover: more like the playing track, matched by sound (the server's
 // discovery embeddings). Library = similar tracks and artists here; Network =
-// leads from the discovery network (not playable here, MusicBrainz links);
-// Peers = federated servers' tracks, streamed through this one.
+// leads from the discovery network (not playable here); Peers = federated
+// servers' tracks, streamed through this one. A Network or Peers row opens
+// the window that gets it into the library (discover-get.js) when the server
+// has plug-ins; without them a network row copies "Artist - Title".
 import { html, useEffect, useState } from '../vendor/preact-htm.js';
 import { app, useStore, href } from '../store.js';
 import * as P from '../player.js';
 import { playback } from '../player.js';
 import { Btn, Icon, Header, Seg, Toggle, Empty, Spinner, TrackTable, Cover } from '../ui.js';
 import { fmtTime, trackTitle, trackArtist, trackCover } from '../util.js';
+import { GetSheet, JobsStrip } from './discover-get.js';
 
 const pct = (x) => `${Math.round((x || 0) * 100)}%`;
 const tags = (list) => (list || []).slice(0, 2).map((x) => String(x).split('---').pop()).join(' · ');
 
 function prefBool(key, def) { try { const v = localStorage.getItem(key); return v === null ? def : v === 'true'; } catch (_) { return def; } }
 function setPref(key, v) { try { localStorage.setItem(key, String(v)); } catch (_) { /* private mode */ } }
+
+async function copyLead(r) {
+  const text = `${r.artist || ''} - ${r.title || ''}`.trim();
+  try { await navigator.clipboard.writeText(text); P.toast(text, 'success', 'Copied'); } catch (_) { P.toast(text); }
+}
 
 function Match({ value, tone = '' }) {
   return html`<span class=${'match ' + tone} title=${pct(value) + ' match'}><i style=${{ height: Math.max(15, Math.round((value || 0) * 100)) + '%' }}></i></span>`;
@@ -27,6 +35,7 @@ export function Discover() {
   const [source, setSource] = useState(() => { try { return localStorage.getItem('zenelo.discover') || 'library'; } catch (_) { return 'library'; } });
   const [newOnly, setNewOnly] = useState(() => prefBool('discoverNewArtistsOnly', false));
   const [data, setData] = useState(null);
+  const [sheet, setSheet] = useState(null);   // { track, source }
 
   const sources = [{ value: 'library', label: 'Library' }];
   if (features.network) { sources.push({ value: 'network', label: 'Network' }); }
@@ -110,17 +119,24 @@ export function Discover() {
         : html`<div class="card table-card">${part.rows.map((r) => {
           const mb = r.recordingMbid ? `https://musicbrainz.org/recording/${r.recordingMbid}` : null;
           const peer = r.peer?.name || (net ? 'a server' : 'peer');
-          const play = net ? null : () => window.VUEPLAYERCORE.addFederationSongWizard(r.peer, r.filepath, { title: r.title || '', artist: r.artist || '', duration: r.duration || null }, false);
-          return html`<div class=${`disc-row ${play ? 'live' : ''}`} onClick=${play}>
+          const open = features.plugins ? () => setSheet({ track: r, source: net ? 'p2p' : 'federation' })
+            : net ? () => copyLead(r)
+            : () => window.VUEPLAYERCORE.addFederationSongWizard(r.peer, r.filepath, { title: r.title || '', artist: r.artist || '', duration: r.duration || null }, false);
+          const queue = net ? null : (e) => {
+            e.stopPropagation();
+            window.VUEPLAYERCORE.addFederationSongWizard(r.peer, r.filepath, { title: r.title || '', artist: r.artist || '', duration: r.duration || null }, true);
+            P.toast('Added to queue');
+          };
+          return html`<div class="disc-row live" onClick=${open}>
             <${Match} value=${r.similarity} tone=${net ? 'net' : 'peer'} />
             <div class="mini-text"><span>${r.title || '(untitled)'}</span><small>${[r.artist, r.album, peer].filter(Boolean).join(' · ')}</small></div>
             <span class="micro-n">${r.duration ? fmtTime(r.duration) : pct(r.similarity)}</span>
             ${mb ? html`<a class="icon-btn" href=${mb} target="_blank" rel="noopener" title="Open on MusicBrainz" onClick=${(e) => e.stopPropagation()}><${Icon} name="open_in_new" size=${15} /></a>`
-              : play ? html`<span class="icon-btn" title="Add to queue"><${Icon} name="queue_music" size=${16} /></span>` : html`<span></span>`}
+              : queue ? html`<button type="button" class="icon-btn" title="Add to queue" onClick=${queue}><${Icon} name="queue_music" size=${16} /></button>` : html`<span></span>`}
           </div>`;
         })}</div>`}
-      <div class="hint">${net ? 'Leads from the discovery network: other servers’ tracks, not on this one. To get one, use Discover in the classic player.'
-        : 'Peers’ tracks play through this server. Click one to add it to the queue.'}</div>
+      <div class="hint">${net ? (features.plugins ? 'Leads from the discovery network: other servers’ tracks, not on this one. Click one to get it.' : 'Leads from the discovery network: other servers’ tracks, not on this one. Click one to copy “Artist - Title”.')
+        : features.plugins ? 'Peers’ tracks play through this server. Click one to play it or add it to your collection.' : 'Peers’ tracks play through this server. Click one to add it to the queue.'}</div>
     </section>`;
   }
 
@@ -136,7 +152,9 @@ export function Discover() {
         <div class="mini-text"><span>${trackTitle(seed)}</span><small>${[trackArtist(seed), tags(data?.seedTags)].filter(Boolean).join(' · ')}</small></div>
         ${data?.loading ? html`<${Icon} name="progress" size=${16} class="spin muted" />` : null}
       </div>` : null}
+      ${features.plugins ? html`<${JobsStrip} onOpen=${(job) => setSheet({ track: { ...(job.recommendation || {}), peer: job.recommendation?.peer || {} }, source: job.recommendation?.source === 'federation' ? 'federation' : 'p2p' })} />` : null}
       ${body}
     </div>
+    ${sheet ? html`<${GetSheet} track=${sheet.track} source=${sheet.source} onClose=${() => setSheet(null)} />` : null}
   </div>`;
 }

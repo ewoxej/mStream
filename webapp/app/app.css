@@ -789,6 +789,60 @@ button.mini-row, button.tile { width: 100%; text-align: left; font: inherit; col
 .st-more { display: flex; justify-content: center; }
 .st-data .set-row .btn { flex: none; }
 
+/* ── Discover: getting a lead (screens/discover-get.js) ─────────────── */
+
+.dialog.dg { width: 560px; max-height: calc(100vh - 48px); overflow-y: auto; gap: 16px; }
+.dg-head { display: flex; align-items: flex-start; gap: 10px; }
+.dg-head-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.dg-sec { display: flex; flex-direction: column; gap: 8px; }
+.dg-sec > .micro { font-size: 9.5px; letter-spacing: .12em; }
+.dg-job { padding: 10px 12px; border-radius: 12px; background: var(--panel); box-shadow: inset 0 0 0 1px var(--border); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.dg-job.muted { opacity: .7; }
+.dg-ic { width: 34px; height: 34px; border-radius: 9px; background: var(--chip); color: var(--tx2); display: flex; align-items: center; justify-content: center; flex: none; }
+.dg-ic.on { background: var(--accent-14); color: var(--accent); }
+.dg-ic.ok { background: var(--state-12); color: var(--state); }
+.dg-ic.err { background: var(--danger-14); color: var(--danger); }
+.dg-body { flex: 1 1 200px; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.dg-title { font-size: 13.5px; font-weight: 600; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.dg-sub { font-size: 12px; color: var(--tx3); line-height: 1.4; overflow: hidden; text-overflow: ellipsis; }
+.dg-sub.err { color: var(--danger); }
+.dg-act { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.dg-act.left { justify-content: flex-start; }
+.dg-act .btn { height: 32px; font-size: 12.5px; }
+.dg-progress { display: block; height: 4px; border-radius: 99px; background: var(--chip); overflow: hidden; }
+.dg-progress i { display: block; height: 100%; background: var(--accent); transition: width .4s var(--ease); }
+.dg-progress.indet i { width: 35%; animation: indet 1.4s ease-in-out infinite; }
+.dg-look { padding: 12px; border-radius: 12px; background: var(--panel); box-shadow: inset 0 0 0 1px var(--border); display: flex; flex-direction: column; gap: 10px; }
+.dg-look .dg-act { justify-content: flex-start; }
+.dg-cands { display: flex; flex-direction: column; gap: 6px; }
+.dg-cand { width: 100%; padding: 6px; border-radius: 10px; display: flex; align-items: center; gap: 10px; text-align: left; box-shadow: inset 0 0 0 1px var(--border); }
+.dg-cand:hover { background: var(--chip); }
+.dg-cand.on { box-shadow: inset 0 0 0 1px var(--accent-30); background: var(--accent-06); }
+.dg-cand img, .dg-thumb { width: 64px; height: 36px; border-radius: 6px; object-fit: cover; background: var(--chip); flex: none; }
+.dg-cand-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.dg-cand-text b { font-size: 12.5px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dg-cand-text small { font-size: 11px; color: var(--tx3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dg-score { font-family: var(--mono); font-size: 11px; color: var(--state); flex: none; }
+.dg-score.loose { color: var(--tx3); }
+.dg-scope { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.dg-missing { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--tx2); cursor: pointer; }
+.dg-dest { display: flex; align-items: center; gap: 8px; padding: 8px 6px 8px 12px; border-radius: 10px; background: var(--chip); color: var(--tx2); font-size: 12.5px; }
+.dg-dest-path { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dg-dest .btn { height: 30px; }
+.dg-form { padding: 12px; border-radius: 12px; background: var(--panel); box-shadow: inset 0 0 0 1px var(--border); display: flex; flex-direction: column; gap: 10px; }
+.dg-form select { height: 38px; padding: 0 10px; border-radius: 10px; border: 0; background: var(--card); box-shadow: inset 0 0 0 1px var(--border); color: var(--tx); }
+.dg-form .field input { background: var(--card); }
+.dg-form .chips .chip { cursor: pointer; font-family: var(--mono); font-size: 11px; }
+.dg-strip { padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.dg-strip-row { display: flex; align-items: center; gap: 8px; }
+.dg-strip-open { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; text-align: left; padding: 4px 6px; border-radius: 8px; }
+.dg-strip-open:hover { background: var(--chip); }
+.dg-strip-open b { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dg-strip-open small { font-size: 11.5px; color: var(--tx3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.disc-dl { grid-template-columns: 30px minmax(0, 1fr) auto; }
+.disc-dl.faded { opacity: .65; }
+.dl-acts { display: flex; align-items: center; gap: 2px; }
+
 /* Narrower desktops: let the home grids reflow. */
 @media (max-width: 1280px) {
 }

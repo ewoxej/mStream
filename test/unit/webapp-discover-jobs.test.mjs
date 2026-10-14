@@ -1,5 +1,5 @@
 /**
- * webapp/alpha/discover-jobs.js — the Discover job rows' pure half, on node:
+ * webapp/assets/js/discover-jobs.js — the Discover job rows' pure half, on node:
  * the layout preview held to the server's engine (src/torrent/path-template.js
  * and src/discovery-plugins/destination.js render the real path; the picker
  * must show the same thing as the user types), a job as a row in every state,
@@ -14,7 +14,7 @@ import * as pathTemplate from '../../src/torrent/path-template.js';
 import * as destination from '../../src/discovery-plugins/destination.js';
 
 const require = createRequire(import.meta.url);
-const J = require('../../webapp/alpha/discover-jobs.js');
+const J = require('../../webapp/assets/js/discover-jobs.js');
 
 const TAGS = [
   { artist: 'Marlowe Vale', album: 'Night Ferry', year: 2019, genre: 'Dream Pop', albumartist: null },

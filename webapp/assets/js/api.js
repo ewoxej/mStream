@@ -50,7 +50,7 @@ const API = (() => {
   // "[object Object]", and src/api/auth.js reads the header BEFORE the cookie.
   // The garbage then shadows the valid cookie and every admin call 401s with
   // "jwt malformed" — the whole panel dies while the player, which does guard
-  // this (webapp/alpha/m.js), keeps working.
+  // this (app/main.js reads the token from localStorage), keeps working.
   //
   // Reading inside the interceptor rather than freezing the value at module
   // init also means a token set after load is picked up.

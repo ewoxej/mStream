@@ -194,7 +194,7 @@ describe('server-audio client: restoring the queue on page load', () => {
 });
 
 // The webapp restores "my last volume" from localStorage while it boots
-// (vp.js created() → MSTREAMPLAYER.changeVolume), before DOMContentLoaded.
+// (app/player.js restorePlayerPrefs → MSTREAMPLAYER.changeVolume), before DOMContentLoaded.
 // That is right for a browser player. Here the volume is the ROOM's: the
 // restore made merely opening the remote on another device yank the engine
 // to whatever that device last used (seen in the same smoke round: an engine
@@ -202,7 +202,7 @@ describe('server-audio client: restoring the queue on page load', () => {
 describe('server-audio client: the volume belongs to the engine', () => {
   test('booting the page does not push this browser\'s saved volume onto the engine', async () => {
     const c = bootClient({});
-    c.player.changeVolume(80);                    // vp.js created(), before the page is ready
+    c.player.changeVolume(80);                    // restorePlayerPrefs, before the page is ready
     await c.ready();
 
     assert.deepEqual(c.volumePosts(), [], 'the engine was told to change volume by a page load');

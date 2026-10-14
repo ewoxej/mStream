@@ -1,9 +1,9 @@
 // The new UI's handle on the shared playback engine (MSTREAMPLAYER, a
-// classic global from assets/js/mstream.player.js). The engine mutates its
+// global from assets/js/mstream.player.js). The engine mutates its
 // own objects; this module polls a cheap signature of them and publishes a
 // snapshot store the player bar and queue subscribe to.
 import { createStore, app } from './store.js';
-import { server, trackTitle } from './util.js';
+import { server, trackTitle, serverAudio } from './util.js';
 
 const P = () => MSTREAMPLAYER;
 
@@ -50,7 +50,7 @@ function publish() {
 setInterval(publish, 250);
 
 // ── Adding songs ────────────────────────────────────────────────────────
-// Mirrors the classic addSongWizard: build the stream URL (media/ or the
+// addSongWizard: build the stream URL (media/ or the
 // transcode/ route), hand the song object to the engine, fetch metadata
 // when the caller had none.
 
@@ -86,7 +86,7 @@ window.VUEPLAYERCORE.addSongWizard = async (filepath, metadata, lookup, position
   if (lookup) { await enrich(song); }
 };
 // A peer's track (Discover → Peers, federated Auto DJ): streamed through
-// this server's federation proxy, as the classic player does.
+// this server's federation proxy.
 window.VUEPLAYERCORE.addFederationSongWizard = (peer, remotePath, metadata, autoPlayOff, position, playNow = true) => {
   let fp = remotePath.replace(/%/g, '%25').replace(/#/g, '%23').replace(/\?/g, '%3F');
   if (fp.charAt(0) === '/') { fp = fp.substr(1); }
@@ -169,6 +169,18 @@ export function playNext(tracks) {
   toast(`${songs.length === 1 ? trackTitle(tracks[0]) : songs.length + ' tracks'} will play next`);
 }
 
+// Play `tracks` now, right after the current one (the queue stays).
+export function playNow(tracks) {
+  const songs = asSongs(tracks);
+  const p = P();
+  if (!songs.length) { return; }
+  if (p.playlist.length === 0) { playTracks(tracks); return; }
+  let at = p.positionCache.val + 1;
+  songs.forEach((s, i) => { p.insertSongAt(s, at++, i === 0); });
+  bump();
+  songs.forEach(enrich);
+}
+
 // "Play similar" (the app's): the track, then what the server's sound
 // analysis finds closest to it.
 export async function playSimilar(track) {
@@ -183,6 +195,9 @@ export function playAt(i) { P().goToSongAtPosition(i); bump(); }
 export function removeAt(i) { P().removeSongAtPosition(i); bump(); }
 
 export function moveItem(from, to) {
+  // The server's engine can't reorder its queue: a reorder here would leave
+  // the two lists disagreeing about every index.
+  if (serverAudio) { toast('The server’s queue can’t be reordered'); return; }
   const list = P().playlist;
   if (from === to || from < 0 || from >= list.length) { return; }
   const [item] = list.splice(from, 1);
@@ -222,7 +237,8 @@ export const toggleShuffle = () => { P().toggleShuffle(); publish(); };
 export const cycleRepeat = () => {
   const p = P();
   const st = p.playerStats;
-  if (st.autoDJ) { p.toggleAutoDJ(); } else if (st.shouldLoopOne) { p.toggleAutoDJ(); } else { p.toggleRepeat(); }
+  // The server's speakers have no Auto DJ: their repeat cycles off → all → one.
+  if (serverAudio) { p.toggleRepeat(); } else if (st.autoDJ) { p.toggleAutoDJ(); } else if (st.shouldLoopOne) { p.toggleAutoDJ(); } else { p.toggleRepeat(); }
   publish();
 };
 
@@ -278,7 +294,7 @@ export function setTranscode(patch) {
 
 // ── Likes ───────────────────────────────────────────────────────────────
 // Ratings are gone from the UI; a like is stored as rating 10 (5★) and any
-// rating above 0 counts as liked, so tracks rated in the classic UI show as
+// rating above 0 counts as liked, so tracks rated with stars elsewhere show as
 // favourites. Unlike clears the rating.
 
 export function isLiked(track) {
@@ -324,7 +340,9 @@ export function restorePlayerPrefs() {
   let saved = {};
   try { saved = JSON.parse(localStorage.getItem(PREFS)) || {}; } catch (_) { /* ignore */ }
   const p = P();
-  if (Number.isFinite(saved.volume)) { p.changeVolume(saved.volume); if (saved.volume > 0) { lastVolume = saved.volume; } }
+  // The server's speakers keep the room's volume: this browser's must not
+  // overwrite it just because the page opened.
+  if (Number.isFinite(saved.volume) && !serverAudio) { p.changeVolume(saved.volume); if (saved.volume > 0) { lastVolume = saved.volume; } }
   if (typeof saved.replayGain === 'boolean') { p.setReplayGainActive(saved.replayGain); }
   if (Number.isFinite(saved.preGain)) { p.setReplayGainPreGainDb(saved.preGain); }
   if (saved.transcode) { p.transcodeOptions.frontendEnabled = true; }

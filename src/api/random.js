@@ -32,7 +32,7 @@
 // pointed at different tracks on every call as filters and the library
 // changed; ids make the cooldown actually mean "don't repeat these
 // songs". The client treats the list as opaque (persist + send back —
-// see webapp/alpha/auto-dj.js), so the change is wire-compatible, and a
+// see webapp/assets/js/auto-dj.js), so the change is wire-compatible, and a
 // session carrying an old index-based list self-heals: stale values
 // match no candidate row and age out of the capped list within a few
 // picks.
@@ -1261,8 +1261,8 @@ export function setup(mstream) {
       limit: Joi.number().integer().min(1).max(PICK_LIMIT_MAX).default(1),
       ignoreList: Joi.array().items(Joi.number().integer().min(0)).max(500).optional(),
       ignoreVPaths: Joi.array().items(Joi.string()).max(50).optional(),
-      // minRating accepts 0..10 — the alpha-UI rating dropdown
-      // (webapp/alpha/m.js's autoDjPanel) uses 0 as the "Disabled"
+      // minRating accepts 0..10 — the web player's Auto DJ settings
+      // (webapp/assets/js/auto-dj.js) use 0 as the "Disabled"
       // option and every autoDJ() call sends that value by default,
       // even when no filter is intended (see
       // webapp/assets/js/mstream.player.js:71). The runRandomSongs

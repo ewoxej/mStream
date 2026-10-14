@@ -104,7 +104,7 @@ export const dir = (path) => MSTREAMAPI.dirparser(path);
 export const dirRecursive = (path) => MSTREAMAPI.recursiveScan(path);
 export const metadataBatch = (paths) => post('api/v1/db/metadata/batch', paths);
 
-// Downloads go through a hidden form, like the classic UI: the server
+// Downloads go through a hidden form: the server
 // answers with a zip attachment.
 export function downloadForm(action, fields) {
   const s = server();

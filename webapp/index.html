@@ -13,15 +13,18 @@
   <link rel="stylesheet" href="assets/fonts/plex.css">
   <link rel="stylesheet" href="app/app.css">
 
-  <!-- The playback engine and its helpers are shared with the classic
-       player (/classic/). They are classic scripts that define globals:
-       MSTREAMAPI, AUTODJ, MSTREAMPLAYSESSION, MSTREAMPLAYER, JUKEBOX (and
-       qrcodegen, STATSVIEW from the /stats page for its charts). app/shims.js
-       provides the globals the engine expects from a UI (iziToast,
-       VUEPLAYERCORE); app/viz.js provides VIZ. -->
+  <!-- The playback engine and its helpers are plain (non-module) scripts
+       that define globals: MSTREAMAPI, AUTODJ, MSTREAMPLAYSESSION,
+       MSTREAMPLAYER, JUKEBOX, DISCOVERJOBS (and qrcodegen, STATSVIEW for the
+       Stats charts).
+       app/shims.js provides the globals the engine expects from a UI
+       (iziToast, VUEPLAYERCORE); app/viz.js provides VIZ. /server-remote
+       serves this page with mstream.player.js swapped for
+       mstream.server-audio.js (src/api/server-playback.js). -->
   <script src="app/shims.js"></script>
-  <script src="alpha/api.js"></script>
-  <script src="alpha/auto-dj.js"></script>
+  <script src="assets/js/mstream.api.js"></script>
+  <script src="assets/js/auto-dj.js"></script>
+  <script src="assets/js/discover-jobs.js"></script>
   <script src="assets/js/mstream.play-session.js"></script>
   <script src="assets/js/mstream.player.js"></script>
   <script src="assets/js/mstream.jukebox.js"></script>

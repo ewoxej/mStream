@@ -1,11 +1,14 @@
 // Downloads: torrents through the client mStream is connected to
-// (qBittorrent / Transmission / Deluge, set up in the admin panel). The
-// transfer list is an admin route; anyone allowed to add torrents can.
+// (qBittorrent / Transmission / Deluge, set up in the admin panel; the
+// transfer list is an admin route, anyone allowed to add torrents can), and
+// what the Discover plug-ins brought into the library (their records:
+// play, queue, show the folder, remove the file).
 import { html, useEffect, useRef, useState } from '../vendor/preact-htm.js';
 import { app, useStore, href } from '../store.js';
 import * as P from '../player.js';
-import { Icon, IconBtn, Header, Chip, Plate, Empty, Spinner, confirm } from '../ui.js';
-import { fmtBytes, server } from '../util.js';
+import { Icon, IconBtn, Header, Chip, Plate, Empty, Spinner, Toggle, confirm } from '../ui.js';
+import { fmtBytes, server, clockLabel } from '../util.js';
+import { playFile, queueFile, pluginTitle, ensurePlugins, errorText } from '../jobs.js';
 
 async function api(method, path, body) {
   const s = server();
@@ -135,15 +138,70 @@ function AddTorrent({ onAdded }) {
 }
 
 export function Downloads() {
-  const on = useStore(app, (x) => x.features.torrent);
-  if (on === false) {
+  const f = useStore(app, (x) => x.features);
+  if (f.torrent === false && !f.plugins) {
     return html`<div class="screen"><${Header} title="Downloads" />
-      <div class="scroll"><${Empty} icon="download" title="Downloads are off on this server.">An admin can connect a torrent client in the admin panel.</${Empty}></div></div>`;
+      <div class="scroll"><${Empty} icon="download" title="Downloads are off on this server.">An admin can connect a torrent client or turn on Discover plug-ins in the admin panel.</${Empty}></div></div>`;
   }
-  return html`<${TorrentList} />`;
+  if (!f.torrent) {
+    return html`<div class="screen"><${Header} title="Downloads" sub="FROM DISCOVER · SAVED INTO THE LIBRARY" />
+      <div class="scroll pad col"><${DiscoverDownloads} /></div></div>`;
+  }
+  return html`<${TorrentList} extra=${f.plugins ? html`<${DiscoverDownloads} />` : null} />`;
 }
 
-function TorrentList() {
+// What the Discover plug-ins brought in. A record follows its file: present
+// (play, queue, remove), missing (remove settles it) or removed (history).
+function DiscoverDownloads() {
+  const [opts, setOpts] = useState({ removed: false, all: false });
+  const [state, setState] = useState({ loading: true, list: [] });
+  const admin = server().admin === true;
+  const load = async () => {
+    try {
+      await ensurePlugins();
+      const res = await MSTREAMAPI.discoveryDownloads({ removed: opts.removed, all: opts.all });
+      setState({ loading: false, list: res?.downloads || [] });
+    } catch (e) { setState({ loading: false, list: [], error: errorText(e) }); }
+  };
+  useEffect(() => { load(); }, [opts.removed, opts.all]);
+  const remove = async (row) => {
+    const ok = await confirm({ title: 'Remove this download?', text: `“${row.title}” is deleted from ${row.crumbs.join(' / ')} and leaves the library.`, okLabel: 'Remove' });
+    if (!ok) { return; }
+    try {
+      await MSTREAMAPI.discoveryDownloadRemove(row.id);
+      // Queue entries for the file would fail on their next play.
+      for (const i of DISCOVERJOBS.queueIndexesFor(MSTREAMPLAYER.playlist, row.filepath)) { P.removeAt(i); }
+      P.toast('Download removed');
+      load();
+    } catch (e) { P.toast(errorText(e), 'error'); }
+  };
+  const rows = state.list.map((d) => DISCOVERJOBS.downloadRow(d));
+  const totals = DISCOVERJOBS.downloadsTotals(state.list);
+  return html`<section class="block">
+    <div class="block-head"><span class="block-title">From Discover</span>
+      <span class="micro-n">${totals.count ? `${totals.count} ${totals.count === 1 ? 'song' : 'songs'} · ${DISCOVERJOBS.fmtBytes(totals.bytes) || '0 B'}` : ''}</span>
+      ${admin ? html`<label class="disc-new" onClick=${(e) => { e.preventDefault(); setOpts({ ...opts, all: !opts.all }); }}><span>All accounts</span><${Toggle} on=${opts.all} onChange=${(v) => setOpts({ ...opts, all: v })} /></label>` : null}
+      <label class="disc-new" onClick=${(e) => { e.preventDefault(); setOpts({ ...opts, removed: !opts.removed }); }}><span>Show removed</span><${Toggle} on=${opts.removed} onChange=${(v) => setOpts({ ...opts, removed: v })} /></label>
+    </div>
+    ${state.loading ? html`<${Spinner} />`
+      : state.error ? html`<div class="hint">${state.error}</div>`
+      : !rows.length ? html`<div class="hint">Nothing yet. Get a track from Discover → Network or Peers and it is listed here.</div>`
+      : html`<div class="card table-card">${rows.map((r) => html`<div class=${`dl-row disc-dl ${r.present ? '' : 'faded'}`} key=${r.id}>
+          <${Plate} icon=${r.removed ? 'delete_outline' : r.present ? 'check' : 'error_outline'} tone=${r.present ? 'state' : 'muted'} size=${30} />
+          <div class="dl-text"><span>${r.title}</span>
+            <small>${[r.artist, r.album, pluginTitle(r.plugin), r.size, r.at ? clockLabel(r.at) : '', r.username && opts.all ? r.username : '', r.removed ? 'removed' : !r.present ? 'file missing' : ''].filter(Boolean).join(' · ')}</small>
+            <small class="muted" title=${r.filepath}>${r.crumbs.join(' / ')}</small></div>
+          <span class="dl-acts">
+            ${r.actions.includes('play') ? html`<${IconBtn} icon="play_arrow" title="Play" onClick=${() => playFile(r.filepath)} size=${16} />` : null}
+            ${r.actions.includes('queue') ? html`<${IconBtn} icon="queue_music" title="Add to queue" onClick=${() => queueFile(r.filepath)} size=${16} />` : null}
+            ${r.actions.includes('show') ? html`<a class="icon-btn" title="Show the folder" href=${href('folders', ...r.crumbs.slice(0, -1))}><${Icon} name="folder" size=${16} /></a>` : null}
+            ${r.actions.includes('remove') ? html`<${IconBtn} icon="delete_outline" title="Remove" onClick=${() => remove(r)} size=${15} />` : null}
+          </span>
+        </div>`)}</div>`}
+  </section>`;
+}
+
+function TorrentList({ extra }) {
   const s = useTorrents();
   const [tab, setTab] = useState('All');
   const filters = {
@@ -184,6 +242,7 @@ function TorrentList() {
             <span class=${'pill ' + (TONE[t.status] || 'muted')}>${LABEL[t.status] || t.status}</span>
             <${IconBtn} icon="delete_outline" title="Remove" onClick=${() => remove(t)} size=${15} />
           </div>`)}</div>` : html`<${Empty} icon="download" title=${tab === 'All' ? 'No torrents' : `Nothing in ${tab}`} />`}`}
+      ${extra}
     </div>
   </div>`;
 }
