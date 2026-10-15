@@ -23,7 +23,7 @@ import { Mosaic } from './playlists.js';
 // `card`: which card modes a section has (none = shortcut only, like the app's Settings).
 // `when`: only while the server offers the feature.
 export const HOME_SECTIONS = [
-  { id: 'dj', label: 'Auto DJ', icon: 'auto_awesome', to: 'dj', card: ['list'], when: (f) => !f.serverAudio },
+  { id: 'dj', label: 'Auto DJ', icon: 'auto_awesome', to: 'dj', card: ['list'] },
   { id: 'downloads', label: 'Downloads', icon: 'download', to: 'dl', card: ['list'], when: (f) => f.torrent },
   { id: 'recent', label: 'Recently played', icon: 'history', to: 'recent', card: ['grid', 'list'] },
   { id: 'added', label: 'Recently added', icon: 'new_releases', card: ['grid', 'list'] },
@@ -37,7 +37,7 @@ export const HOME_SECTIONS = [
   { id: 'sonic', label: 'Sonic Path', icon: 'route', to: 'sonic', card: [], when: (f) => f.sonicPath },
   { id: 'discover', label: 'Discover', icon: 'explore', to: 'discover', card: [], when: (f) => f.discover },
   { id: 'stats', label: 'Stats', icon: 'insights', to: 'stats', card: [], when: (f) => f.stats },
-  { id: 'jukebox', label: 'Jukebox', icon: 'qr_code_2', to: 'jukebox', card: [] },
+  { id: 'guests', label: 'Guests', icon: 'qr_code_2', to: 'guests', card: [], when: (f) => f.account },
   { id: 'viz', label: 'Visualizer', icon: 'equalizer', to: 'viz', card: [] },
   { id: 'settings', label: 'Settings', icon: 'settings', to: 'settings', card: [] },
 ];

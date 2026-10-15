@@ -23,7 +23,7 @@ info:
     ### Special tokens
 
     - **Admin tokens** have `admin: true` in the payload and are required for every `/api/v1/admin/*` endpoint.
-    - **Jukebox tokens** (`jukebox: true`) are short-lived and bound to an active remote-control session.
+    - **Guest-link tokens** (`guestLink: <id>`) belong to a guest link of Play on (the playback devices): they reach only `/api/v1/guest/*` and album art, and end when the link is revoked or expires.
     - **Shared-playlist tokens** (`shareToken: true`) restrict file access to the tracks in one specific shared playlist.
     - **Federation keys** (`x-federation-key: fedk_…` header, not a JWT) authenticate a paired peer server as a
       synthetic read-only user scoped to the key's granted libraries, limited to a read-route allowlist.
@@ -121,9 +121,9 @@ tags:
       allow_server_audio flag; admins always pass. Every route answers 503
       while the engine is not running. Files are named by
       library path ("library/folder/track.mp3") in both directions: no
-      filesystem path is accepted from, or returned to, a client.
-  - name: Jukebox
-    description: Remote-control mode via WebSocket-backed REST.
+      filesystem path is accepted from, or returned to, a client. The player
+      shows the engine as a playback device ("Server speakers"); these
+      routes stay for other clients.
   - name: YouTube DL
     description: Download YouTube audio into the library.
   - name: Admin - Config
@@ -1222,7 +1222,7 @@ paths:
           to `discovery` on servers new enough to have this endpoint).
         * **`admin`** — cheap support/debug facts (uptime, runtime
           versions, DB schema version). Never present for federation
-          keys or jukebox sessions — and never while the admin API is
+          keys — and never while the admin API is
           locked (`lockAdmin`): an admin account then still shows
           `user.admin: true` (identity) but no `admin` object, which is
           how a client tells "locked" from "not an admin".
@@ -2519,8 +2519,8 @@ paths:
         it (a peer's list of that artist's albums). Each arm takes at most
         500 entries, at least one arm must be present, unknown keys on an
         entry are ignored, and answers come back in the order asked.
-        Advertised by `features.discoveryOwned` on `GET /api/`. A jukebox
-        session is refused; a paired server's key never reaches it.
+        Advertised by `features.discoveryOwned` on `GET /api/`. A guest
+        link is refused; a paired server's key never reaches it.
       requestBody:
         required: true
         content:
@@ -2599,7 +2599,7 @@ paths:
                 albums: [true]
                 artists: [{ owned: true, have: 2, missing: ["Lost Tapes"] }]
         "400": { description: "Malformed body: no arm, an entry without its name, or more than 500 entries in one arm." }
-        "403": { description: "A jukebox session." }
+        "403": { description: "A guest link." }
 
   /api/v1/discovery/collection/destination:
     get:
@@ -2740,7 +2740,7 @@ paths:
                       `?token=` the /media URLs use.
         "400": { description: "Malformed body, or the plug-in does not resolve recommendations." }
         "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { description: "A jukebox session token, or — for a plug-in with a lookup — the acquisition gate refuses the caller or uploads are off for them (the lookup stands behind the job's own gate)." }
+        "403": { description: "A guest-link token, or — for a plug-in with a lookup — the acquisition gate refuses the caller or uploads are off for them (the lookup stands behind the job's own gate)." }
         "404": { description: "Unknown or disabled plug-in (disabled plug-ins are invisible, not forbidden); for a plug-in with a lookup, also one whose probe says it cannot run." }
         "429": { description: "The plug-in's own request budget for its catalogue is spent, or (a lookup) too many lookups are running at once — try again shortly." }
         "502": { description: "The plug-in failed to resolve this recommendation (a catalogue was unreachable); the cause is logged server-side." }
@@ -2880,7 +2880,7 @@ paths:
         "200": { description: "A live job for this recommendation already exists; `created: false` and that job." }
         "400": { description: "Malformed body, the plug-in does not run jobs (use resolve), a `scope` the plug-in does not run or the recommendation cannot fill, or a `choice` for a plug-in without a lookup / a link it does not accept." }
         "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { description: "The acquisition gate is in whitelist mode and the caller is not allowed; an acquire plug-in's job when uploads are off for the server or the caller (a download is an upload); or a jukebox session token." }
+        "403": { description: "The acquisition gate is in whitelist mode and the caller is not allowed; an acquire plug-in's job when uploads are off for the server or the caller (a download is an upload); or a guest-link token." }
         "404": { description: "Unknown or disabled plug-in." }
         "409": { description: "Another account's live job already covers this recommendation — try again when it has finished." }
         "429": { description: "The caller already has `discoveryJobs.maxQueuedPerUser` jobs queued or running — wait for some to finish." }
@@ -3093,7 +3093,7 @@ paths:
                   rowsRemoved: { type: integer, description: "Track rows deleted (0 when a scan got there first, or the file was left alone)." }
                   playlistEntries: { type: integer, description: "Playlist entries that pointed at the file." }
         "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { description: "The caller may not upload (and so may not remove), or a jukebox session token." }
+        "403": { description: "The caller may not upload (and so may not remove), or a guest-link token." }
         "404": { description: "No such download, not the caller's, or the caller no longer sees the library it landed in." }
         "409": { description: "Already removed, or the file is in use right now (try again)." }
 
@@ -5350,175 +5350,13 @@ paths:
   /server-remote:
     get:
       tags: [Server Playback]
-      summary: Server-audio webapp
+      summary: The old server-audio page
       description: >-
-        index.html with the browser player swapped for the server-audio
-        client. Sits behind the same auth wall and per-user allow_server_audio
-        gate as the /api/v1/server-playback/* routes.
+        Leads to the player (301 to /): the server's speakers are a playback
+        device there ("Server speakers", for the users allowed server audio,
+        while the engine runs).
       responses:
-        "200":
-          description: HTML.
-          content:
-            text/html:
-              schema: { type: string }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "503":
-          description: No server-audio backend is running (an HTML page with a retry link and how to get one running).
-          content:
-            text/html:
-              schema: { type: string }
-
-  # ── Jukebox ──────────────────────────────────────────────────────────────
-
-  /api/v1/jukebox/push-to-client:
-    post:
-      tags: [Jukebox]
-      summary: Send a command to a connected remote
-      description: Commands include `next`, `previous`, `playPause`, `play`.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [code, command]
-              properties:
-                code: { type: string, description: "Jukebox code." }
-                command: { type: string }
-                file: { type: string }
-      responses:
-        "200": { $ref: "#/components/responses/EmptySuccess" }
-
-  /api/v1/jukebox/update-playlist:
-    post:
-      tags: [Jukebox]
-      summary: Cache the current playlist for a jukebox code
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [code, playlist]
-              properties:
-                code: { type: string }
-                playlist: { type: array, items: { type: object } }
-      responses:
-        "200": { $ref: "#/components/responses/EmptySuccess" }
-
-  /api/v1/jukebox/update-now-playing:
-    post:
-      tags: [Jukebox]
-      summary: Cache the now-playing state for a jukebox code
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [code, nowPlaying]
-              properties:
-                code: { type: string }
-                nowPlaying:
-                  type: object
-                  properties:
-                    title: { type: string, nullable: true }
-                    artist: { type: string, nullable: true }
-                    album: { type: string, nullable: true }
-                    albumArt: { type: string, nullable: true }
-                    filepath: { type: string }
-                    playing: { type: boolean }
-                    index: { type: integer }
-                    currentTime: { type: number }
-                    duration: { type: number }
-      responses:
-        "200": { $ref: "#/components/responses/EmptySuccess" }
-
-  /api/v1/jukebox/does-code-exist:
-    post:
-      tags: [Jukebox]
-      summary: Check if a jukebox code is active
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [code]
-              properties:
-                code: { type: string }
-      responses:
-        "200":
-          description: Status.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status: { type: boolean }
-                  token: { type: string }
-
-  /api/v1/jukebox/get-playlist:
-    get:
-      tags: [Jukebox]
-      summary: Fetch the cached playlist for a code
-      security: []
-      parameters:
-        - name: code
-          in: query
-          required: true
-          schema: { type: string }
-      responses:
-        "200":
-          description: Playlist.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  playlist:
-                    type: array
-                    items: { type: object }
-
-  /api/v1/jukebox/get-now-playing:
-    get:
-      tags: [Jukebox]
-      summary: Fetch the cached now-playing state
-      security: []
-      parameters:
-        - name: code
-          in: query
-          required: true
-          schema: { type: string }
-      responses:
-        "200":
-          description: Now-playing.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  nowPlaying:
-                    type: object
-                    nullable: true
-
-  /remote/{remoteId}:
-    get:
-      tags: [Jukebox]
-      summary: Serve the remote-control webapp
-      security: []
-      parameters:
-        - name: remoteId
-          in: path
-          required: true
-          schema: { type: string }
-      responses:
-        "200":
-          description: HTML.
-          content:
-            text/html:
-              schema: { type: string }
+        "301": { description: To the player. }
 
   # ── YouTube DL ───────────────────────────────────────────────────────────
 

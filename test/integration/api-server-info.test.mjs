@@ -25,7 +25,7 @@
  *  - federation allowlist          → /api/ allowed, but ping (and every
  *    other unlisted route) still 403s — adding /api loosened nothing;
  *  - bogus federation key          → 401;
- *  - jukebox JWT, dead session     → 401 (correctly signed is not enough);
+ *  - guest-link JWT, no such link  → 401 (correctly signed is not enough);
  *  - disclosure pins               → users-table columns (password, salt,
  *    scrobbler credentials, …) and the fed user's internal fields are
  *    asserted ABSENT from the response by name;
@@ -290,16 +290,16 @@ describe('layered /api/ server info', () => {
     assert.equal(r.status, 401);
   });
 
-  test('a jukebox token without a live session is a 401', async () => {
-    // A CORRECTLY-SIGNED jukebox JWT whose WebSocket session no longer
-    // exists (or never did) must 401 like the wall does — not downgrade to
+  test('a guest-link token whose link is gone is a 401', async () => {
+    // A CORRECTLY-SIGNED guest-link JWT naming no live link (revoked,
+    // expired, never made) must 401 like the wall does — not downgrade to
     // the public layer. Signed with the spawned server's own secret, read
     // back from its generated config.
     const { secret } = JSON.parse(
       await fs.readFile(path.join(srv.tmpDir, 'config.json'), 'utf8'));
-    const stale = jwt.sign({ username: 'pleb', jukebox: true }, secret);
+    const stale = jwt.sign({ guestLink: 'no-such-link' }, secret);
     const r = await api({ 'x-access-token': stale });
-    assert.equal(r.status, 401, 'dead jukebox session → error, not the public layer');
+    assert.equal(r.status, 401, 'a gone link → error, not the public layer');
   });
 });
 

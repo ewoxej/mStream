@@ -17,14 +17,19 @@ export const NAV_GROUPS = [
     { id: 'pl', label: 'Playlists', icon: 'queue_music' },
   ] },
   { id: 'tools', label: 'TOOLS', items: [
-    { id: 'dj', label: 'Auto DJ', icon: 'auto_awesome', when: (f) => !f.serverAudio },
+    { id: 'dj', label: 'Auto DJ', icon: 'auto_awesome' },
     { id: 'sonic', label: 'Sonic Path', icon: 'route', when: (f) => f.sonicPath },
     { id: 'discover', label: 'Discover', icon: 'explore', when: (f) => f.discover },
-    { id: 'jukebox', label: 'Jukebox', icon: 'qr_code_2' },
+    { id: 'guests', label: 'Guests', icon: 'qr_code_2', when: (f) => f.account, whenNote: 'No sign-in on this server' },
     { id: 'stats', label: 'Stats', icon: 'insights', when: (f) => f.stats },
-    { id: 'viz', label: 'Visualizer', icon: 'equalizer', when: (f) => !f.serverAudio },
+    { id: 'viz', label: 'Visualizer', icon: 'equalizer' },
     { id: 'dl', label: 'Downloads', icon: 'download', when: (f) => f.torrent || f.plugins },
     { id: 'settings', label: 'Settings', icon: 'settings', fixed: true },
+  ] },
+  // Not screens: Admin opens the admin panel in a new tab, Log out asks first.
+  { id: 'account', label: 'ACCOUNT', items: [
+    { id: 'admin', label: 'Admin', icon: 'open_in_new', link: 'admin', when: (f) => f.admin, whenNote: 'Admins only' },
+    { id: 'logout', label: 'Log out', icon: 'logout', action: 'logout', when: (f) => f.account, whenNote: 'No sign-in on this server' },
   ] },
 ];
 

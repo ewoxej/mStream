@@ -222,9 +222,25 @@ function run({ command, args }) {
     case 'setShuffle': if (typeof args?.shuffle === 'boolean') { P.setShuffle(args.shuffle); } break;
     case 'setRepeat': P.setRepeat(args?.mode); break;
     case 'takeover': transferringUntil = Date.now() + 5000; adopt(args, args?.play !== false); break;
+    // From guests (api/guest.js): queue library tracks, take one out.
+    case 'enqueue': enqueue(args); break;
+    case 'remove': {
+      const i = mapIndex(args?.index);
+      if (i >= 0 && MSTREAMPLAYER.playlist[i]?.rawFilePath === args?.path) { P.removeAt(i); }
+      break;
+    }
     default: break;
   }
   setTimeout(() => report(true), 400);
+}
+
+async function enqueue(args) {
+  const paths = Array.isArray(args?.paths) ? args.paths.filter((p) => typeof p === 'string') : [];
+  if (!paths.length) { return; }
+  const tracks = await withMetadata(paths);
+  // An empty player starts with what the guest picked.
+  if (!MSTREAMPLAYER.playlist.length) { P.playTracks(tracks, 0); } else if (args.next) { P.playNext(tracks); } else { P.addToQueue(tracks); }
+  report(true);
 }
 
 // ── Pick-up ─────────────────────────────────────────────────────────────
@@ -252,6 +268,13 @@ function maybePickUp() {
     .then((r) => (r.ok && !MSTREAMPLAYER.playerStats.playing ? adopt(r.state, false) : false))
     .catch(() => {});
 }
+
+// ── Guest links (api/guest.js) ──────────────────────────────────────────
+
+export const listGuests = () => api('GET', 'api/v1/devices/guests').then((r) => r.links);
+export const createGuest = (device, duration, label) => api('POST', 'api/v1/devices/guests', { device, duration, label });
+export const revokeGuest = (id) => api('DELETE', `api/v1/devices/guests/${encodeURIComponent(id)}`);
+export const guestUrl = (token) => new URL(`guest/#${token}`, server().host || location.href.split('#')[0]).href;
 
 // ── Actions for the UI ──────────────────────────────────────────────────
 

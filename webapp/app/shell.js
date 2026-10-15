@@ -8,15 +8,19 @@ import { sidebarLayout } from './nav.js';
 import { devices, followed, positionOf, command as devCommand, remoteQueue, loadRemoteQueue } from './devices.js';
 import { DevicesButton } from './devices-ui.js';
 import { PipButton } from './pip.js';
-import { Icon, IconBtn, Cover, LikeButton, openMenu, trackMenuItems, prompt } from './ui.js';
-import { fmtTime, fmtCount, trackTitle, trackArtist, trackAlbum, trackCover, formatLabel, gainLabel, serverAudio } from './util.js';
+import { Icon, IconBtn, Cover, LikeButton, openMenu, trackMenuItems, prompt, logOut } from './ui.js';
+import { fmtTime, fmtCount, trackTitle, trackArtist, trackAlbum, trackCover, formatLabel, gainLabel } from './util.js';
 
 // ── Sidebar ─────────────────────────────────────────────────────────────
 
-function NavItem({ id, label, icon, trail, trailTone, screen, to }) {
+const ACTIONS = { logout: logOut };
+
+function NavItem({ id, label, icon, trail, trailTone, screen, to, link, action }) {
   const on = screen === id || (id === 'albums' && screen === 'album') || (id === 'artists' && screen === 'artist')
     || (id === 'genres' && screen === 'genre') || (id === 'pl' && screen === 'playlist');
-  return html`<a class=${`nav-item ${on ? 'on' : ''}`} href=${to || href(id)} title=${label}>
+  const run = action ? (e) => { e.preventDefault(); ACTIONS[action]?.(); } : null;
+  return html`<a class=${`nav-item ${on ? 'on' : ''}`} href=${link || to || (action ? '#' : href(id))} title=${label}
+    target=${link ? '_blank' : null} rel=${link ? 'noopener' : null} onClick=${run}>
     <${Icon} name=${icon} size=${17} />
     <span class="nav-label">${label}</span>
     ${trail ? html`<span class=${'nav-trail ' + (trailTone || '')}>${trail}</span>` : null}
@@ -49,7 +53,7 @@ function ServerCard() {
     <div class="sc-top">
       <i class=${scan?.scanning ? 'busy' : ''}></i>
       <span class="sc-name">${server.name}</span>
-      <span class="micro-n">v${server.version}</span>
+      <span class="micro-n" title=${server.upstream && server.upstream !== server.version ? `mStream Zenelo ${server.version}, based on mStream ${server.upstream}` : null}>v${server.version}</span>
     </div>
     <div class="sc-meta">${fmtCount(counts.tracks ?? scan?.tracks ?? 0)} tracks · ${server.vpaths.length} ${server.vpaths.length === 1 ? 'vpath' : 'vpaths'}<br />
       ${scan?.scanning ? `Scanning${Number.isFinite(pct) ? ' · ' + Math.round(pct) + '%' : '…'}` : 'Library up to date'}</div>
@@ -85,7 +89,7 @@ export function Sidebar() {
       ${groups.map((g) => html`<div class="nav-group" key=${g.id}>
         ${g.label ? html`<div class="nav-head">${g.label}</div>` : null}
         ${g.items.map((i) => html`<${NavItem} key=${i.id} id=${i.id} label=${i.label} icon=${i.icon} screen=${screen}
-          trail=${trail[i.id]} trailTone=${i.id === 'dj' ? 'accent' : ''}
+          trail=${trail[i.id]} trailTone=${i.id === 'dj' ? 'accent' : ''} link=${i.link} action=${i.action}
           to=${i.id === 'folders' && home ? href('folders', ...home.split('/')) : null} />`)}
       </div>`)}
     </nav>
@@ -456,7 +460,7 @@ function NowSheet({ n }) {
     <${Transport} n=${n} big />
     <div class="ns-tools">
       <${IconBtn} icon="queue_music" title="Lyrics" size=${19} onClick=${() => page('lyrics')} />
-      ${serverAudio ? null : html`<${IconBtn} icon="equalizer" title="Visualizer" size=${19} onClick=${() => page('viz')} />`}
+      <${IconBtn} icon="equalizer" title="Visualizer" size=${19} onClick=${() => page('viz')} />
       <${IconBtn} icon="list" title="Queue" size=${19} onClick=${() => app.set({ nowOpen: false, queueOpen: true })} />
       <${DevicesButton} />
       <${Volume} remote=${remote} />
@@ -495,8 +499,8 @@ export function PlayerBar() {
       </div>`}
       <${IconBtn} icon="queue_music" title="Lyrics" active=${screen === 'lyrics'} size=${17} class="pager"
         onClick=${() => (screen === 'lyrics' ? history.back() : go('lyrics'))} />
-      ${serverAudio ? null : html`<${IconBtn} icon="equalizer" title="Visualizer" active=${screen === 'viz'} size=${17} class="pb-viz pager"
-        onClick=${() => (screen === 'viz' ? history.back() : go('viz'))} />`}
+      <${IconBtn} icon="equalizer" title="Visualizer" active=${screen === 'viz'} size=${17} class="pb-viz pager"
+        onClick=${() => (screen === 'viz' ? history.back() : go('viz'))} />
       <${IconBtn} icon="list" title=${queueOpen ? 'Hide queue' : 'Show queue'} active=${queueOpen} size=${17} class="pager"
         onClick=${() => { app.set({ queueOpen: !queueOpen }); savePrefs(); }} />
       <${PipButton} />

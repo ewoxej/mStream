@@ -13,13 +13,12 @@
 // integration's pattern) — and an acquire plug-in's job, which lands a file
 // in a library, needs the caller's upload right as the REQUEST carries it
 // (the job runs later under the account's own rights, which may be wider:
-// a jukebox token is the account with its writes switched off). Reading and
-// cancelling are owner-only; an admin sees everyone's.
+// a guest link's user is the account with its writes switched off). Reading
+// and cancelling are owner-only; an admin sees everyone's.
 //
-// None of it is for a jukebox session: a remote-control guest holds the
-// owner's account with no writes, and every plug-in route here acts on the
-// account itself (auth.js buildJukeboxUser marks the user; refuseJukebox
-// sits in front of every discovery plug-in route).
+// None of it is for a guest of Play on (api/guest.js): the wall keeps a
+// guest token to the guest routes, and refuseGuest sits in front of every
+// discovery plug-in route as well.
 //
 // One account may hold discoveryJobs.maxQueuedPerUser jobs queued or
 // running at once (429 past it), and the runner takes turns between
@@ -60,18 +59,18 @@ export function checkJobsAccess(user) {
 // A file a plug-in lands in a library is an upload by another road: the
 // server switch and the caller's allow_upload both apply, at the request
 // (the job's later run re-checks the account, but the account's rights are
-// not always the request's — see buildJukeboxUser).
+// not always the request's — see api/guest.js authenticate).
 export function checkUploadRight(user) {
   if (!destinations.uploadsAllowed(user)) {
     throw new WebError('Uploading Disabled', 403);
   }
 }
 
-// Express middleware for a route prefix: a jukebox session token reaches no
+// Express middleware for a route prefix: a guest of Play on reaches no
 // discovery plug-in route at all.
-export function refuseJukebox(req, res, next) {
-  if (req.user && req.user.jukebox === true) {
-    throw new WebError('not available in a jukebox session', 403);
+export function refuseGuest(req, res, next) {
+  if (req.user && req.user.guest) {
+    throw new WebError('Not available to guests', 403);
   }
   next();
 }
@@ -89,10 +88,10 @@ function ownJob(req) {
 }
 
 export function setup(mstream) {
-  mstream.use('/api/v1/discovery/plugin-jobs', refuseJukebox);
+  mstream.use('/api/v1/discovery/plugin-jobs', refuseGuest);
 
   mstream.post('/api/v1/discovery/plugins/:name/jobs', (req, res) => {
-    refuseJukebox(req, res, () => {});
+    refuseGuest(req, res, () => {});
     const name = String(req.params.name || '');
     const plugin = NAME_RE.test(name) ? plugins.getPlugin(name) : null;
     // Unknown, disabled and unavailable (its probe failed — no yt-dlp) all

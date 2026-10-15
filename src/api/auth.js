@@ -5,7 +5,7 @@ import * as auth from '../util/auth.js';
 import * as config from '../state/config.js';
 import * as db from '../db/manager.js';
 import * as shared from '../api/shared.js';
-import { isActiveJukeboxToken } from '../api/remote.js';
+import * as guest from './guest.js';
 import * as federationAuth from './federation-auth.js';
 import * as federationGuest from '../state/federation-guest.js';
 import WebError from '../util/web-error.js';
@@ -97,9 +97,10 @@ export function setup(mstream) {
 
     const decoded = verifyToken(token, req);
 
-    // Handle jukebox tokens
-    if (decoded.jukebox === true && decoded.username) {
-      req.user = buildJukeboxUser(decoded, token);
+    // A guest link (Play on's guest access): its own routes and album art only.
+    if (typeof decoded.guestLink === 'string') {
+      req.user = guest.authenticate(decoded);
+      if (!guest.allowedPath(req.path)) { throw new WebError('Not available to guests', 403); }
       return next();
     }
 
@@ -190,33 +191,6 @@ function verifyToken(token, req) {
     winston.warn(`Rejected invalid token from ${req.ip} on ${req.path}: ${err.message}`);
     throw new WebError('Authentication Error', 401);
   }
-}
-
-// A jukebox session's restricted user: real user's libraries, no writes,
-// never admin. Verifies the token belongs to an ACTIVE jukebox session.
-// `jukebox: true` marks it for the routes that act on the account itself
-// (the Discover plug-ins, whose jobs write files and whose removals delete
-// them) — those refuse a remote-control guest outright, whatever the
-// owner's own rights are.
-function buildJukeboxUser(decoded, token) {
-  if (!isActiveJukeboxToken(token)) {
-    throw new WebError('Jukebox session expired', 401);
-  }
-  const user = db.getUserByUsername(decoded.username);
-  if (!user) { throw new WebError('Authentication Error', 401); }
-  const libIds = db.getUserLibraryIds(user);
-  const libraries = db.getAllLibraries().filter(l => libIds.includes(l.id));
-  return {
-    ...user,
-    vpaths: libraries.map(l => l.name),
-    admin: false,
-    jukebox: true,
-    allow_upload: 0,
-    allow_mkdir: 0,
-    allow_file_modify: 0,
-    allow_server_audio: 0,
-    allow_discovery_jobs: 0
-  };
 }
 
 // A real user token → user object with vpaths.

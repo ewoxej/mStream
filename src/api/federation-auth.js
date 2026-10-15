@@ -17,7 +17,7 @@
 //
 // A validated key resolves to a synthetic read-only req.user:
 //   - admin false + every allow_* flag 0 → all write handlers refuse
-//     (the same construction the jukebox-token branch uses);
+//     (the same construction api/guest.js uses for guest links);
 //   - vpaths / libraryIds restricted to the key's granted libraries →
 //     getVPathInfo, the /media/:vpath static gate, and libraryFilter scope
 //     browse/stream/download automatically;

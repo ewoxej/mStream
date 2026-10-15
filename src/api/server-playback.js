@@ -1,5 +1,6 @@
-// Routes for server-side playback: /api/v1/server-playback/* and the
-// /server-remote page. The backend itself — which process is running, how it
+// Routes for server-side playback: /api/v1/server-playback/*, and the
+// server's speakers as a playback device (state/server-device.js — Play on;
+// it replaced the /server-remote page). The backend itself — which process is running, how it
 // is found, spawned, watched and stopped — lives in src/state/server-audio.js;
 // this module only translates paths, gates access and proxies.
 //
@@ -12,16 +13,17 @@
 // untranslated — after the caller's access to them was checked exactly as
 // before (pathForEngine).
 
-import fsPromises from 'fs/promises';
 import path from 'path';
 import Joi from 'joi';
 import winston from 'winston';
-import * as config from '../state/config.js';
 import * as serverAudio from '../state/server-audio.js';
 import * as vpath from '../util/vpath.js';
 import * as db from '../db/manager.js';
 import { joiValidate } from '../util/validation.js';
 import WebError from '../util/web-error.js';
+import { createServerDevice } from '../state/server-device.js';
+import { hub } from './devices.js';
+import { pullMetaDataBatch } from './db.js';
 
 // ── Path translation ────────────────────────────────────────────────────────
 
@@ -169,55 +171,8 @@ export function proxyRoute(proxy, method, rustPath, { mapBody, mapResult } = {})
   };
 }
 
-// ── /server-remote ──────────────────────────────────────────────────────────
-
-// The /server-remote page is the web player (webapp/index.html) with the
-// browser engine swapped for the server-audio client. Pure and exported so a
-// unit test can pin it against the REAL index.html: each step is an
-// exact-string match that would silently no-op if the markup drifted. The
-// player hides what makes no sense in this mode (Auto DJ, the visualizer,
-// devices) when it sees serverAudioMode.
-export function rewriteIndexForServerAudio(page) {
-  return page
-    // mstream.server-audio.js implements the same MSTREAMPLAYER interface but
-    // routes every command through the server-playback API. The flag must be
-    // set before the client script runs.
-    .replace(
-      '<script src="assets/js/mstream.player.js"></script>',
-      '<script>var serverAudioMode = true;</script>\n  <script src="assets/js/mstream.server-audio.js"></script>'
-    )
-    // The visualizer reads the browser's audio element; the client stubs VIZ.
-    .replace('<script src="app/viz.js"></script>', '')
-    .replace('<title>mStream</title>', '<title>mStream · Server audio</title>');
-}
-
-// What /server-remote answers while the engine is not up. The advice has to
-// match what the lifecycle can actually do: the proxy only ever talks to an
-// engine the SERVER spawned, so "start the mstream-player binary yourself" —
-// what this page said for months — never worked. autoBootServerAudio is the
-// one switch: it brings the engine up (fetching it on first use), and when it
-// is already on and the engine still is not running, the reason is in the
-// server log.
-export const UNAVAILABLE_PAGE =
-  '<!doctype html><html><head><meta charset="utf-8"><title>Server Audio Unavailable</title>' +
-  '<style>body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;' +
-  'display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;' +
-  'background:#1a1a2e;color:#e4e4e4;text-align:center;}' +
-  '.box{max-width:440px;padding:40px;}' +
-  'h1{font-size:24px;margin-bottom:12px;color:#7aabdf;}' +
-  'p{color:#999;line-height:1.6;margin-bottom:24px;}' +
-  'a{color:#7aabdf;text-decoration:none;}a:hover{text-decoration:underline;}' +
-  '</style></head><body><div class="box">' +
-  '<h1>Server Audio Unavailable</h1>' +
-  '<p>The server audio engine is not running. Turn on <b>autoBootServerAudio</b> in the ' +
-  '<a href="/admin">admin panel</a> to start it. If it is already on, the engine failed to ' +
-  'start on this machine and the server log says why.</p>' +
-  '<a href="/server-remote">Retry</a> &middot; <a href="/">Normal Mode</a>' +
-  '</div></body></html>';
-
 // Single source of truth for "may this user touch server audio?" — shared
-// between the /api/v1/server-playback/* middleware and the /server-remote
-// page handler so the two can't drift apart.
+// between the /api/v1/server-playback/* middleware and the server device.
 function userCanUseServerAudio(user) {
   if (!user) { return false; }
   if (user.admin === true) { return true; }
@@ -263,31 +218,53 @@ export function setup(mstream) {
     mstream[verb](`/api/v1/server-playback${rustPath}`, proxyRoute(serverAudio.proxy, verb.toUpperCase(), rustPath, opts));
   }
 
-  // ── /server-remote page (serves the webapp with serverAudioMode flag) ──
-  //
-  // Previously registered ahead of the auth wall so anyone could hit the
-  // page, but that let unauthenticated users probe whether server audio was
-  // running. The page only makes sense for users who can actually control
-  // playback, so it sits behind the same auth + permission checks as the APIs.
-  mstream.get('/server-remote', async (req, res) => {
-    if (!userCanUseServerAudio(req.user)) {
-      return res.status(403).json({ error: 'Server audio access disabled for this user' });
-    }
+  // The old page: the server's speakers are a device in the player now.
+  mstream.get('/server-remote', (req, res) => res.redirect(301, '/'));
+}
 
-    // Is the engine answering? Not an error worth a log line when it isn't —
-    // see proxyRoute — just a different page.
-    try {
-      await serverAudio.proxy('GET', '/status');
-    } catch (_err) {
-      return res.status(503).send(UNAVAILABLE_PAGE);
-    }
+// ── The server's speakers as a device ───────────────────────────────────────
 
-    try {
-      const page = await fsPromises.readFile(path.join(config.program.webAppDirectory, 'index.html'), 'utf-8');
-      res.send(rewriteIndexForServerAudio(page));
-    } catch (err) {
-      winston.warn(`[server-audio] failed to serve /server-remote: ${err.message}`);
-      res.status(500).json({ error: 'Failed to serve server-remote page' });
-    }
+// A user as the device acts for them: their libraries (path checks).
+function withLibraries(user) {
+  const ids = db.getUserLibraryIds(user);
+  return { ...user, admin: user.is_admin === 1, vpaths: db.getAllLibraries().filter((l) => ids.includes(l.id)).map((l) => l.name) };
+}
+
+let device = null;
+
+/** Starts "Server speakers" in the users' devices (it follows the engine on its own). */
+export function startServerDevice() {
+  stopServerDevice();
+  const up = () => serverAudio.getActiveBackend().engine !== null;
+  const read = async (rustPath, shape) => {
+    const r = await serverAudio.proxy('GET', rustPath);
+    return r.status < 400 ? shape(r.data) : null;
+  };
+  device = createServerDevice({
+    hub,
+    isUp: up,
+    users: () => db.getAllUsers()
+      .filter((u) => u.is_admin === 1 || u.allow_server_audio === 1)
+      .map((u) => ({ key: String(u.id), user: withLibraries(u) })),
+    status: () => read('/status', (d) => statusForClient(d, serverAudio.getActiveBackend())),
+    queue: () => read('/queue', (d) => queueForClient(d, absoluteToVpath, serverAudio.getActiveBackend())?.queue || []),
+    post: async (rustPath, body) => (await serverAudio.proxy('POST', rustPath, body)).data,
+    enginePath: (libraryPath, user) => {
+      try { return pathForEngine(libraryPath, vpath.getVPathInfo(libraryPath, user).fullPath, serverAudio.getActiveBackend()); } catch (_) { return null; }
+    },
+    describe: (paths) => {
+      const all = { vpaths: db.getAllLibraries().map((l) => l.name) };
+      const meta = pullMetaDataBatch(paths, all);
+      return new Map(paths.map((p) => {
+        const m = meta.get(p)?.metadata;
+        return [p, m ? { title: m.title, artist: m.artist, album: m.album, art: m['album-art'] } : null];
+      }));
+    },
   });
+  device.start(1000);
+}
+
+export function stopServerDevice() {
+  device?.stop();
+  device = null;
 }

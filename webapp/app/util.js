@@ -2,10 +2,6 @@
 
 export const server = () => MSTREAMAPI.currentServer;
 
-// /server-remote: this page drives the server's own speakers (the engine is
-// assets/js/mstream.server-audio.js). Auto DJ, the visualizer and the
-// devices don't apply there.
-export const serverAudio = window.serverAudioMode === true;
 
 export function coverUrl(file, size = 's') {
   if (!file) { return null; }

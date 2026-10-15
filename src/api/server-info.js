@@ -10,8 +10,9 @@
 //   broke exactly that detection (every server answered 200, so every
 //   server looked public). Do not make this endpoint anonymous again.
 //
-// For authenticated callers (valid JWT, public-access mode, jukebox
-// session, or a federation key — the wall resolves all of them), the
+// For authenticated callers (valid JWT, public-access mode or a
+// federation key — the wall resolves all of them; guest links never get
+// here), the
 // response is built ADDITIVELY in three layers. Never build it by
 // filtering a full object down: an additive bug omits a field, a
 // filtering bug discloses everything.
@@ -27,7 +28,7 @@
 //     exactly as ping scopes it.
 //
 //   `admin`: cheap support/debug facts. Admin callers only — never
-//     federation keys or jukebox sessions — and never while lockAdmin
+//     federation keys — and never while lockAdmin
 //     is on: a locked admin API serves no admin params, so an is_admin
 //     account under the lock sees user.admin=true (identity) with no
 //     admin object, which is how a client tells "locked" from "not an

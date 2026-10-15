@@ -7,7 +7,7 @@ import { Icon, IconBtn, prompt } from './ui.js';
 import { devices, playOn, rename, forget, playingElsewhere, followed } from './devices.js';
 import { clockLabel } from './util.js';
 
-const typeIcon = (t) => (t === 'android' ? 'smartphone' : t === 'web' || t === 'desktop' ? 'computer' : 'devices_other');
+const typeIcon = (t) => (t === 'android' ? 'smartphone' : t === 'server' ? 'speaker' : t === 'web' || t === 'desktop' ? 'computer' : 'devices_other');
 const ts = (s) => (s ? Date.parse(s) : NaN);
 
 function DevicesMenu({ onClose, anchor }) {

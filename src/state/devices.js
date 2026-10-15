@@ -17,7 +17,10 @@
 export const OFFLINE_KEEP_MS = 30 * 24 * 3600 * 1000;
 export const MAX_DEVICES = 20;
 export const MAX_QUEUE = 20000;
-export const COMMANDS = ['play', 'pause', 'playPause', 'next', 'previous', 'seek', 'goTo', 'setVolume', 'setShuffle', 'setRepeat', 'takeover'];
+// `enqueue` { paths, next } adds library tracks (after the playing one when
+// `next`); `remove` { index, path } takes the queue's entry out if it still
+// is that path. Guests (api/guest.js) send them; so may devices.
+export const COMMANDS = ['play', 'pause', 'playPause', 'next', 'previous', 'seek', 'goTo', 'setVolume', 'setShuffle', 'setRepeat', 'takeover', 'enqueue', 'remove'];
 
 export function createHub(now = () => Date.now()) {
   const users = new Map();   // userKey → Map(deviceId → device)

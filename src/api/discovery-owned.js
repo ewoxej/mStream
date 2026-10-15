@@ -24,7 +24,7 @@
 // to them, sits in the caller's libraries; `have` and `missing` are about
 // the album names the asker sent (a peer's list of the artist's albums).
 //
-// A jukebox session is refused, like every discovery route that speaks for
+// A guest of Play on is refused, like every discovery route that speaks for
 // the account. A federation key never reaches it: the route is not on the
 // read allowlist (api/federation-auth.js), and a peer's library is not a
 // thing this server has.
@@ -32,7 +32,7 @@
 import Joi from 'joi';
 import * as db from '../db/manager.js';
 import { ownedTrack, ownedAlbum, ownedArtist, libraryIdsFor } from '../discovery-plugins/owned.js';
-import { refuseJukebox } from './discovery-plugin-jobs.js';
+import { refuseGuest } from './discovery-plugin-jobs.js';
 import { joiValidate } from '../util/validation.js';
 
 // One list's worth: a panel's rows, a peer's album names for one artist.
@@ -77,7 +77,7 @@ export const ownedBodySchema = Joi.object({
 }).or('songs', 'albums', 'artists');
 
 export function setup(mstream) {
-  mstream.use('/api/v1/discovery/owned', refuseJukebox);
+  mstream.use('/api/v1/discovery/owned', refuseGuest);
 
   mstream.post('/api/v1/discovery/owned', (req, res) => {
     const { value } = joiValidate(ownedBodySchema, req.body || {});

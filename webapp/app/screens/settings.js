@@ -6,7 +6,7 @@ import { sidebarLayout, sidebarPrefs } from '../nav.js';
 import * as P from '../player.js';
 import { playback } from '../player.js';
 import * as lib from '../library.js';
-import { Header, Seg, Toggle, Btn, Icon, Plate, confirm } from '../ui.js';
+import { Header, Seg, Toggle, Btn, Icon, Plate, confirm, logOut } from '../ui.js';
 import { fmtCount, server } from '../util.js';
 
 const TABS = [
@@ -124,7 +124,7 @@ function Interface() {
           onDragEnd=${() => setDrag(null)}>
           <span class="ch-handle" title="Drag to reorder"><${Icon} name="drag_indicator" size=${18} /></span>
           <${Plate} icon=${i.icon} size=${26} iconSize=${14} tone=${i.on ? 'accent' : 'muted'} />
-          <span class="sb-name">${i.label}${!offered ? html`<small>Not on this server</small>` : i.fixed ? html`<small>Always shown</small>` : null}</span>
+          <span class="sb-name">${i.label}${!offered ? html`<small>${i.whenNote || 'Not on this server'}</small>` : i.fixed ? html`<small>Always shown</small>` : null}</span>
           <span class="ch-move">
             <button type="button" title="Move up" disabled=${n === 0} onClick=${() => move(g.id, n, n - 1)}><${Icon} name="arrow_upward" size=${14} /></button>
             <button type="button" title="Move down" disabled=${n === g.items.length - 1} onClick=${() => move(g.id, n, n + 1)}><${Icon} name="arrow_downward" size=${14} /></button>
@@ -145,16 +145,12 @@ function Interface() {
   </${Card}>`;
 }
 
-async function logOut() {
-  if (await confirm({ title: 'Log out of mStream?', text: 'You will need to sign in again to listen.', okLabel: 'Log out' })) { MSTREAMAPI.logout(); }
-}
-
 function Server() {
   const s = server();
   const info = useStore(app, (x) => x.server);
   return html`<${Card} title="Server" note="The mStream instance this player talks to.">
     <${Row} title="Address"><${Value}>${location.host}</${Value}></${Row}>
-    <${Row} title="Version"><${Value}>${info?.version || '—'}</${Value}></${Row}>
+    <${Row} title="Version" sub=${info?.upstream && info.upstream !== info.version ? `mStream Zenelo, based on mStream ${info.upstream}` : null}><${Value}>${info?.version || '—'}</${Value}></${Row}>
     <${Row} title="Signed in as"><${Value}>${info?.user || 'public'}</${Value}></${Row}>
     ${s.admin ? html`<${Row} title="Administration" sub="Users, folders, scanning, transcoding, DLNA, federation">
       <a class="btn btn-outline" href="admin" target="_blank"><${Icon} name="open_in_new" size=${15} />Open admin</a></${Row}>` : null}

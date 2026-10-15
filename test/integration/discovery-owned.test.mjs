@@ -7,7 +7,7 @@
  * Somebody, Later Works; Vosto — Night Drive, Untitled EP), with users so
  * the library scoping is real: dana sees testlib, eli only an empty
  * library of his own, the admin both. Also the boot flag and the refusals:
- * no arm, a batch past the cap, a bad entry, a jukebox session, a paired
+ * no arm, a batch past the cap, a bad entry, a guest link, a paired
  * server's key.
  */
 
@@ -17,6 +17,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { startServer } from '../helpers/server.mjs';
+import { guestToken } from '../helpers/guest.mjs';
 
 const ADMIN = { username: 'admin', password: 'pw-admin' };
 const DANA = { username: 'dana', password: 'pw-dana' };
@@ -146,26 +147,17 @@ describe('discovery owned lookup (POST /api/v1/discovery/owned)', () => {
     assert.equal(admin.body.songs[0].by, 'tags');
   });
 
-  test('refusals: no arm, a batch past the cap, a bad entry; a jukebox session; a paired server\'s key', async () => {
+  test('refusals: no arm, a batch past the cap, a bad entry; a guest link; a paired server\'s key', async () => {
     assert.equal((await post(danaToken, OWNED, {})).status, 400, 'at least one arm');
     assert.equal((await post(danaToken, OWNED, { songs: Array.from({ length: 501 }, () => ({ title: 'x' })) })).status, 400, 'past the cap');
     assert.equal((await post(danaToken, OWNED, { albums: [{ artist: 'no album name' }] })).status, 400, 'an album entry names its album');
     assert.equal((await post(danaToken, OWNED, { songs: 'nope' })).status, 400);
-    // A jukebox guest holds the account minus its writes — and the library
-    // is not the guest's to ask about (auth.js buildJukeboxUser).
-    const { default: WebSocket } = await import('ws');
-    const juke = await new Promise((resolve, reject) => {
-      const ws = new WebSocket(`${server.baseUrl.replace(/^http/, 'ws')}/?token=${danaToken}`);
-      ws.on('message', (m) => { const j = JSON.parse(String(m)); if (j.token) { resolve({ ws, token: j.token }); } });
-      ws.on('error', reject);
-    });
-    try {
-      const r = await post(juke.token, OWNED, { artists: [{ name: 'Icarus' }] });
-      assert.equal(r.status, 403, JSON.stringify(r.body));
-      assert.match(r.body.error, /jukebox session/);
-    } finally {
-      juke.ws.close();
-    }
+    // A guest of Play on acts within the account, and the library is not
+    // the guest's to ask about (api/guest.js; the wall keeps it out).
+    const guest = await guestToken(server.baseUrl, danaToken);
+    const r = await post(guest, OWNED, { artists: [{ name: 'Icarus' }] });
+    assert.equal(r.status, 403, JSON.stringify(r.body));
+    assert.match(r.body.error, /guests/);
     // A paired server's key reaches the read allowlist and nothing else.
     const mint = await post(adminToken, '/api/v1/admin/federation/keys', { name: 'peer', vpaths: ['testlib'] });
     assert.equal(mint.status, 200, JSON.stringify(mint.body));

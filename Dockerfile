@@ -29,9 +29,12 @@ ARG REVISION=unknown
 # ca-certificates: the ffmpeg / player downloads are https; xz-utils: the
 # ffmpeg download is a .tar.xz (without it: "tar failed (2): xz: Cannot
 # exec"); tini reaps the child processes mStream spawns (ffmpeg, the
-# sidecars) and forwards signals.
+# sidecars) and forwards signals. libasound2: the server-audio engine
+# (mstream-player) links ALSA at load time — without it it can't even start;
+# libasound2-plugins: its PulseAudio plugin, for a host whose sound is
+# PulseAudio / PipeWire (docker/README.md, "Server speakers").
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends ca-certificates xz-utils tini \
+  && apt-get install -y --no-install-recommends ca-certificates xz-utils tini libasound2 libasound2-plugins \
   && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -50,7 +53,11 @@ LABEL org.opencontainers.image.title="mstream-zenelo" \
       org.opencontainers.image.version="$VERSION" \
       org.opencontainers.image.revision="$REVISION"
 
-ENV NODE_ENV=production
+# Binaries mStream fetches on first use (the server-audio engine, yt-dlp, …)
+# go under $XDG_DATA_HOME/mstream: in /config, so a new container doesn't
+# fetch them again.
+ENV NODE_ENV=production \
+    XDG_DATA_HOME=/config/data
 USER node
 VOLUME /config
 EXPOSE 3000

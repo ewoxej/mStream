@@ -4,11 +4,10 @@ import { app, useStore } from './store.js';
 import { restorePlayerPrefs, toast } from './player.js';
 import * as lib from './library.js';
 import { Sidebar, Queue, PlayerBar } from './shell.js';
-import { MenuLayer, DialogLayer, ToastLayer, Empty, Icon } from './ui.js';
+import { MenuLayer, DialogLayer, ToastLayer, Empty } from './ui.js';
 import { connect as connectDevices } from './devices.js';
 import { DeviceStrip } from './devices-ui.js';
 import { initJobs } from './jobs.js';
-import { serverAudio } from './util.js';
 import { Recent, Albums, Album, Artists, Artist, Tracks, Genres, Genre, Favorites, Search } from './screens/library.js';
 import { Home, CustomizeHome } from './screens/home.js';
 import { Playlists, Playlist } from './screens/playlists.js';
@@ -19,7 +18,7 @@ import { Downloads } from './screens/downloads.js';
 import { Settings } from './screens/settings.js';
 import { SonicPath } from './screens/sonicpath.js';
 import { Discover } from './screens/discover.js';
-import { Jukebox } from './screens/jukebox.js';
+import { Guests } from './screens/guests.js';
 import { Lyrics } from './screens/lyrics.js';
 import { Stats } from './screens/stats.js';
 
@@ -27,7 +26,7 @@ const SCREENS = {
   home: Home, recent: Recent, albums: Albums, album: Album, artists: Artists, artist: Artist,
   tracks: Tracks, genres: Genres, genre: Genre, fav: Favorites, search: Search,
   pl: Playlists, playlist: Playlist, folders: Folders, dj: AutoDJ, viz: Visualizer,
-  dl: Downloads, settings: Settings, sonic: SonicPath, discover: Discover, jukebox: Jukebox,
+  dl: Downloads, settings: Settings, sonic: SonicPath, discover: Discover, guests: Guests,
   lyrics: Lyrics, stats: Stats, customize: CustomizeHome,
 };
 
@@ -47,19 +46,10 @@ function App() {
     ${showQueue ? html`<${Queue} />` : null}
     ${showQueue ? html`<div class="queue-scrim" onClick=${() => app.set({ queueOpen: false })}></div>` : null}
     <${PlayerBar} />
-    ${serverAudio ? html`<${ServerAudioStrip} />` : html`<${DeviceStrip} />`}
+    <${DeviceStrip} />
     <${MenuLayer} />
     <${DialogLayer} />
     <${ToastLayer} />
-  </div>`;
-}
-
-// In place of the devices strip on /server-remote: where the sound is.
-function ServerAudioStrip() {
-  return html`<div class="device-strip">
-    <${Icon} name="speaker" size=${15} />
-    <span>Playing on the <b>server’s speakers</b></span>
-    <a class="strip-btn" href="./"><${Icon} name="computer" size=${14} />Play in this browser</a>
   </div>`;
 }
 
@@ -88,7 +78,7 @@ async function boot() {
   app.set({ features: {
     discover: s.discovery, sonicPath: s.discoveryPath, stats: s.stats >= 2,
     network: s.discoveryP2p, peers: s.federationDiscovery, plugins: ping.discoveryPlugins === true,
-    serverAudio,
+    account: !!s.token,
   } });
   if (ping.transcode) {
     MSTREAMPLAYER.transcodeOptions.serverEnabled = true;
@@ -103,10 +93,15 @@ async function boot() {
 
   MSTREAMAPI.serverInfo().then((info) => {
     s.admin = !!info?.user?.admin;
-    app.set({ server: { name: location.hostname, version: info?.server || '', user: info?.user?.username || '', vpaths: s.vpaths } });
+    // The version shown is the Zenelo fork's (its VERSION file); `upstream`
+    // is the mStream it is based on.
+    app.set({
+      server: { name: location.hostname, version: info?.fork?.version || info?.server || '', upstream: info?.server || '', user: info?.user?.username || '', vpaths: s.vpaths },
+      features: { ...app.get().features, admin: s.admin },
+    });
   }).catch(() => {
     s.admin = false;
-    app.set({ server: { name: location.hostname, version: '', user: '', vpaths: s.vpaths } });
+    app.set({ server: { name: location.hostname, version: '', upstream: '', user: '', vpaths: s.vpaths } });
   });
   // Downloads (torrents) only while a torrent client is set up and this
   // user may add torrents; otherwise the feature is off for them.
@@ -117,7 +112,7 @@ async function boot() {
   lib.loadCounts().catch(() => {});
   lib.loadLikedCount();
   // This tab as a playback device (devices.js); a server without accounts has none.
-  if (s.token && !serverAudio) { connectDevices(); }
+  if (s.token) { connectDevices(); }
   initJobs();
 
   // A share link handed to /?... from the old UI, or a stale hash: land on Home.

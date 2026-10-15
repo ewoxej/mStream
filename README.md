@@ -81,8 +81,8 @@ The demo site does not require you to sign in because mStream is publicly access
 * Transcoding
 * Auto DJ - Automatically queue up songs
 * Lyrics Support - includes being able to search by lyrics
-* Jukebox Mode - Control your browser remotely
-* Local server audio playback - Note, will not work on Docker
+* Guest links - let others control what plays on one of your devices from their phone, no account needed
+* Server speakers - play on the server machine's sound device, picked like any other playback device (in Docker: a Linux host with a sound device, see docker/README.md)
 
 ## Credits
 

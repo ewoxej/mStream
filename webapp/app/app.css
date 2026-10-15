@@ -736,15 +736,24 @@ button.mini-row, button.tile { width: 100%; text-align: left; font: inherit; col
 
 /* ── Jukebox ────────────────────────────────────────────────────────── */
 
-.jb-card { max-width: 760px; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
-.jb-live { display: flex; gap: 22px; align-items: flex-start; }
-.jb-qr { width: 168px; height: 168px; padding: 8px; border-radius: 12px; background: #f4f4ee; flex: none; }
-.jb-qr svg { width: 100%; height: 100%; display: block; }
-.jb-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
-.jb-info .micro { font-size: 9.5px; letter-spacing: .12em; margin-top: 4px; }
-.jb-code { font-family: var(--mono); font-size: 30px; font-weight: 600; letter-spacing: .12em; color: var(--accent); }
-.jb-link { display: flex; align-items: center; gap: 6px; min-width: 0; }
-.jb-link a { font-family: var(--mono); font-size: 12px; color: var(--state); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-card { max-width: 760px; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.gl-field { display: flex; flex-direction: column; gap: 6px; }
+.gl-field .micro { font-size: 9.5px; letter-spacing: .12em; }
+.gl-field select, .gl-field input { height: 38px; padding: 0 12px; border-radius: 9px; background: var(--chip); color: var(--tx); border: 0; box-shadow: inset 0 0 0 1px var(--border); font: inherit; font-size: 13.5px; max-width: 420px; }
+.gl-field .seg { align-self: flex-start; flex-wrap: wrap; }
+.gl-row { border-radius: 10px; box-shadow: inset 0 0 0 1px var(--border); }
+.gl-row.open { background: var(--chip); }
+.gl-head { display: flex; align-items: center; gap: 12px; padding: 10px 10px 10px 12px; cursor: pointer; }
+.gl-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.gl-text span { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-text small { font-size: 12px; color: var(--tx2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-live { display: flex; gap: 22px; align-items: flex-start; padding: 6px 14px 16px; }
+.gl-qr { width: 168px; height: 168px; padding: 8px; border-radius: 12px; background: #f4f4ee; flex: none; }
+.gl-qr svg { width: 100%; height: 100%; display: block; }
+.gl-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.gl-info .micro { font-size: 9.5px; letter-spacing: .12em; margin-top: 4px; }
+.gl-link { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.gl-link a { font-family: var(--mono); font-size: 12px; color: var(--state); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ── Lyrics ─────────────────────────────────────────────────────────── */
 
@@ -936,7 +945,7 @@ html.pip-html, html.pip-html body { height: 100%; overflow: hidden; background: 
 @media (max-width: 760px) {
   .f-row { grid-template-columns: 34px minmax(0, 1fr) 32px; }
   .f-row > :nth-child(3), .f-row > :nth-child(4) { display: none; }
-  .jb-live { flex-direction: column; }
+  .gl-live { flex-direction: column; }
   .sp-actions .btn { padding: 0 10px; }
 
   /* Player bar: cover + title, transport, the queue button. */

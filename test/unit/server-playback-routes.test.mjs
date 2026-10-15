@@ -27,7 +27,7 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { proxyRoute, statusForClient, queueForClient, pathForEngine, UNAVAILABLE_PAGE } from '../../src/api/server-playback.js';
+import { proxyRoute, statusForClient, queueForClient, pathForEngine } from '../../src/api/server-playback.js';
 import WebError from '../../src/util/web-error.js';
 
 // Just enough of an Express response to record what a handler answered.
@@ -187,19 +187,6 @@ describe('queueForClient', () => {
     assert.deepEqual(queueForClient({ raw: 'not json' }, toVpath), { raw: 'not json' });
     assert.deepEqual(queueForClient({ queue: 'nope' }, toVpath), { queue: 'nope' });
     assert.equal(queueForClient(null, toVpath), null);
-  });
-});
-
-describe('the unavailable page', () => {
-  test('only gives advice the lifecycle can honour', () => {
-    // The proxy only talks to an engine the server spawned itself, so a
-    // hand-started binary is never reachable — the old copy said otherwise.
-    assert.ok(!/start the mstream-player binary/i.test(UNAVAILABLE_PAGE));
-    assert.match(UNAVAILABLE_PAGE, /autoBootServerAudio/);
-    assert.match(UNAVAILABLE_PAGE, /server log/, 'when the switch is already on, the log is where the reason is');
-    // The engine is the only backend: installing a player is no longer a way out.
-    assert.ok(!/\b(mpv|MPD|VLC|MPlayer)\b/.test(UNAVAILABLE_PAGE));
-    assert.match(UNAVAILABLE_PAGE, /href="\/server-remote">Retry</);
   });
 });
 

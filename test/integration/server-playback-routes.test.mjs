@@ -1,5 +1,5 @@
 /**
- * /api/v1/server-playback/* and /server-remote through a real server.
+ * /api/v1/server-playback/* through a real server.
  *
  * Server audio is off by default, and off means nothing is running — so this
  * pins what the route layer owes a caller when there is no engine, which is
@@ -11,7 +11,7 @@
  *     library the caller lacks is a 404, even with no backend to reach. The
  *     old handlers decided 503-vs-400 by grepping the error text, which also
  *     flattened vpath's deliberate 404 to a 400.
- *   - /server-remote serves the unavailable page, with advice that is true
+ *   - /server-remote (the old page) leads to the player
  *
  * The engine-up half (path translation, playback, the UI) is covered by the
  * unit tests with a fake proxy and by the real-engine smoke; it cannot run
@@ -82,16 +82,12 @@ describe('server-playback routes', () => {
       assert.equal(r.status, 403, `${method} ${route} must be gated`);
       assert.deepEqual(r.json, { error: 'Server audio access disabled for this user' });
     }
-    const page = await call('GET', '/server-remote', { token: tokens.pleb });
-    assert.equal(page.status, 403);
   });
 
   test('the gate: the flag lets a non-admin through, and so does the admin role', async () => {
     for (const who of ['dj', 'boss']) {
       const api = await call('GET', '/api/v1/server-playback/status', { token: tokens[who] });
       assert.notEqual(api.status, 403, `${who} reaches the API`);
-      const page = await call('GET', '/server-remote', { token: tokens[who] });
-      assert.notEqual(page.status, 403, `${who} reaches the page`);
     }
   });
 
@@ -110,12 +106,10 @@ describe('server-playback routes', () => {
     }
   });
 
-  test('no engine: /server-remote is the unavailable page, and its advice is true', async () => {
-    const page = await call('GET', '/server-remote', { token: tokens.dj });
-    assert.equal(page.status, 503);
-    assert.match(page.text, /<h1>Server Audio Unavailable<\/h1>/);
-    assert.match(page.text, /autoBootServerAudio/);
-    assert.ok(!/start the mstream-player binary/i.test(page.text), 'a hand-started engine is never reachable');
+  test('/server-remote, the old page, leads to the player (the speakers are a device there)', async () => {
+    const r = await fetch(`${srv.baseUrl}/server-remote`, { headers: { 'x-access-token': tokens.dj }, redirect: 'manual' });
+    assert.equal(r.status, 301);
+    assert.equal(r.headers.get('location'), '/');
   });
 
   test('input is judged before the backend: a malformed body is a 400', async () => {

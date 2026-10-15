@@ -10,7 +10,7 @@
 // Removing is the first place the API deletes music, so the rule is narrow:
 // the account that asked for the download (with the upload right the
 // download needed — taking a file out is the same road back), or an admin.
-// Anyone else gets the same 404 as an unknown id; a jukebox session none of
+// Anyone else gets the same 404 as an unknown id; a guest of Play on none of
 // it. The file goes only when it is still the download: its hash is checked
 // against the record's before the unlink, so a file that replaced it at the
 // same path (the user's own rip copied over it, an upload, a library
@@ -26,7 +26,7 @@ import winston from 'winston';
 import * as db from '../db/manager.js';
 import * as downloadsDb from '../db/plugin-downloads.js';
 import * as vpathUtil from '../util/vpath.js';
-import { checkUploadRight, refuseJukebox } from './discovery-plugin-jobs.js';
+import { checkUploadRight, refuseGuest } from './discovery-plugin-jobs.js';
 import { joiValidate } from '../util/validation.js';
 import WebError from '../util/web-error.js';
 
@@ -52,7 +52,7 @@ function withNames(rows, everyone) {
 }
 
 export function setup(mstream) {
-  mstream.use('/api/v1/discovery/downloads', refuseJukebox);
+  mstream.use('/api/v1/discovery/downloads', refuseGuest);
 
   mstream.get('/api/v1/discovery/downloads', (req, res) => {
     const schema = Joi.object({

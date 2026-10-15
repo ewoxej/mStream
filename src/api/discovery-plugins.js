@@ -16,7 +16,7 @@
 // it is a search on this server's behalf — for the youtube plug-in a yt-dlp
 // process per call — so it is not for a caller the job would refuse, nor
 // while the plug-in's probe says it cannot run. No route here is for a
-// jukebox session (see discovery-plugin-jobs.js refuseJukebox).
+// guest of Play on (see discovery-plugin-jobs.js refuseGuest).
 //
 // Settings are per user (user_settings, V74, namespace
 // discovery-plugin:<name>): a plug-in declares what may be stored
@@ -32,7 +32,7 @@ import Joi from 'joi';
 import winston from 'winston';
 import * as plugins from '../discovery-plugins/index.js';
 import * as settingsDb from '../db/user-settings.js';
-import { jobsAllowed, checkJobsAccess, checkUploadRight, refuseJukebox } from './discovery-plugin-jobs.js';
+import { jobsAllowed, checkJobsAccess, checkUploadRight, refuseGuest } from './discovery-plugin-jobs.js';
 import { joiValidate } from '../util/validation.js';
 import WebError from '../util/web-error.js';
 
@@ -75,7 +75,7 @@ async function settingsView(plugin, req, userId) {
 }
 
 export function setup(mstream) {
-  mstream.use('/api/v1/discovery/plugins', refuseJukebox);
+  mstream.use('/api/v1/discovery/plugins', refuseGuest);
 
   mstream.get('/api/v1/discovery/plugins', (req, res) => {
     // `jobs.allowed` is the acquisition gate for THIS caller: a client hides

@@ -30,4 +30,11 @@ JSON
   echo "mstream-zenelo: wrote a first config to $CONFIG (library: /music)"
 fi
 
+# Server audio through the host's PulseAudio / PipeWire (its socket mounted,
+# PULSE_SERVER pointing at it): ALSA's default device is the pulse plugin.
+# A ~/.asoundrc of the user's own (mounted) is left alone.
+if [ -n "$PULSE_SERVER" ] && [ ! -e "$HOME/.asoundrc" ]; then
+  printf 'pcm.!default { type pulse }\nctl.!default { type pulse }\n' > "$HOME/.asoundrc" 2>/dev/null || true
+fi
+
 exec node /app/cli-boot-wrapper.js -j "$CONFIG" "$@"

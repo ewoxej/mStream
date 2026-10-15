@@ -37,7 +37,7 @@ import * as discoveryRetention from './discovery-plugins/retention.js';
 import * as discoveryCollectionApi from './api/discovery-collection.js';
 import * as discoveryDownloadsApi from './api/discovery-downloads.js';
 import * as discoveryOwnedApi from './api/discovery-owned.js';
-import * as remoteApi from './api/remote.js';
+import * as guestApi from './api/guest.js';
 import * as devicesApi from './api/devices.js';
 import * as sharedApi from './api/shared.js';
 import * as scrobblerApi from './api/scrobbler.js';
@@ -386,7 +386,7 @@ export async function serveIt(configFile, { relisten = null } = {}) {
   // update-status poll (GET /api/v1/admin/update, every 5s while the About
   // page is open): the surface that DISPLAYS an update must never be the
   // reason it cannot apply. An idle player tab makes no periodic requests
-  // (the jukebox and server-audio polls only run while those modes are in
+  // (the server-audio polls only run while that mode is in
   // use — which genuinely is activity), so an open-but-abandoned tab goes
   // quiet on its own.
   mstream.use((req, res, next) => {
@@ -561,7 +561,6 @@ export async function serveIt(configFile, { relisten = null } = {}) {
   }));
 
   // Public APIs
-  remoteApi.setupBeforeAuth(mstream, server);
   await sharedApi.setupBeforeSecurity(mstream);
   // DLNA routes must be before the auth wall — only needed in same-port mode
   if (config.program.dlna.mode === 'same-port') { dlnaApi.setup(mstream); }
@@ -594,6 +593,7 @@ export async function serveIt(configFile, { relisten = null } = {}) {
   dbApi.setup(mstream);
   syncApi.setup(mstream);
   statsApi.setup(mstream);
+  guestApi.setup(mstream);
   devicesApi.setup(mstream);
   startRetentionSweep();
   searchApi.setup(mstream);
@@ -617,7 +617,6 @@ export async function serveIt(configFile, { relisten = null } = {}) {
     msSinceActivity: () => Date.now() - lastUserRequestAt,
   });
   scrobblerApi.setup(mstream);
-  remoteApi.setupAfterAuth(mstream, server);
   sharedApi.setupAfterSecurity(mstream);
   federationApi.setup(mstream);
   federationDiscoveryApi.setup(mstream);
@@ -641,6 +640,7 @@ export async function serveIt(configFile, { relisten = null } = {}) {
   // and on reboot().
   backupManager.init();
   serverPlaybackApi.setup(mstream);
+  serverPlaybackApi.startServerDevice();
 
   // album art folder
   mstream.get('/album-art/:file', albumArtApi.serveAlbumArtFile);
@@ -1068,13 +1068,8 @@ export function reboot() {
     // no second chance: the secondary server stayed dead until the next
     // restart.
     mdns.stop();
+    serverPlaybackApi.stopServerDevice();
     serverAudio.stop().catch(() => {});
-    // Tear down the /remote WebSocket server: it detaches its upgrade/error
-    // listeners from the HTTP server (serveIt attaches a fresh one) and closes
-    // its clients — an open WS client would otherwise keep a recycled listener
-    // from ever closing, leaving the user with "server stopped but never
-    // rebooted".
-    remoteApi.stop();
     // Pause the backup scheduler's timers (intervals + one-shot boot
     // ticks). serveIt below re-runs backupManager.init(), which re-arms
     // them — without this, each reboot left the old boot timeouts

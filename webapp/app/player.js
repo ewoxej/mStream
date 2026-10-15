@@ -3,7 +3,7 @@
 // own objects; this module polls a cheap signature of them and publishes a
 // snapshot store the player bar and queue subscribe to.
 import { createStore, app } from './store.js';
-import { server, trackTitle, serverAudio } from './util.js';
+import { server, trackTitle } from './util.js';
 
 const P = () => MSTREAMPLAYER;
 
@@ -113,7 +113,7 @@ export function playTracks(tracks, start = 0) {
   const dj = p.playerStats.autoDJ;
   // Shuffled: load the list in its own order, start the chosen song, then
   // shuffle the rest behind it (and "off" comes back to the list's order).
-  const shuffled = p.playerStats.shuffle === true && !serverAudio;
+  const shuffled = p.playerStats.shuffle === true;
   if (shuffled) { p.setShuffle(false); }
   // clearPlaylist would bootstrap two Auto DJ picks into the empty queue.
   if (dj) { p.playerStats.autoDJ = false; }
@@ -202,7 +202,6 @@ export function removeAt(i) { P().removeSongAtPosition(i); bump(); }
 export function moveItem(from, to) {
   // The server's engine can't reorder its queue: a reorder here would leave
   // the two lists disagreeing about every index.
-  if (serverAudio) { toast('The server’s queue can’t be reordered'); return; }
   const list = P().playlist;
   if (from === to || from < 0 || from >= list.length) { return; }
   const [item] = list.splice(from, 1);
@@ -245,7 +244,7 @@ export const cycleRepeat = () => {
   const p = P();
   const st = p.playerStats;
   // The server's speakers have no Auto DJ: their repeat cycles off → all → one.
-  if (serverAudio) { p.toggleRepeat(); } else if (st.autoDJ) { p.toggleAutoDJ(); } else if (st.shouldLoopOne) { p.toggleAutoDJ(); } else { p.toggleRepeat(); }
+  if (st.autoDJ) { p.toggleAutoDJ(); } else if (st.shouldLoopOne) { p.toggleAutoDJ(); } else { p.toggleRepeat(); }
   publish();
 };
 
@@ -349,7 +348,7 @@ export function restorePlayerPrefs() {
   const p = P();
   // The server's speakers keep the room's volume: this browser's must not
   // overwrite it just because the page opened.
-  if (Number.isFinite(saved.volume) && !serverAudio) { p.changeVolume(saved.volume); if (saved.volume > 0) { lastVolume = saved.volume; } }
+  if (Number.isFinite(saved.volume)) { p.changeVolume(saved.volume); if (saved.volume > 0) { lastVolume = saved.volume; } }
   if (typeof saved.replayGain === 'boolean') { p.setReplayGainActive(saved.replayGain); }
   if (Number.isFinite(saved.preGain)) { p.setReplayGainPreGainDb(saved.preGain); }
   if (saved.transcode) { p.transcodeOptions.frontendEnabled = true; }

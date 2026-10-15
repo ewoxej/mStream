@@ -21,8 +21,8 @@
 // connection in the hub); `ack` = the cursor of the last answer it got, so
 // an answer lost on the way is sent again. No poll for POLL_GONE_MS = gone.
 //
-// Server-Sent Events rather than a WebSocket: plain HTTP (no upgrade next to
-// the Jukebox socket, fine through reverse proxies), and the compression
+// Server-Sent Events rather than a WebSocket: plain HTTP (fine through
+// reverse proxies), and the compression
 // middleware already leaves text/event-stream alone. The token rides the
 // query string, as for media URLs (EventSource can't set headers).
 
@@ -31,7 +31,8 @@ import { joiValidate } from '../util/validation.js';
 import WebError from '../util/web-error.js';
 import { createHub, COMMANDS, MAX_QUEUE } from '../state/devices.js';
 
-const hub = createHub();
+// Shared with api/guest.js: guests control a device through it.
+export const hub = createHub();
 const HEARTBEAT_MS = 25000;
 const POLL_WAIT_MS = 25000;
 const POLL_GONE_MS = 45000;
@@ -39,7 +40,7 @@ const MAILBOX_MAX = 2000;
 const mailboxes = new Map();   // user \0 id \0 session → mailbox
 
 function userKey(req) {
-  if (!req.user?.id || req.user.federation) { throw new WebError('Forbidden', 403); }
+  if (!req.user?.id || req.user.federation || req.user.guest) { throw new WebError('Forbidden', 403); }
   return String(req.user.id);
 }
 

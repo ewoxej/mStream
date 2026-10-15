@@ -15,19 +15,16 @@
 
   <!-- The playback engine and its helpers are plain (non-module) scripts
        that define globals: MSTREAMAPI, AUTODJ, MSTREAMPLAYSESSION,
-       MSTREAMPLAYER, JUKEBOX, DISCOVERJOBS (and qrcodegen, STATSVIEW for the
+       MSTREAMPLAYER, DISCOVERJOBS (and qrcodegen, STATSVIEW for the
        Stats charts).
        app/shims.js provides the globals the engine expects from a UI
-       (iziToast, VUEPLAYERCORE); app/viz.js provides VIZ. /server-remote
-       serves this page with mstream.player.js swapped for
-       mstream.server-audio.js (src/api/server-playback.js). -->
+       (iziToast, VUEPLAYERCORE); app/viz.js provides VIZ. -->
   <script src="app/shims.js"></script>
   <script src="assets/js/mstream.api.js"></script>
   <script src="assets/js/auto-dj.js"></script>
   <script src="assets/js/discover-jobs.js"></script>
   <script src="assets/js/mstream.play-session.js"></script>
   <script src="assets/js/mstream.player.js"></script>
-  <script src="assets/js/mstream.jukebox.js"></script>
   <script src="assets/js/lib/qr.js"></script>
   <script src="stats/stats-view.js"></script>
   <script src="app/viz.js"></script>

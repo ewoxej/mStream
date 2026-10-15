@@ -198,6 +198,11 @@ export function MenuLayer() {
 export function prompt({ title, label, value = '', okLabel = 'Save', note }) {
   return new Promise((resolve) => app.set({ dialog: { kind: 'prompt', title, label, value, okLabel, note, resolve } }));
 }
+// Log out, after asking (the sidebar's Log out, Settings → Server).
+export async function logOut() {
+  if (await confirm({ title: 'Log out of mStream?', text: 'You will need to sign in again to listen.', okLabel: 'Log out' })) { MSTREAMAPI.logout(); }
+}
+
 export function confirm({ title, text, okLabel = 'Delete', danger = true }) {
   return new Promise((resolve) => app.set({ dialog: { kind: 'confirm', title, text, okLabel, danger, resolve } }));
 }

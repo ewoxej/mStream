@@ -18,6 +18,7 @@
 import { describe, before, after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { startServer } from '../helpers/server.mjs';
+import { guestToken } from '../helpers/guest.mjs';
 
 const ADMIN = { username: 'admin', password: 'pw-admin' };
 const USER = { username: 'dana', password: 'pw-dana' };
@@ -257,38 +258,29 @@ describe('discovery plug-in jobs API', () => {
     assert.equal((await post(userToken, '/api/v1/discovery/plugins/noop-acquire/jobs', {})).status, 400);
   });
 
-  test('a jukebox session token reaches none of it: the account with its writes off is not the account', async () => {
-    // A remote-control guest holds the owner's account minus every write
-    // (auth.js buildJukeboxUser). Every discovery plug-in route acts on the
-    // account itself — a job writes a file into its library, a removal
-    // deletes one — so the guest is refused at the door.
-    const { default: WebSocket } = await import('ws');
-    const juke = await new Promise((resolve, reject) => {
-      const ws = new WebSocket(`${server.baseUrl.replace(/^http/, 'ws')}/?token=${userToken}`);
-      ws.on('message', (m) => { const j = JSON.parse(String(m)); if (j.token) { resolve({ ws, token: j.token }); } });
-      ws.on('error', reject);
-    });
-    try {
-      const refused = async (method, route, body) => {
-        const r = await fetch(`${server.baseUrl}${route}`, { method, headers: hdr(juke.token), body: body === undefined ? undefined : JSON.stringify(body) });
-        assert.equal(r.status, 403, `${method} ${route} answered ${r.status}`);
-        assert.match((await r.json()).error, /jukebox session/);
-      };
-      await refused('POST', '/api/v1/discovery/plugins/noop-acquire/jobs', { recommendation: rec('Guest Pick') });
-      await refused('GET', '/api/v1/discovery/plugin-jobs');
-      await refused('POST', '/api/v1/discovery/plugin-jobs/clear', {});
-      await refused('POST', '/api/v1/discovery/plugin-jobs/lookup', { recommendation: rec('Guest Pick') });
-      await refused('GET', '/api/v1/discovery/plugins');
-      await refused('POST', '/api/v1/discovery/plugins/noop-acquire/resolve', { recommendation: rec('Guest Pick') });
-      await refused('GET', '/api/v1/discovery/downloads');
-      await refused('DELETE', '/api/v1/discovery/downloads/1');
-      await refused('GET', '/api/v1/discovery/collection/destination');
-      await refused('PUT', '/api/v1/discovery/collection/destination', { destination: null });
-      const jobs = await get(userToken, '/api/v1/discovery/plugin-jobs');
-      assert.ok(!jobs.body.jobs.some((j) => j.recommendation && j.recommendation.title === 'Guest Pick'), 'nothing was queued in the owner\'s name');
-    } finally {
-      juke.ws.close();
-    }
+  test('a guest of Play on reaches none of it: the account with its writes off is not the account', async () => {
+    // A guest link's user is the owner's account minus every write
+    // (api/guest.js). Every discovery plug-in route acts on the account
+    // itself — a job writes a file into its library, a removal deletes one —
+    // so the guest is refused at the door.
+    const guest = await guestToken(server.baseUrl, userToken);
+    const refused = async (method, route, body) => {
+      const r = await fetch(`${server.baseUrl}${route}`, { method, headers: hdr(guest), body: body === undefined ? undefined : JSON.stringify(body) });
+      assert.equal(r.status, 403, `${method} ${route} answered ${r.status}`);
+      assert.match((await r.json()).error, /guests/);
+    };
+    await refused('POST', '/api/v1/discovery/plugins/noop-acquire/jobs', { recommendation: rec('Guest Pick') });
+    await refused('GET', '/api/v1/discovery/plugin-jobs');
+    await refused('POST', '/api/v1/discovery/plugin-jobs/clear', {});
+    await refused('POST', '/api/v1/discovery/plugin-jobs/lookup', { recommendation: rec('Guest Pick') });
+    await refused('GET', '/api/v1/discovery/plugins');
+    await refused('POST', '/api/v1/discovery/plugins/noop-acquire/resolve', { recommendation: rec('Guest Pick') });
+    await refused('GET', '/api/v1/discovery/downloads');
+    await refused('DELETE', '/api/v1/discovery/downloads/1');
+    await refused('GET', '/api/v1/discovery/collection/destination');
+    await refused('PUT', '/api/v1/discovery/collection/destination', { destination: null });
+    const jobs = await get(userToken, '/api/v1/discovery/plugin-jobs');
+    assert.ok(!jobs.body.jobs.some((j) => j.recommendation && j.recommendation.title === 'Guest Pick'), 'nothing was queued in the owner\'s name');
   });
 
   test('one account\'s share of the queue: past maxQueuedPerUser the start answers 429, live', async () => {
