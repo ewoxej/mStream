@@ -1,7 +1,8 @@
 // Library reads, cached for the session. Screens call these; a scan or a
 // playlist edit invalidates the relevant cache.
-import { app } from './store.js';
+import { app, createStore } from './store.js';
 import { server } from './util.js';
+import { idbGet, idbSet, idbDelete } from './idb.js';
 
 const cache = new Map();
 function cached(key, fn) {
@@ -42,17 +43,76 @@ export const liked = () => cached('liked', () => MSTREAMAPI.getRated());
 export const recentlyPlayed = (limit = 200) => cached(`recent:${limit}`, () => MSTREAMAPI.getRecentlyPlayed(limit));
 export const recentlyAdded = (limit = 60) => cached(`added:${limit}`, () => MSTREAMAPI.getRecentlyAdded(limit));
 
-// Every track, paged by the server (POST /api/v1/db/songs).
+// Every track, paged by the server (POST /api/v1/db/songs, ≤ 1000 a page):
+// the first page says how many, the rest come four at a time.
 export const songsPage = (opts) => post('api/v1/db/songs', opts);
-export const allSongs = () => cached('songs:all', async () => {
-  const out = [];
-  let offset = 0;
-  for (;;) {
-    const page = await songsPage({ sort: 'title', dir: 'asc', offset, limit: 1000 });
-    out.push(...page.songs);
-    offset += page.songs.length;
-    if (!page.songs.length || offset >= page.total) { return out; }
+const PAGE = 1000;
+async function fetchAllSongs() {
+  const first = await songsPage({ sort: 'title', dir: 'asc', offset: 0, limit: PAGE });
+  const offsets = [];
+  for (let o = first.songs.length; first.songs.length && o < first.total; o += PAGE) { offsets.push(o); }
+  const pages = [];
+  for (let i = 0; i < offsets.length; i += 4) {
+    pages.push(...await Promise.all(offsets.slice(i, i + 4).map((offset) => songsPage({ sort: 'title', dir: 'asc', offset, limit: PAGE }))));
   }
+  return [first, ...pages].flatMap((p) => p.songs);
+}
+
+// The library's revision (the sync manifest's: count, last id, last change,
+// art): the same as `known` → 304, nothing sent.
+async function libraryRevision(known) {
+  const s = server();
+  const res = await fetch(s.host + 'api/v1/sync/manifest', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-access-token': s.token, ...(known ? { 'If-None-Match': `"${known}"` } : {}) },
+    body: JSON.stringify({ limit: 1 }),
+  });
+  if (res.status === 304) { return known; }
+  if (!res.ok) { throw new Error(`revision ${res.status}`); }
+  return (await res.json()).revision;
+}
+
+// The list is kept in IndexedDB, per server and account: shown at once on
+// the next visit, then checked against the library's revision and fetched
+// again only when the library changed (`songsState.rev` tells the screen).
+export const songsState = createStore({ rev: 0, refreshing: false });
+function songsKey() {
+  const s = server();
+  let user = '';
+  try { user = JSON.parse(atob(s.token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).username || ''; } catch (_) { /* no login */ }
+  return `songs|${s.host || location.origin}|${user}`;
+}
+
+async function revalidateSongs(key, known) {
+  songsState.set({ refreshing: true });
+  try {
+    const revision = await libraryRevision(known);
+    if (revision === known) { return; }
+    const songs = await fetchAllSongs();
+    await idbSet(key, { revision, songs, savedAt: Date.now() });
+    cache.set('songs:all', Promise.resolve(songs));
+    songsState.set({ rev: songsState.get().rev + 1 });
+  } catch (_) {
+    // Offline or the server's busy: the kept list stays.
+  } finally {
+    songsState.set({ refreshing: false });
+  }
+}
+
+/** Drops the kept track list of this account (log out). */
+export const forgetKept = () => idbDelete(songsKey());
+
+export const allSongs = () => cached('songs:all', async () => {
+  const key = songsKey();
+  const kept = await idbGet(key);
+  if (Array.isArray(kept?.songs)) {
+    revalidateSongs(key, kept.revision);
+    return kept.songs;
+  }
+  const revision = await libraryRevision().catch(() => null);
+  const songs = await fetchAllSongs();
+  if (revision) { idbSet(key, { revision, songs, savedAt: Date.now() }); }
+  return songs;
 });
 
 export const search = (q) => MSTREAMAPI.search({ search: q });

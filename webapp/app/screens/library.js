@@ -224,7 +224,9 @@ export function Artist({ args }) {
 export function Tracks() {
   const [q, setQ] = useState('');
   const sort = useSort('tracks');
-  const state = useAsync(() => lib.allSongs(), []);
+  // The kept list shows at once; a newer one (the library changed) replaces it.
+  const rev = useStore(lib.songsState, (x) => x.rev);
+  const state = useAsync(() => lib.allSongs(), [rev]);
   const filtered = useMemo(() => {
     const tracks = state.data || [];
     if (!q) { return tracks; }

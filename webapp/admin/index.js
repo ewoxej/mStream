@@ -7680,17 +7680,23 @@ const discoveryView = Vue.component('discovery-view', {
                   post-scan analysis that builds the embeddings) if it isn't already on. You can
                   disable the network here at any time; collected data stays local until you
                   re-enable it.</p>
-                  <p v-if="discoveryP2p.status && discoveryP2p.status.binaryFound === false" style="color: var(--z-danger);">
+                  <p v-if="discoveryP2p.status && discoveryP2p.status.binaryFound === false && !discoveryP2p.status.binaryFetchable" style="color: var(--z-danger);">
                     The p2p-sidecar binary was not found for this platform — the network is unavailable.
                   </p>
-                  <a v-else v-on:click="enableP2p()" :class="{disabled: p2pToggling}" class="waves-effect waves-light btn green">
+                  <p v-if="discoveryP2p.status && discoveryP2p.status.binaryFound === false && discoveryP2p.status.binaryFetchable">
+                    The network's helper (p2p-sidecar, ~8 MB) is downloaded on enable.
+                  </p>
+                  <a v-if="!(discoveryP2p.status && discoveryP2p.status.binaryFound === false && !discoveryP2p.status.binaryFetchable)" v-on:click="enableP2p()" :class="{disabled: p2pToggling}" class="waves-effect waves-light btn green">
                     {{ p2pToggling ? 'Enabling…' : 'Enable Discovery Network' }}
                   </a>
                   <div v-if="p2pToggling" class="progress" style="max-width: 480px; margin: 10px 0 4px 0;"><div class="indeterminate"></div></div>
                 </div>
                 <div v-else>
-                  <p v-if="!discoveryP2p.status.binaryFound" style="color: var(--z-danger);">
+                  <p v-if="!discoveryP2p.status.binaryFound && !discoveryP2p.status.binaryFetchable" style="color: var(--z-danger);">
                     The p2p-sidecar binary was not found for this platform — the network is unavailable.
+                  </p>
+                  <p v-else-if="!discoveryP2p.status.binaryFound && !discoveryP2p.status.running" style="color: var(--z-text-2);">
+                    The network's helper (p2p-sidecar) is downloaded when it starts — if it doesn't start, the server log says why.
                   </p>
                   <div style="border: 1px solid var(--z-line); border-radius: 2px; padding: 16px 20px; margin-bottom: 14px;">
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap;">

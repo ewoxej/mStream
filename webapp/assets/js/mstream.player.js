@@ -1507,9 +1507,20 @@ const MSTREAMPLAYER = (() => {
     return url;
   }
 
+  // The stream URL a song plays from: a copy fetched ahead (app/prefetch.js
+  // sets `cachedUrl`: stream URL → blob URL, or null) when there is one.
+  mstreamModule.cachedUrl = null;
+  mstreamModule.streamUrl = (song) => buildStreamUrl(song, 0);
+  function sourceFor(song) {
+    const url = buildStreamUrl(song, 0);
+    return (mstreamModule.cachedUrl && mstreamModule.cachedUrl(url)) || url;
+  }
+  // The URLs the two audio elements hold (a fetched copy they hold is in use).
+  mstreamModule.urlsInUse = () => [playerA.playerObject && playerA.playerObject.src, playerB.playerObject && playerB.playerObject.src].filter(Boolean);
+
   function setMedia(song, player, play) {
     player.seekOffset = 0; // a fresh song starts at the beginning
-    player.playerObject.src = buildStreamUrl(song, 0);
+    player.playerObject.src = sourceFor(song);
     player.songObject = song;
     player.playerObject.load();
     player.playerObject.playbackRate = mstreamModule.playerStats.playbackRate;
@@ -1543,7 +1554,9 @@ const MSTREAMPLAYER = (() => {
     if (!(targetSec >= 0)) { targetSec = 0; }
     if (Number.isFinite(dur) && dur > 0 && targetSec > dur) { targetSec = dur; }
 
-    if (isTranscoding()) {
+    // A transcode is re-requested from the offset — unless it is a copy
+    // fetched whole, which seeks like a file.
+    if (isTranscoding() && !String(lPlayer.playerObject.src).startsWith('blob:')) {
       transcodeSeek(targetSec);
     } else {
       lPlayer.seekOffset = 0;
@@ -1666,7 +1679,9 @@ const MSTREAMPLAYER = (() => {
     recacheNext();
   }
 
-  // The song after the current one changed: preload that one instead.
+  // The song after the current one changed: preload that one instead. Also
+  // called when the next song's copy has been fetched (app/prefetch.js).
+  mstreamModule.recacheNext = () => recacheNext();
   function recacheNext() {
     clearTimeout(cacheTimer);
     cacheTimer = undefined;

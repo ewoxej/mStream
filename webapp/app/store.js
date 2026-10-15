@@ -81,6 +81,8 @@ export const app = createStore({
   homeFolder: typeof prefs.homeFolder === 'string' ? prefs.homeFolder : '',
   // Sidebar items per group, in order, with on / off (nav.js); null = default.
   sidebar: prefs.sidebar && typeof prefs.sidebar === 'object' ? prefs.sidebar : null,
+  // Tracks of the queue fetched whole ahead of playing (prefetch.js), 0 = off.
+  prefetchAhead: Number.isInteger(prefs.prefetchAhead) ? prefs.prefetchAhead : 2,
   // Library facts filled in after boot (server/ping + counts).
   server: null,
   // What the server offers (its ping): Discover, Sonic Path, Stats, …
@@ -108,6 +110,7 @@ export function savePrefs() {
     localStorage.setItem(LS_KEY, JSON.stringify({
       queueOpen: wideQueueOpen, albumView: s.albumView, artistView: s.artistView, sorts: s.sorts,
       trackCols: s.trackCols, home: s.home, homeFolder: s.homeFolder, sidebar: s.sidebar,
+      prefetchAhead: s.prefetchAhead,
     }));
   } catch (_) { /* private mode */ }
 }

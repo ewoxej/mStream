@@ -4,8 +4,11 @@
 name: Node.js Package
 
 on:
-  release:
-    types: [published]
+  # Zenelo fork: upstream mStream's pipeline, run by hand only. Its automatic
+  # triggers (pushes, PRs, releases, schedules) published docs / binaries /
+  # packages for upstream and committed to master; the fork's own builds are
+  # docker.yml and docker-release.yml.
+  workflow_dispatch:
 
 jobs:
   publish-npm:

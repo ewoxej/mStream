@@ -5,17 +5,16 @@ name: Build Rust Parser Binaries (musl)
 # Uses cross-rs/cross for all targets — same pattern as build-rust-parser.yml.
 
 on:
+  # Zenelo fork: upstream mStream's pipeline, run by hand only. Its automatic
+  # triggers (pushes, PRs, releases, schedules) published docs / binaries /
+  # packages for upstream and committed to master; the fork's own builds are
+  # docker.yml and docker-release.yml.
   workflow_dispatch:
     inputs:
       dry_run:
         description: 'Build + self-test only; do not commit the binaries'
         type: boolean
         default: false
-  push:
-    branches: [master]
-    paths:
-      - 'rust-parser/**'
-      - '.github/workflows/build-rust-parser-musl.yml'
 
 # Serialize runs of THIS workflow per ref (see build-rust-parser.yml — same
 # rationale; sibling families keep their own groups on purpose).

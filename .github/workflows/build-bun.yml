@@ -6,40 +6,10 @@ name: Build Bun Server
 # builds on an OS runner; exec bits for committed sidecars are set by the bundler
 # (scripts/build-bun.mjs), not relied on from the runner's checkout mode.
 on:
-  push:
-    tags:
-      - 'v*'
-  pull_request:
-    paths:
-      - 'src/**'
-      - 'webapp/**'
-      - 'bin/**'
-      - 'cli-boot-wrapper.js'
-      - 'scripts/build-bun.mjs'
-      # Imported by build-bun.mjs on EVERY target (a broken stamper breaks
-      # bundling everywhere) / the win-x64 VersionInfo gate — a change to
-      # either must run the legs before merge, not first on the release tag.
-      - 'scripts/win-versioninfo.mjs'
-      - 'scripts/check-win-versioninfo.ps1'
-      # A lockfile-only dependency refresh changes what `npm ci` + `bun build
-      # --compile` embed in the shipped binaries just as much as package.json.
-      - 'package.json'
-      - 'package-lock.json'
-      - '.github/workflows/build-bun.yml'
-      # Launcher source changes must run the integrated bundle smokes BEFORE
-      # merge (the launcher step below builds them fresh for such PRs) — the
-      # binary-commit workflow's own gate is only compile + --autostart=status.
-      - 'rust-launcher/**'
-      # build/ carries bundle inputs the legs consume directly — icons the
-      # bundler stages and mac-entitlements-server.plist the sign step feeds
-      # to codesign. An entitlements-only PR without this filter would merge
-      # with zero CI and first run on the release tag.
-      - 'build/**'
-      # The install scripts + manifest generator have their own PR-time
-      # contract check (installer-contract job below).
-      - 'install.sh'
-      - 'install.ps1'
-      - 'scripts/release-manifest.sh'
+  # Zenelo fork: upstream mStream's pipeline, run by hand only. Its automatic
+  # triggers (pushes, PRs, releases, schedules) published docs / binaries /
+  # packages for upstream and committed to master; the fork's own builds are
+  # docker.yml and docker-release.yml.
   workflow_dispatch:
     inputs:
       notarize:

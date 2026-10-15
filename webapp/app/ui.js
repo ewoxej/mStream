@@ -200,7 +200,10 @@ export function prompt({ title, label, value = '', okLabel = 'Save', note }) {
 }
 // Log out, after asking (the sidebar's Log out, Settings → Server).
 export async function logOut() {
-  if (await confirm({ title: 'Log out of mStream?', text: 'You will need to sign in again to listen.', okLabel: 'Log out' })) { MSTREAMAPI.logout(); }
+  if (!(await confirm({ title: 'Log out of mStream?', text: 'You will need to sign in again to listen.', okLabel: 'Log out' }))) { return; }
+  // The track list kept for this account goes with the session.
+  await import('./library.js').then((l) => l.forgetKept()).catch(() => {});
+  MSTREAMAPI.logout();
 }
 
 export function confirm({ title, text, okLabel = 'Delete', danger = true }) {

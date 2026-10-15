@@ -8,6 +8,7 @@ import { playback } from '../player.js';
 import * as lib from '../library.js';
 import { Header, Seg, Toggle, Btn, Icon, Plate, confirm, logOut } from '../ui.js';
 import { fmtCount, server } from '../util.js';
+import { stats as prefetchStats } from '../prefetch.js';
 
 const TABS = [
   ['playback', 'Playback'],
@@ -33,8 +34,16 @@ function Row({ title, sub, children }) {
 
 const Value = ({ children }) => html`<span class="value">${children}</span>`;
 
+// What the tracks fetched ahead take now (prefetch.js).
+function aheadNote() {
+  const st = prefetchStats();
+  if (!st.count && !st.loading) { return ''; }
+  return `Now: ${st.count} ${st.count === 1 ? 'track' : 'tracks'}, ${Math.round(st.bytes / 1048576)} MB${st.loading ? ', loading the next' : ''}.`;
+}
+
 function Playback() {
   const s = useStore(playback, (x) => ({ rg: x.replayGain, pre: x.replayGainPreGainDb }));
+  const ahead = useStore(app, (x) => x.prefetchAhead);
   return html`<${Card} title="Volume normalization" note="Evens out loudness between tracks using the ReplayGain track-gain tags written at scan time.">
     <${Row} title="Mode" sub="Track applies each file's own gain tag">
       <${Seg} value=${s.rg ? 'track' : 'off'} onChange=${(v) => P.setReplayGain(v === 'track')}
@@ -50,6 +59,10 @@ function Playback() {
   </${Card}>
   <${Card} title="Transitions" note="The next track is preloaded on a second audio element, so albums play without gaps.">
     <${Row} title="Gapless playback" sub="Always on"><${Value}>on</${Value}></${Row}>
+    <${Row} title="Load tracks ahead" sub=${`Fetched whole while the current one plays, so the next starts at once and doesn't stall. ${aheadNote()}`}>
+      <${Seg} value=${ahead} onChange=${(v) => setPref({ prefetchAhead: v })}
+        options=${[{ value: 0, label: 'Off' }, { value: 1, label: '1' }, { value: 2, label: '2' }, { value: 3, label: '3' }]} />
+    </${Row}>
   </${Card}>`;
 }
 

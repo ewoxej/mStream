@@ -1,17 +1,16 @@
 name: Build Rust Parser Binaries
 
 on:
+  # Zenelo fork: upstream mStream's pipeline, run by hand only. Its automatic
+  # triggers (pushes, PRs, releases, schedules) published docs / binaries /
+  # packages for upstream and committed to master; the fork's own builds are
+  # docker.yml and docker-release.yml.
   workflow_dispatch:
     inputs:
       dry_run:
         description: 'Build + self-test only; do not commit the binaries'
         type: boolean
         default: false
-  push:
-    branches: [master]
-    # This file too, so a change to how the binaries are built or STAMPED
-    # re-lands the set (and its provenance stamp) right away.
-    paths: ['rust-parser/**', '.github/workflows/build-rust-parser.yml']
 
 # Serialize runs of THIS workflow per ref: the commit job lands binaries on
 # the master tip, and two interleaved runs of the same family would race to

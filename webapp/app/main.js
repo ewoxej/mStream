@@ -8,6 +8,7 @@ import { MenuLayer, DialogLayer, ToastLayer, Empty } from './ui.js';
 import { connect as connectDevices } from './devices.js';
 import { DeviceStrip } from './devices-ui.js';
 import { initJobs } from './jobs.js';
+import { startPrefetch } from './prefetch.js';
 import { Recent, Albums, Album, Artists, Artist, Tracks, Genres, Genre, Favorites, Search } from './screens/library.js';
 import { Home, CustomizeHome } from './screens/home.js';
 import { Playlists, Playlist } from './screens/playlists.js';
@@ -113,6 +114,7 @@ async function boot() {
   lib.loadLikedCount();
   // This tab as a playback device (devices.js); a server without accounts has none.
   if (s.token) { connectDevices(); }
+  startPrefetch();
   initJobs();
 
   // A share link handed to /?... from the old UI, or a stale hash: land on Home.

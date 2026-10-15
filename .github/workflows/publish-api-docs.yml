@@ -1,14 +1,10 @@
 name: Publish API Docs
 
 on:
-  push:
-    branches: [master]
-    paths:
-      - 'docs/openapi.yaml'
-      - '.github/workflows/publish-api-docs.yml'
-  pull_request:
-    paths:
-      - 'docs/openapi.yaml'
+  # Zenelo fork: upstream mStream's pipeline, run by hand only. Its automatic
+  # triggers (pushes, PRs, releases, schedules) published docs / binaries /
+  # packages for upstream and committed to master; the fork's own builds are
+  # docker.yml and docker-release.yml.
   workflow_dispatch:
 
 permissions:
