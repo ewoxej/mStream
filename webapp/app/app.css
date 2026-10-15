@@ -112,6 +112,9 @@ input, select { font: inherit; color: inherit; }
 .scroll { flex: 1; min-height: 0; overflow-y: auto; }
 .scroll.pad { padding: 22px 30px 28px; }
 .scroll.col { display: flex; flex-direction: column; gap: 16px; }
+/* In a scrolling column nothing shrinks: a card squeezed to the window's height
+   clipped its rows (overflow: hidden) and left the column nothing to scroll. */
+.scroll.col > * { flex-shrink: 0; }
 
 .screen-head { height: 64px; flex: none; padding: 0 30px; display: flex; align-items: center; gap: 10px; box-shadow: inset 0 -1px 0 var(--border); position: relative; }
 .screen-head.flat { box-shadow: none; padding: 0; }

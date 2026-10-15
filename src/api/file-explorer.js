@@ -8,6 +8,7 @@ import * as fileExplorer from '../util/file-explorer.js';
 import * as vpath from '../util/vpath.js';
 import * as m3u from '../util/m3u.js';
 import * as config from '../state/config.js';
+import * as dbQueue from '../db/task-queue.js';
 import { joiValidate } from '../util/validation.js';
 import WebError from '../util/web-error.js';
 
@@ -145,6 +146,9 @@ export function setup(mstream) {
     const pathInfo = vpath.getVPathInfo(decodeURI(req.headers['data-location']), req.user);
     fsOld.mkdirSync(pathInfo.fullPath, { recursive: true });
 
+    // Every file's write, so the answer (and the scan) waits until they're on disk:
+    // busboy's 'close' only says the request was read, not that the files were written.
+    const writes = [];
     const bb = busboy({ headers: req.headers, defParamCharset: 'utf8' });
     bb.on('file', (fieldname, file, info) => {
       // Sanitize filename — strip path separators and traversal sequences
@@ -162,10 +166,25 @@ export function setup(mstream) {
         return;
       }
       winston.info(`Uploading from ${req.user.username} to: ${saveTo}`);
-      file.pipe(fsOld.createWriteStream(saveTo));
+      const out = fsOld.createWriteStream(saveTo);
+      writes.push(new Promise((resolve, reject) => { out.on('finish', resolve); out.on('error', reject); }));
+      file.pipe(out);
     });
 
-    bb.on('close', () => { res.json({}); });
+    // Uploaded tracks go into the library at once: a scan of the folder they
+    // landed in (until a scan, a new track had no row — no likes, no
+    // playlists, not in search).
+    bb.on('close', async () => {
+      try {
+        await Promise.all(writes);
+      } catch (err) {
+        winston.error(`Upload failed: ${err.message}`);
+        if (!res.headersSent) { res.status(500).json({ error: 'Upload failed' }); }
+        return;
+      }
+      if (writes.length) { dbQueue.scanSubtree(pathInfo.vpath, pathInfo.relativePath); }
+      res.json({});
+    });
     req.pipe(bb);
   });
 

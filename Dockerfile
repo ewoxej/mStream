@@ -62,8 +62,9 @@ USER node
 VOLUME /config
 EXPOSE 3000
 
-# Any answer means the server is up (the API wants a login: 401 is fine).
+# A static file the server hands out without a login: up = 200. (It asked
+# /api/v1/ping, whose 401 logged a "Rejected" warning every 30 s.)
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
-  CMD node -e "fetch('http://127.0.0.1:' + (process.env.MSTREAM_PORT || 3000) + '/api/v1/ping').then(() => process.exit(0), () => process.exit(1))"
+  CMD node -e "fetch('http://127.0.0.1:' + (process.env.MSTREAM_PORT || 3000) + '/assets/fav/favicon-32x32.png').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"
 
 ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/mstream-entrypoint"]

@@ -319,9 +319,10 @@ export async function toggleLike(track) {
     await MSTREAMAPI.rateSong(path, liked ? 10 : null);
     // Keep queued copies in step so a reload of the queue agrees.
     P().playlist.forEach((s) => { if (s.rawFilePath === path && s.metadata) { s.metadata.rating = liked ? 10 : null; } });
-  } catch (_) {
+  } catch (err) {
     app.set((s) => ({ likes: { ...s.likes, [path]: !liked } }));
-    toast('Could not save the like', 'error');
+    // 404: the file isn't in the library's index yet (just uploaded or copied in, before its scan).
+    toast(err?.status === 404 ? 'This track isn’t in the library yet — try again once it’s scanned' : 'Could not save the like', 'error');
   }
 }
 
