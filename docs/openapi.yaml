@@ -215,6 +215,17 @@ components:
       name: x-access-token
 
   schemas:
+    TrackTags:
+      type: object
+      properties:
+        title: { type: string }
+        artist: { type: string }
+        album: { type: string }
+        albumArtist: { type: string }
+        track: { type: string, description: '"3" or "3/12"' }
+        disc: { type: string, description: '"1" or "1/2"' }
+        year: { type: string, description: Four digits }
+        genre: { type: string }
     DiscoveryCollectionDestination:
       type: object
       description: Where files the user decides to own are put — a library, a base folder inside it, and a layout rendered per song.
@@ -4825,6 +4836,67 @@ paths:
                 type: object
                 properties:
                   available: { type: boolean }
+
+  # ── Tags ─────────────────────────────────────────────────────────────────
+
+  /api/v1/tags/read:
+    post:
+      tags: [Tags]
+      summary: Read a track's tags from the file
+      description: mp3, flac, m4a, m4b, ogg and opus. `editable` says whether this user may write them (same as `tagEdit` in ping).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [filepath]
+              properties:
+                filepath: { type: string, description: "<vpath>/<relative path>" }
+      responses:
+        "200":
+          description: The tags.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  filepath: { type: string }
+                  format: { type: string }
+                  editable: { type: boolean }
+                  tags: { $ref: "#/components/schemas/TrackTags" }
+        "415": { description: A file type whose tags can't be edited. }
+
+  /api/v1/tags/write:
+    post:
+      tags: [Tags]
+      summary: Write a track's tags into the file
+      description: >-
+        Keys left out stay as they are; an empty string removes the tag. The file is remuxed by ffmpeg with every
+        stream (and every other tag) copied, then replaced at once; its folder is rescanned, and the user state
+        (ratings, stars, plays) follows the file. Needs file modification (noFileModify / allow_file_modify) and ffmpeg.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [filepath, tags]
+              properties:
+                filepath: { type: string }
+                tags: { $ref: "#/components/schemas/TrackTags" }
+      responses:
+        "200":
+          description: The tags as they are in the file now.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  filepath: { type: string }
+                  tags: { $ref: "#/components/schemas/TrackTags" }
+        "403": { description: Editing tags is not allowed for this user. }
+        "404": { description: No such file. }
 
   # ── Waveform ─────────────────────────────────────────────────────────────
 

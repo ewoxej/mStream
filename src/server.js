@@ -63,6 +63,7 @@ import * as mdns from './discovery/mdns.js';
 import * as serverPlaybackApi from './api/server-playback.js';
 import * as serverAudio from './state/server-audio.js';
 import * as albumArtApi from './api/album-art.js';
+import * as tagsApi from './api/tags.js';
 import * as waveformApi from './api/waveform.js';
 import * as scanApi from './api/scan.js';
 import * as lyricsApi from './api/lyrics.js';
@@ -591,6 +592,7 @@ export async function serveIt(configFile, { relisten = null } = {}) {
   discoveryDownloadsApi.setup(mstream);
   discoveryOwnedApi.setup(mstream);
   dbApi.setup(mstream);
+  tagsApi.setup(mstream);
   syncApi.setup(mstream);
   statsApi.setup(mstream);
   guestApi.setup(mstream);

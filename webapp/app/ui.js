@@ -288,6 +288,11 @@ export function trackMenuItems(tracks, extra = []) {
   if (one && !one.federation && features.sonicPath) {
     items.push({ label: 'Sonic path', icon: 'route', tone: 'state', onClick: () => sonicPathAdd(one) });
   }
+  // The file's tags (api/tags.js): a user who may change files; a peer's
+  // track is another server's.
+  if (one && !one.federation && features.tagEdit) {
+    items.push({ label: 'Edit tags…', icon: 'edit', tone: 'state', onClick: () => app.set({ tagEditor: one }) });
+  }
   if (one) {
     items.push('sep');
     const folder = one.filepath.split('/').slice(0, -1).join('/');

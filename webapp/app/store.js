@@ -92,6 +92,7 @@ export const app = createStore({
   likes: {},            // filepath → true/false, overrides fetched metadata
   menu: null,           // open context menu: { x, y, items }
   dialog: null,         // open prompt dialog
+  tagEditor: null,      // the track whose tags are being edited (tag-editor.js)
   toasts: [],
 });
 

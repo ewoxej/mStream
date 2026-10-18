@@ -44,6 +44,7 @@
 // but kept indefinitely; it composes its frozen flat payload from the
 // two builders below — one source of truth, zero drift.
 
+import { canEditTags } from './tags.js';
 import packageJson from '../../package.json' with { type: 'json' };
 import { FORK } from '../util/fork.js';
 import * as config from '../state/config.js';
@@ -134,6 +135,9 @@ export function buildClientBootPayload(user) {
     noMkdir: config.program.noMkdir || user.allow_mkdir === false || user.allow_mkdir === 0,
     noUpload: config.program.noUpload || user.allow_upload === false || user.allow_upload === 0,
     noFileModify: config.program.noFileModify || user.allow_file_modify === false || user.allow_file_modify === 0,
+    // Editing tags in the files (api/tags.js): file modification allowed and
+    // ffmpeg there. Flag, never a probe — an older build omits it.
+    tagEdit: canEditTags(user),
     // "From your peers" in the Discover panel: needs local embeddings (the
     // seed vector comes from our discovery.db) plus at least one federated
     // peer that hasn't opted out of discovery. Caller-scoped by nature —

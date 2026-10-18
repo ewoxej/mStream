@@ -1048,3 +1048,12 @@ html.pip-html, html.pip-html body { height: 100%; overflow: hidden; background: 
   .ns-art { display: none; }
   .now-sheet { justify-content: center; }
 }
+
+/* Tag editor (tag-editor.js) */
+.dialog.tag-editor { width: 520px; }
+.tag-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.tag-grid .field.wide { grid-column: 1 / -1; }
+.tag-grid .field input { background: var(--panel); }
+.tag-grid .field.bad input { box-shadow: inset 0 0 0 1px var(--danger, #e26d5a); }
+.tag-error { color: var(--danger, #e26d5a); }
+@media (max-width: 520px) { .tag-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

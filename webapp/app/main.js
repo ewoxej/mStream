@@ -5,6 +5,7 @@ import { restorePlayerPrefs, toast } from './player.js';
 import * as lib from './library.js';
 import { Sidebar, Queue, PlayerBar } from './shell.js';
 import { MenuLayer, DialogLayer, ToastLayer, Empty } from './ui.js';
+import { TagEditor } from './tag-editor.js';
 import { connect as connectDevices } from './devices.js';
 import { DeviceStrip } from './devices-ui.js';
 import { initJobs } from './jobs.js';
@@ -50,6 +51,7 @@ function App() {
     <${DeviceStrip} />
     <${MenuLayer} />
     <${DialogLayer} />
+    <${TagEditor} />
     <${ToastLayer} />
   </div>`;
 }
@@ -80,6 +82,8 @@ async function boot() {
     discover: s.discovery, sonicPath: s.discoveryPath, stats: s.stats >= 2,
     network: s.discoveryP2p, peers: s.federationDiscovery, plugins: ping.discoveryPlugins === true,
     account: !!s.token,
+    // Tags written into the files (api/tags.js): file changes allowed + ffmpeg.
+    tagEdit: ping.tagEdit === true,
   } });
   if (ping.transcode) {
     MSTREAMPLAYER.transcodeOptions.serverEnabled = true;
