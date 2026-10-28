@@ -454,7 +454,8 @@ export function railSlots(letters, max) {
 
 // `extraCols`: page-specific columns (TRACK_COLUMNS with `extra`), placed
 // before Time.
-export function TrackTable({ groups, firstCol = '#', firstValue, rail = false, rowMenu, empty, hideAlbum = false, extraCols = [] }) {
+// `top`: content scrolled with the table, above its header (an artist's albums).
+export function TrackTable({ groups, firstCol = '#', firstValue, rail = false, rowMenu, empty, hideAlbum = false, extraCols = [], top = null }) {
   const currentPath = useStore(playback, (s) => s.currentPath);
   const playing = useStore(playback, (s) => s.playing);
   const chosen = useTrackCols();
@@ -474,6 +475,7 @@ export function TrackTable({ groups, firstCol = '#', firstValue, rail = false, r
   const height = items.length ? items[items.length - 1].top + (items[items.length - 1].head ? HEAD_H : ROW_H) : 0;
 
   const scroller = useRef();
+  const body = useRef();
   const [view, setView] = useState({ top: 0, h: 800, w: 0 });
   useEffect(() => {
     const el = scroller.current;
@@ -481,7 +483,9 @@ export function TrackTable({ groups, firstCol = '#', firstValue, rail = false, r
     const onScroll = () => {
       const cs = getComputedStyle(el);
       const w = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - 24;
-      setView({ top: el.scrollTop, h: el.clientHeight, w });
+      // Rows are placed from the body's top: what's above it (`top`) scrolls first.
+      const above = top && body.current ? body.current.getBoundingClientRect().top - el.getBoundingClientRect().top + el.scrollTop : 0;
+      setView({ top: el.scrollTop - above, h: el.clientHeight, w });
     };
     onScroll();
     el.addEventListener('scroll', onScroll, { passive: true });
@@ -545,6 +549,7 @@ export function TrackTable({ groups, firstCol = '#', firstValue, rail = false, r
 
   return html`<div class="track-table">
     <div class="tt-scroll" ref=${scroller}>
+      ${top}
       <div class="tr th" style=${gridStyle}>
         <span class="c-n">${firstCol}</span><span class="c-t">TITLE</span>
         ${layout.cols.map((c) => html`<span class=${c.cls}>${c.head}</span>`)}
@@ -552,7 +557,7 @@ export function TrackTable({ groups, firstCol = '#', firstValue, rail = false, r
           onClick=${(e) => { e.stopPropagation(); setColsOpen(!colsOpen); }}><${Icon} name="view_column" size=${15} /></button></span>
       </div>
       ${colsOpen ? html`<${ColumnsPopover} chosen=${chosen} onClose=${() => setColsOpen(false)} />` : null}
-      <div class="tt-body" style=${windowed ? { height: height + 'px', position: 'relative' } : null}>
+      <div class="tt-body" ref=${body} style=${windowed ? { height: height + 'px', position: 'relative' } : null}>
         ${visible.map((it) => it.head
           ? html`<div key=${it.key} class="tg" style=${windowed ? { position: 'absolute', top: it.top + 'px', left: 0, right: 0 } : null}>${it.label}</div>`
           : row(it))}

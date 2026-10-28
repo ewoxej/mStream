@@ -9,6 +9,7 @@ import * as lib from '../library.js';
 import { Header, Seg, Toggle, Btn, Icon, Plate, confirm, logOut } from '../ui.js';
 import { fmtCount, server } from '../util.js';
 import { stats as prefetchStats } from '../prefetch.js';
+import { DEFAULT_SEPARATORS, DEFAULT_EXCEPTIONS } from '../artist-split.js';
 
 const TABS = [
   ['playback', 'Playback'],
@@ -105,6 +106,27 @@ function Library() {
     <${Row} title="Tracks" sub=${`${fmtCount(counts.albums ?? 0)} albums · ${fmtCount(counts.artists ?? 0)} artists`}><${Value}>${fmtCount(counts.tracks ?? 0)}</${Value}></${Row}>
     ${s.admin ? html`<${Row} title="Rescan now" sub="Picks up new files and changed tags">
       <${Btn} icon="refresh" onClick=${scan} disabled=${busy}>Scan</${Btn}></${Row}>` : null}
+  </${Card}>
+  <${ArtistSplit} />`;
+}
+
+// How a tag naming several artists ("A; B", "A / B", "A, B") becomes artists on
+// the Artists pages (artist-split.js) — the Zenelo app's setting, one entry per line.
+function ArtistSplit() {
+  const separators = useStore(app, (x) => x.artistSeparators);
+  const exceptions = useStore(app, (x) => x.artistExceptions);
+  const lines = (v) => v.split('\n').map((x) => x.trim()).filter(Boolean);
+  const save = (patch) => { setPref(patch); lib.loadCounts().catch(() => {}); };
+  return html`<${Card} title="Artists" note="A tag naming several artists counts for each of them. The album artist tag is used when a track has one.">
+    <${Row} title="Separators" sub="One per line. Words (feat., x) only cut between whole words.">
+      <textarea class="set-lines" rows="4" value=${separators.join('\n')} onChange=${(e) => save({ artistSeparators: lines(e.currentTarget.value) })} />
+    </${Row}>
+    <${Row} title="Never split" sub="Names kept whole although they contain a separator, one per line">
+      <textarea class="set-lines" rows="4" value=${exceptions.join('\n')} onChange=${(e) => save({ artistExceptions: lines(e.currentTarget.value) })} />
+    </${Row}>
+    <${Row} title="Reset" sub=${`Separators ${DEFAULT_SEPARATORS.join(' ')} and the default names`}>
+      <${Btn} icon="restart_alt" onClick=${() => save({ artistSeparators: DEFAULT_SEPARATORS, artistExceptions: DEFAULT_EXCEPTIONS })}>Reset</${Btn}>
+    </${Row}>
   </${Card}>`;
 }
 

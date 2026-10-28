@@ -391,6 +391,12 @@ components:
               description: |
                 V73. Composer credit(s) from the COMPOSER / TCOM tag, several
                 joined with ", ". Null when the file carries none.
+            album-artist:
+              type: string
+              nullable: true
+              description: |
+                Zenelo fork. The ALBUMARTIST tag as written (DB column
+                `tag_album_artist`); null when the file has none.
             album:
               type: string
               nullable: true
@@ -564,6 +570,10 @@ components:
           type: array
           items: { type: string }
           description: V73. Performer credits in tag order (see `Metadata`).
+        album-artist:
+          type: string
+          nullable: true
+          description: Zenelo fork. The ALBUMARTIST tag as written (see `Metadata`).
         album:
           type: string
           nullable: true

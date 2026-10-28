@@ -43,7 +43,7 @@ export const SORTS = {
       { key: 'count', label: 'Number of tracks', ...num((a) => a.track_count || 0, 'Fewest first', 'Most first') },
     ],
   },
-  // Artist rows are { name, albums, tracks } (counts from the album list).
+  // Artist rows are { name, albums, tracks } (counts from artist-split.js).
   artists: {
     def: { key: 'name', dir: 'asc' },
     fields: [

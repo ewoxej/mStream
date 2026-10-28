@@ -2,6 +2,7 @@
 // useStore(store, selector) and re-render only when the selected value
 // changes (shallow compare).
 import { useEffect, useRef, useState } from './vendor/preact-htm.js';
+import { DEFAULT_SEPARATORS, DEFAULT_EXCEPTIONS } from './artist-split.js';
 
 export function createStore(initial) {
   let state = initial;
@@ -83,6 +84,9 @@ export const app = createStore({
   sidebar: prefs.sidebar && typeof prefs.sidebar === 'object' ? prefs.sidebar : null,
   // Tracks of the queue fetched whole ahead of playing (prefetch.js), 0 = off.
   prefetchAhead: Number.isInteger(prefs.prefetchAhead) ? prefs.prefetchAhead : 2,
+  // How an artist tag naming several is cut into artists (artist-split.js), and names never cut.
+  artistSeparators: Array.isArray(prefs.artistSeparators) ? prefs.artistSeparators : DEFAULT_SEPARATORS,
+  artistExceptions: Array.isArray(prefs.artistExceptions) ? prefs.artistExceptions : DEFAULT_EXCEPTIONS,
   // Library facts filled in after boot (server/ping + counts).
   server: null,
   // What the server offers (its ping): Discover, Sonic Path, Stats, …
@@ -111,7 +115,7 @@ export function savePrefs() {
     localStorage.setItem(LS_KEY, JSON.stringify({
       queueOpen: wideQueueOpen, albumView: s.albumView, artistView: s.artistView, sorts: s.sorts,
       trackCols: s.trackCols, home: s.home, homeFolder: s.homeFolder, sidebar: s.sidebar,
-      prefetchAhead: s.prefetchAhead,
+      prefetchAhead: s.prefetchAhead, artistSeparators: s.artistSeparators, artistExceptions: s.artistExceptions,
     }));
   } catch (_) { /* private mode */ }
 }

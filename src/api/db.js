@@ -36,6 +36,9 @@ export function renderMetadataObj(row) {
       composer: creditDisplay(row.credit_composers || []) || null,
       hash: row.file_hash || null,
       album: row.album_name || null,
+      // The ALBUMARTIST tag as written (the web player counts artists by it,
+      // else by the artist tag, as the Zenelo app does).
+      'album-artist': row.tag_album_artist || null,
       track: row.track_number || null,
       disk: row.disc_number || null,
       title: row.title || null,

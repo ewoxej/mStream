@@ -10,6 +10,7 @@ import {
   Icon, Btn, Cover, Header, SearchField, Seg, Empty, Spinner, TrackTable, AlbumTile, useAsync, openMenu, confirm, showInfo,
 } from '../ui.js';
 import { readM3u, saveM3u, foundNote } from './playlists.js';
+import { artistIndex, artistKey, albumsOf, artistTrackOrder } from '../artist-split.js';
 import {
   fmtCount, fmtTime, plural, sumDuration, dayBucket, clockLabel, trackTitle,
   trackArtist, trackCover,
@@ -123,34 +124,21 @@ export function Album({ args, params }) {
 
 // ── Artists ─────────────────────────────────────────────────────────────
 
-// Art and counts come from the album list: an artist's first album cover.
-function useArtistFacts() {
-  const albums = useAsync(() => lib.albums(), []);
-  return useMemo(() => {
-    const m = new Map();
-    (albums.data || []).forEach((a) => {
-      const names = new Set([a.album_artist, ...(a.artists || [])].filter(Boolean));
-      names.forEach((n) => {
-        const k = n.toLowerCase();
-        const f = m.get(k) || { albums: 0, tracks: 0, art: null };
-        f.albums++;
-        f.tracks += a.track_count || 0;
-        f.art = f.art || a.album_art_file;
-        m.set(k, f);
-      });
-    });
-    return m;
-  }, [albums.data]);
+// The library's artists as the Zenelo app counts them (artist-split.js): built
+// from the All tracks list, each name of a multi-artist tag on its own.
+export function useArtistIndex() {
+  const rev = useStore(lib.songsState, (x) => x.rev);
+  const state = useAsync(() => lib.allSongs(), [rev]);
+  const separators = useStore(app, (s) => s.artistSeparators);
+  const exceptions = useStore(app, (s) => s.artistExceptions);
+  const index = useMemo(() => artistIndex(state.data || [], separators, exceptions), [state.data, separators, exceptions]);
+  return { state, index };
 }
 
 // Artist rows for lists, Home and sorting: { name, albums, tracks, art }.
 export function useArtistRows() {
-  const state = useAsync(() => lib.artists(), []);
-  const facts = useArtistFacts();
-  const rows = useMemo(() => (state.data || []).map((name) => {
-    const f = facts.get(name.toLowerCase());
-    return { name, albums: f?.albums || 0, tracks: f?.tracks || 0, art: f?.art || null };
-  }), [state.data, facts]);
+  const { state, index } = useArtistIndex();
+  const rows = useMemo(() => [...index.values()].map((a) => ({ name: a.name, albums: a.albums.size, tracks: a.tracks.length, art: a.art })), [index]);
   return { state, rows };
 }
 
@@ -194,28 +182,28 @@ export function Artists() {
   </div>`;
 }
 
+// An artist's albums, then all of its tracks (the album ones included), as in the app.
 export function Artist({ args }) {
   const name = args[0] || '';
-  const state = useAsync(() => lib.artistAlbums(name), [name]);
+  const { state, index } = useArtistIndex();
+  const artist = index.get(artistKey(name));
   const sort = useSort('artistAlbums');
-  const albums = useSorted(state.data, sort);
-  const playAll = async (shuffle) => {
-    const lists = await Promise.all(albums.map((a) => lib.albumSongs(a.name, a.album_artist)));
-    const all = lists.flat();
-    if (shuffle) { P.shufflePlay(all); } else { P.playTracks(all); }
-  };
+  const albums = useSorted(useMemo(() => albumsOf(artist?.tracks), [artist]), sort);
+  const tracks = useMemo(() => [...(artist?.tracks || [])].sort(artistTrackOrder), [artist]);
+  const albumGrid = albums.length ? html`<div class="artist-albums">
+      <div class="micro artist-sec">${plural(albums.length, 'album').toUpperCase()}</div>
+      <div class="grid g6">${albums.map((a) => html`<${AlbumTile} album=${a} meta=${[a.year, a.track_count && plural(a.track_count, 'track')].filter(Boolean).join(' · ')} />`)}</div>
+      <div class="micro artist-sec">${plural(tracks.length, 'track').toUpperCase()}</div>
+    </div>` : null;
   return html`<div class="screen">
-    <${Header} back title=${name} sub=${state.data ? `${plural(albums.length, 'album').toUpperCase()} · ${sort.label}` : ''}>
+    <${Header} back title=${artist?.name || name}
+      sub=${artist ? `${plural(albums.length, 'album')} · ${plural(tracks.length, 'track')} · ${fmtTime(sumDuration(tracks))}`.toUpperCase() : ''}>
       <${SortButton} sort=${sort} />
-      <${Btn} icon="shuffle" onClick=${() => playAll(true)} disabled=${!albums.length}>Shuffle</${Btn}>
-      <${Btn} kind="primary" icon="play_arrow" iconSize=${14} onClick=${() => playAll(false)} disabled=${!albums.length}>Play all</${Btn}>
+      <${Btn} icon="shuffle" onClick=${() => P.shufflePlay(tracks)} disabled=${!tracks.length}>Shuffle</${Btn}>
+      <${Btn} kind="primary" icon="play_arrow" iconSize=${14} onClick=${() => P.playTracks(tracks)} disabled=${!tracks.length}>Play all</${Btn}>
     </${Header}>
-    <div class="scroll pad">
-      <${Loading} state=${state}>${() => albums.length
-        ? html`<div class="grid g6">${albums.map((a) => html`<${AlbumTile} album=${a} meta=${[a.year, a.track_count && plural(a.track_count, 'track')].filter(Boolean).join(' · ')} />`)}</div>`
-        : html`<${Empty} icon="album" title="No albums for this artist" />`}
-      </${Loading}>
-    </div>
+    <${Loading} state=${state}>${() => html`<${TrackTable} groups=${[{ tracks }]} top=${albumGrid}
+      empty=${html`<${Empty} icon="person" title="No tracks for this artist" />`} />`}</${Loading}>
   </div>`;
 }
 

@@ -3,6 +3,7 @@
 import { app, createStore } from './store.js';
 import { server } from './util.js';
 import { idbGet, idbSet, idbDelete } from './idb.js';
+import { artistIndex } from './artist-split.js';
 
 const cache = new Map();
 function cached(key, fn) {
@@ -36,7 +37,6 @@ export const albumSongs = (album, albumArtist) => cached(`album:${album}|${album
   if (albumArtist) { body.album_artist = albumArtist; }
   return MSTREAMAPI.albumSongs(body);
 });
-export const artistAlbums = (artist) => cached(`artist:${artist}`, async () => (await MSTREAMAPI.artistAlbums({ artist })).albums || []);
 export const genreSongs = (genre) => cached(`genre:${genre}`, () => MSTREAMAPI.genreSongs({ genre }));
 
 export const liked = () => cached('liked', () => MSTREAMAPI.getRated());
@@ -80,7 +80,8 @@ function songsKey() {
   const s = server();
   let user = '';
   try { user = JSON.parse(atob(s.token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).username || ''; } catch (_) { /* no login */ }
-  return `songs|${s.host || location.origin}|${user}`;
+  // v2: tracks carry their album artist tag (artist-split.js); lists kept before it are fetched again.
+  return `songs|v2|${s.host || location.origin}|${user}`;
 }
 
 async function revalidateSongs(key, known) {
@@ -203,10 +204,12 @@ export async function startScan() {
 }
 
 export async function loadCounts() {
-  const [al, ar, ge, st] = await Promise.allSettled([albums(), artists(), genres(), dbStatus()]);
+  // Artists as the pages count them (artist-split.js), not the server's list.
+  const [al, ar, ge, st] = await Promise.allSettled([albums(), allSongs(), genres(), dbStatus()]);
+  const { artistSeparators, artistExceptions } = app.get();
   const counts = {
     albums: al.value?.length,
-    artists: ar.value?.length,
+    artists: ar.value ? artistIndex(ar.value, artistSeparators, artistExceptions).size : undefined,
     genres: ge.value?.length,
     tracks: st.value?.totalFileCount,
   };
