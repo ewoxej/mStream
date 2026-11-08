@@ -100,7 +100,7 @@ export function Sidebar() {
 // ── Queue ───────────────────────────────────────────────────────────────
 
 function QueueRow({ song, index, cur, faded, playing, dragState }) {
-  const track = { filepath: song.rawFilePath, metadata: song.metadata };
+  const track = { filepath: song.rawFilePath, metadata: song.metadata, federation: song.federation };
   const menu = (e) => openMenu(e, [
     { label: 'Play', icon: 'play_arrow', tone: 'accent', onClick: () => P.playAt(index) },
     { label: 'Remove from queue', icon: 'remove_circle_outline', tone: 'danger', onClick: () => P.removeAt(index) },
@@ -332,7 +332,7 @@ export function useNowPlaying() {
   const track = remote ? (remote.track ? { filepath: remote.track.filepath, metadata: {
     title: remote.track.title, artist: remote.track.artist, album: remote.track.album, 'album-art': remote.track.art || null,
     duration: (remote.track.durationMs || 0) / 1000,
-  } } : null) : song ? { filepath: song.rawFilePath, metadata: song.metadata || {} } : null;
+  } } : null) : song ? { filepath: song.rawFilePath, metadata: song.metadata || {}, federation: song.federation } : null;
   const meta = track?.metadata || {};
   const playing = remote ? remote.playing : s.playing;
   const ctl = remote ? {

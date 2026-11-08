@@ -143,7 +143,8 @@ function stopPreview(setPlaying) {
 }
 
 // The window for one row. `source` = 'p2p' (a network lead) | 'federation' (a peer's track).
-export function GetSheet({ track, source, onClose }) {
+// `scope`: what "Add to your collection" starts on (a peer's album page: 'album').
+export function GetSheet({ track, source, onClose, scope = 'song' }) {
   const s = useStore(jobs, (x) => x);
   const recommendation = { ...track, source, filepath: source === 'federation' ? track.filepath : null };
   const [links, setLinks] = useState({ loading: true, list: [] });
@@ -153,7 +154,7 @@ export function GetSheet({ track, source, onClose }) {
   const [errors, setErrors] = useState({});
   const [previews, setPreviews] = useState({});
   const [playing, setPlaying] = useState(null);
-  const [keep, setKeep] = useState({ scope: 'song', onlyMissing: true });
+  const [keep, setKeep] = useState({ scope, onlyMissing: true });
   const alive = useRef(true);
 
   useEffect(() => {

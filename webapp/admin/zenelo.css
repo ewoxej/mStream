@@ -144,6 +144,10 @@ hr { border: 0; height: 1px; background: var(--z-line); }
 }
 .btn-flat { height: 36px; line-height: 36px; padding: 0 14px; border-radius: 9px; color: var(--z-text-2); font-weight: 500; text-transform: none; }
 .btn-flat:hover, .btn-flat:focus { background: var(--z-placeholder); color: var(--z-text); }
+/* A small flat button ("Dismiss", "Reject", "Cancel" in tables): .btn-small's
+   filled accent made it grey text on mustard. Outlined and quiet instead. */
+.btn-flat.btn-small { height: 30px; line-height: 30px; padding: 0 12px; font-size: 12.5px; background: transparent; color: var(--z-text-2); box-shadow: inset 0 0 0 1px var(--z-line); }
+.btn-flat.btn-small:hover, .btn-flat.btn-small:focus { background: var(--z-placeholder); color: var(--z-text); box-shadow: inset 0 0 0 1px var(--z-line); }
 .btn-floating, .btn-floating:hover { background: var(--z-accent); color: var(--z-on-accent); }
 .btn-floating.red { background: var(--z-danger); }
 .btn-floating i, .btn i { color: inherit; }

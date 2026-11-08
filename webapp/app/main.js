@@ -23,14 +23,27 @@ import { Discover } from './screens/discover.js';
 import { Guests } from './screens/guests.js';
 import { Lyrics } from './screens/lyrics.js';
 import { Stats } from './screens/stats.js';
+import { Peers, Peer } from './screens/peers.js';
+import { GetSheet } from './screens/discover-get.js';
 
 const SCREENS = {
   home: Home, recent: Recent, albums: Albums, album: Album, artists: Artists, artist: Artist,
   tracks: Tracks, genres: Genres, genre: Genre, fav: Favorites, search: Search,
   pl: Playlists, playlist: Playlist, folders: Folders, dj: AutoDJ, viz: Visualizer,
   dl: Downloads, settings: Settings, sonic: SonicPath, discover: Discover, guests: Guests,
-  lyrics: Lyrics, stats: Stats, customize: CustomizeHome,
+  lyrics: Lyrics, stats: Stats, customize: CustomizeHome, peers: Peers, peer: Peer,
 };
+
+// "Add to my library" for a peer's track (track menu, a peer's album): Discover's copy window.
+function PeerGetLayer() {
+  const get = useStore(app, (s) => s.peerGet);
+  if (!get) { return null; }
+  const t = get.track;
+  const m = t.metadata || {};
+  const track = { peer: { id: t.federation.peerId, name: t.federation.peerName }, filepath: t.filepath,
+    title: m.title || '', artist: m.artist || '', album: m.album || '', duration: m.duration || null };
+  return html`<${GetSheet} track=${track} source="federation" scope=${get.scope || 'song'} onClose=${() => app.set({ peerGet: null })} />`;
+}
 
 function App() {
   const route = useStore(app, (s) => s.route);
@@ -52,6 +65,7 @@ function App() {
     <${MenuLayer} />
     <${DialogLayer} />
     <${TagEditor} />
+    <${PeerGetLayer} />
     <${ToastLayer} />
   </div>`;
 }
@@ -84,6 +98,8 @@ async function boot() {
     account: !!s.token,
     // Tags written into the files (api/tags.js): file changes allowed + ffmpeg.
     tagEdit: ping.tagEdit === true,
+    // Paired servers whose libraries can be browsed (screens/peers.js).
+    browsePeers: ping.federationBrowse === true,
   } });
   if (ping.transcode) {
     MSTREAMPLAYER.transcodeOptions.serverEnabled = true;

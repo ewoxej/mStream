@@ -15,6 +15,7 @@ export const NAV_GROUPS = [
     { id: 'folders', label: 'Folders', icon: 'folder' },
     { id: 'fav', label: 'Favorites', icon: 'favorite_border' },
     { id: 'pl', label: 'Playlists', icon: 'queue_music' },
+    { id: 'peers', label: 'Peers', icon: 'lan', when: (f) => f.browsePeers, whenNote: 'No paired servers' },
   ] },
   { id: 'tools', label: 'TOOLS', items: [
     { id: 'dj', label: 'Auto DJ', icon: 'auto_awesome' },

@@ -67,7 +67,8 @@ function songObject(filepath, metadata) {
 }
 
 async function enrich(song) {
-  if (song.metadata && Object.keys(song.metadata).length > 0) { return; }
+  // A peer's track: this library has no metadata for it.
+  if (song.federation || (song.metadata && Object.keys(song.metadata).length > 0)) { return; }
   try {
     const res = await MSTREAMAPI.lookupMetadata(song.rawFilePath);
     if (res && res.metadata) {
@@ -87,23 +88,29 @@ window.VUEPLAYERCORE.addSongWizard = async (filepath, metadata, lookup, position
 };
 // A peer's track (Discover → Peers, federated Auto DJ): streamed through
 // this server's federation proxy.
-window.VUEPLAYERCORE.addFederationSongWizard = (peer, remotePath, metadata, autoPlayOff, position, playNow = true) => {
+function peerSongObject(peer, remotePath, metadata) {
   let fp = remotePath.replace(/%/g, '%25').replace(/#/g, '%23').replace(/\?/g, '%3F');
   if (fp.charAt(0) === '/') { fp = fp.substr(1); }
   const s = server();
   let url = `${s.host}api/v1/federation/peers/${peer.id}/stream/${fp}?`;
   if (s.token) { url += 'token=' + s.token; }
-  const song = {
+  return {
     url, rawFilePath: remotePath, filepath: remotePath, metadata: metadata || {}, authToken: s.token,
     federation: { peerId: peer.id, peerName: peer.name || 'peer' },
   };
+}
+window.VUEPLAYERCORE.addFederationSongWizard = (peer, remotePath, metadata, autoPlayOff, position, playNow = true) => {
+  const song = peerSongObject(peer, remotePath, metadata);
   if (position !== undefined) { P().insertSongAt(song, position, playNow !== false); } else { P().addSong(song, autoPlayOff); }
   bump();
 };
 
+// A track of a peer's library (screens/peers.js) carries `federation`, as its song does.
 const asSongs = (tracks) => tracks
   .filter((t) => t && t.filepath)
-  .map((t) => songObject(t.filepath, t.metadata && Object.keys(t.metadata).length ? { ...t.metadata } : {}));
+  .map((t) => (t.federation
+    ? peerSongObject({ id: t.federation.peerId, name: t.federation.peerName }, t.filepath, { ...(t.metadata || {}) })
+    : songObject(t.filepath, t.metadata && Object.keys(t.metadata).length ? { ...t.metadata } : {})));
 
 // Replace the queue with `tracks` and start at `start`.
 export function playTracks(tracks, start = 0) {

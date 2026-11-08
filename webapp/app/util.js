@@ -3,8 +3,14 @@
 export const server = () => MSTREAMAPI.currentServer;
 
 
+// A peer's cover is "@peer:<id>/<file>" (library.js asPeerTracks): fetched
+// through this server's art proxy (api/federation-browse.js).
+export const peerCover = (peerId, file) => (file ? `@peer:${peerId}/${file}` : null);
+
 export function coverUrl(file, size = 's') {
   if (!file) { return null; }
+  const peer = /^@peer:(\d+)\/(.+)$/.exec(file);
+  if (peer) { return MSTREAMAPI.peerArtUrl(peer[1], peer[2], size); }
   const s = server();
   const q = new URLSearchParams();
   if (size) { q.set('compress', size); }

@@ -159,6 +159,43 @@ export async function shareTracks(tracks, days = 14) {
   return new URL('shared/' + res.playlistId, location.href.split('#')[0]).href;
 }
 
+// ── Peers (federation: a paired server's library, through ours) ─────────
+
+export const peers = () => cached('peers', async () => (await MSTREAMAPI.federationPeers()).peers || []);
+const peerCached = (id, key, fn) => cached(`peer:${id}:${key}`, fn);
+export const peerAlbums = (id) => peerCached(id, 'albums', async () => (await MSTREAMAPI.peer.albums(id)).albums || []);
+export const peerArtists = (id) => peerCached(id, 'artists', async () => (await MSTREAMAPI.peer.artists(id)).artists || []);
+export const peerArtistAlbums = (id, artist) => peerCached(id, `artist:${artist}`, async () => (await MSTREAMAPI.peer.artistAlbums(id, { artist })).albums || []);
+export const peerAlbumSongs = (id, album, albumArtist) => peerCached(id, `album:${album}|${albumArtist}`, () => {
+  const body = { album };
+  if (albumArtist) { body.album_artist = albumArtist; }
+  return MSTREAMAPI.peer.albumSongs(id, body);
+});
+export const peerDir = (id, directory) => MSTREAMAPI.peer.dirparser(id, directory, true);
+// A folder's tracks with their tags (the recursive listing is paths only).
+export async function peerDirRecursive(id, directory) {
+  const paths = (await MSTREAMAPI.peer.recursiveScan(id, directory)) || [];
+  const meta = {};
+  for (let i = 0; i < paths.length; i += 500) {
+    Object.assign(meta, await MSTREAMAPI.peer.metadataBatch(id, paths.slice(i, i + 500)).catch(() => ({})));
+  }
+  return paths.map((p) => ({ filepath: p, metadata: meta[p]?.metadata || {} }));
+}
+export const peerSearch = (id, q) => MSTREAMAPI.peer.search(id, { search: q });
+
+/**
+ * A peer's answers as tracks this player can play and show: marked with the
+ * peer (`federation`, as its queued songs are), covers through the art proxy.
+ */
+export function asPeerTracks(peer, list) {
+  return (list || []).map((x) => (typeof x === 'string' ? { filepath: x, metadata: {} } : x)).filter((x) => x && x.filepath)
+    .map((x) => {
+      const m = { ...(x.metadata || {}) };
+      if (m['album-art']) { m['album-art'] = `@peer:${peer.id}/${m['album-art']}`; }
+      return { filepath: String(x.filepath).replace(/^\/+/, ''), metadata: m, federation: { peerId: peer.id, peerName: peer.name || 'peer' } };
+    });
+}
+
 // ── Folders ─────────────────────────────────────────────────────────────
 
 export const dir = (path) => MSTREAMAPI.dirparser(path);

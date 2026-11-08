@@ -1062,3 +1062,9 @@ html.pip-html, html.pip-html body { height: 100%; overflow: hidden; background: 
 .tag-grid .field.bad input { box-shadow: inset 0 0 0 1px var(--danger, #e26d5a); }
 .tag-error { color: var(--danger, #e26d5a); }
 @media (max-width: 520px) { .tag-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* Peers (screens/peers.js) */
+.peer-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.peer-bar-gap { flex: 1; }
+.peer-plate { display: grid; place-items: center; color: var(--accent); background: var(--chip); }
+.screen-head.peer-sub { border-top: 1px solid var(--border); }

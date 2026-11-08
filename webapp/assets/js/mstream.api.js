@@ -329,8 +329,9 @@ const MSTREAMAPI = (() => {
   };
 
   mstreamModule.peer = {
-    dirparser: (peerId, directory) => peerReq(peerId, 'POST', 'api/v1/file-explorer', { directory }),
+    dirparser: (peerId, directory, pullMetadata) => peerReq(peerId, 'POST', 'api/v1/file-explorer', pullMetadata ? { directory, pullMetadata: true } : { directory }),
     recursiveScan: (peerId, directory) => peerReq(peerId, 'POST', 'api/v1/file-explorer/recursive', { directory }),
+    metadataBatch: (peerId, filepaths) => peerReq(peerId, 'POST', 'api/v1/db/metadata/batch', filepaths),
     search: (peerId, postObject) => peerReq(peerId, 'POST', 'api/v1/db/search', postObject),
     artists: (peerId, postObject) => peerReq(peerId, 'POST', 'api/v1/db/artists', postObject || {}),
     albums: (peerId, postObject) => peerReq(peerId, 'POST', 'api/v1/db/albums', postObject || {}),

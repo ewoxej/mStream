@@ -262,6 +262,7 @@ export function ToastLayer() {
 // The app's track ⋮ menu: same items, order, icons and tints (mustard for the
 // queue and playlists, blue for favorites, celadon for downloads).
 export function trackMenuItems(tracks, extra = []) {
+  if (tracks.some((t) => t.federation)) { return peerMenuItems(tracks, extra); }
   const one = tracks.length === 1 ? tracks[0] : null;
   const playlists = app.get().playlists;
   const items = [
@@ -307,6 +308,31 @@ export function trackMenuItems(tracks, extra = []) {
   return [...items, ...extra];
 }
 
+// A peer's tracks (screens/peers.js): queue them, copy one into this library
+// (the server's copy job — main.js PeerGetLayer), or go where it is on the peer.
+function peerMenuItems(tracks, extra) {
+  const one = tracks.length === 1 ? tracks[0] : null;
+  const items = [
+    { label: 'Add to queue', icon: 'queue_music', tone: 'accent', onClick: () => addToQueue(tracks) },
+    { label: 'Play next', icon: 'playlist_play', tone: 'accent', onClick: () => playNext(tracks) },
+  ];
+  const peerId = one?.federation?.peerId;
+  if (one && app.get().features.plugins) {
+    items.push({ label: 'Add to my library…', icon: 'add', tone: 'state', onClick: () => app.set({ peerGet: { track: one } }) });
+  }
+  if (one && peerId !== undefined) {
+    items.push('sep');
+    items.push({ label: 'Go to folder', icon: 'folder', tone: 'accent', onClick: () => go('peer', peerId, 'folders', one.filepath.split('/').slice(0, -1).join('/')) });
+    if (one.metadata?.album) {
+      items.push({ label: 'Go to album', icon: 'album', tone: 'accent', onClick: () => go('peer', peerId, 'album', one.metadata.album, { artist: one.metadata['album-artist'] || '' }) });
+    }
+    if (one.metadata?.artist) {
+      items.push({ label: 'Go to artist', icon: 'person', tone: 'accent', onClick: () => go('peer', peerId, 'artist', one.metadata.artist) });
+    }
+  }
+  return [...items, ...extra];
+}
+
 async function newPlaylistWith(tracks) {
   const name = await prompt({ title: 'New playlist', label: 'NAME', okLabel: 'Create' });
   if (!name) { return; }
@@ -328,6 +354,8 @@ export function LikeButton({ track, size = 16, always = false }) {
     const o = s.likes[track?.filepath || track?.rawFilePath];
     return o !== undefined ? o : Number(track?.metadata?.rating) > 0;
   });
+  // A peer's track isn't in this library: nothing to rate here.
+  if (track?.federation) { return null; }
   return html`<button type="button" class=${`like ${liked ? 'on' : ''} ${always ? 'always' : ''}`}
     title=${liked ? 'Remove from favorites' : 'Add to favorites'}
     onClick=${(e) => { e.stopPropagation(); toggleLike(track); }}>

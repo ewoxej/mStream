@@ -97,6 +97,7 @@ export const app = createStore({
   menu: null,           // open context menu: { x, y, items }
   dialog: null,         // open prompt dialog
   tagEditor: null,      // the track whose tags are being edited (tag-editor.js)
+  peerGet: null,        // { track, scope }: a peer's track to copy into this library (main.js PeerGetLayer)
   toasts: [],
 });
 
