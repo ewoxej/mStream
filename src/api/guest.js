@@ -27,6 +27,7 @@ import { joiValidate } from '../util/validation.js';
 import WebError from '../util/web-error.js';
 import { createStore, DURATIONS } from '../state/guest-links.js';
 import { hub } from './devices.js';
+import { currentDevice } from '../state/devices.js';
 import { pullMetaDataBatch } from './db.js';
 import { runFtsSearch, runLikeSearch } from './search.js';
 
@@ -111,7 +112,7 @@ function guestOf(req) {
   return { link: req.user.guest, key: String(req.user.id) };
 }
 
-const trackOf = (fp, m) => ({
+export const trackOf = (fp, m) => ({
   filepath: fp,
   title: m?.title || fp.split('/').pop(),
   artist: m?.artist || '',
@@ -120,7 +121,34 @@ const trackOf = (fp, m) => ({
   durationMs: Number.isFinite(m?.duration) ? Math.round(m.duration * 1000) : null,
 });
 
+// A device's queue around the playing track, with the tracks' tags (the
+// guest page, and GET /api/v1/devices/now).
+export function queueWindow(key, deviceId, user) {
+  const q = hub.queue(key, deviceId);
+  if (!q || !q.queue.length) { return { total: 0, start: 0, index: -1, items: [] }; }
+  const index = Math.min(Math.max(q.index ?? 0, 0), q.queue.length - 1);
+  const start = Math.max(0, index - QUEUE_BEFORE);
+  const paths = q.queue.slice(start, index + QUEUE_AFTER + 1);
+  const meta = pullMetaDataBatch(paths, user);
+  return { total: q.queue.length, start, index, items: paths.map((fp) => trackOf(fp, meta.get(fp)?.metadata)) };
+}
+
 export function setup(mstream) {
+  // The device the user listened on last, with its queue, in one answer —
+  // what a widget that carries on from there needs (an API key, say).
+  mstream.get('/api/v1/devices/now', (req, res) => {
+    const key = ownerKey(req);
+    const device = currentDevice(hub.list(key));
+    res.set('Cache-Control', 'no-store');
+    res.json({
+      device: device && {
+        id: device.id, name: device.name, type: device.type, online: device.online, playing: device.playing,
+        positionMs: device.positionMs, volume: device.volume, track: device.track,
+      },
+      queue: device ? queueWindow(key, device.id, req.user) : { total: 0, start: 0, index: -1, items: [] },
+    });
+  });
+
   // ── The owner ─────────────────────────────────────────────────────────
 
   mstream.get('/api/v1/devices/guests', (req, res) => {
@@ -166,15 +194,7 @@ export function setup(mstream) {
   mstream.get('/api/v1/guest', (req, res) => {
     const { link, key } = guestOf(req);
     const device = hub.list(key).find((d) => d.id === link.device) || null;
-    const q = device ? hub.queue(key, link.device) : null;
-    let queue = { total: 0, start: 0, index: -1, items: [] };
-    if (q && q.queue.length) {
-      const index = Math.min(Math.max(q.index ?? 0, 0), q.queue.length - 1);
-      const start = Math.max(0, index - QUEUE_BEFORE);
-      const paths = q.queue.slice(start, index + QUEUE_AFTER + 1);
-      const meta = pullMetaDataBatch(paths, req.user);
-      queue = { total: q.queue.length, start, index, items: paths.map((fp) => trackOf(fp, meta.get(fp)?.metadata)) };
-    }
+    const queue = queueWindow(key, link.device, req.user);
     res.set('Cache-Control', 'no-store');
     res.json({
       link: { label: link.label, deviceName: device?.name || link.deviceName, expiresAt: link.expiresAt ? new Date(link.expiresAt).toISOString() : null },

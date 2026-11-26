@@ -1,6 +1,6 @@
 // Settings: what this player controls (playback, transcoding) plus the
 // server facts a listener needs. Server administration stays in /admin.
-import { html, useState } from '../vendor/preact-htm.js';
+import { html, useEffect, useState } from '../vendor/preact-htm.js';
 import { app, useStore, href, setPref } from '../store.js';
 import { sidebarLayout, sidebarPrefs } from '../nav.js';
 import * as P from '../player.js';
@@ -10,12 +10,14 @@ import { Header, Seg, Toggle, Btn, Icon, Plate, confirm, logOut } from '../ui.js
 import { fmtCount, server } from '../util.js';
 import { stats as prefetchStats } from '../prefetch.js';
 import { DEFAULT_SEPARATORS, DEFAULT_EXCEPTIONS } from '../artist-split.js';
+import { listApiKeys, createApiKey, revokeApiKey } from '../devices.js';
 
 const TABS = [
   ['playback', 'Playback'],
   ['interface', 'Interface'],
   ['transcoding', 'Transcoding'],
   ['library', 'Library'],
+  ['keys', 'API keys'],
   ['server', 'Server'],
 ];
 
@@ -180,6 +182,55 @@ function Interface() {
   </${Card}>`;
 }
 
+// Personal API keys (src/api/api-keys.js). The secret is shown once.
+function ApiKeys() {
+  const s = server();
+  const [keys, setKeys] = useState(null);
+  const [label, setLabel] = useState('');
+  const [made, setMade] = useState(null);
+  const load = () => listApiKeys().then(setKeys).catch(() => setKeys([]));
+  useEffect(() => { if (s.token) { load(); } }, []);
+
+  if (!s.token) {
+    return html`<${Card} title="API keys" note="API keys need an account: this server has no sign-in." />`;
+  }
+  const make = async () => {
+    try {
+      const k = await createApiKey(label.trim());
+      setMade(k);
+      setLabel('');
+      load();
+    } catch (e) {
+      P.toast(e.status === 409 ? 'Too many keys: revoke one first' : 'Could not make the key', 'error');
+    }
+  };
+  const revoke = async (k) => {
+    if (!(await confirm({ title: 'Revoke this key?', text: 'The app that uses it loses access at once.', okLabel: 'Revoke' }))) { return; }
+    try { await revokeApiKey(k.id); } catch (_) { /* gone already */ }
+    if (made?.id === k.id) { setMade(null); }
+    load();
+  };
+  const day = (iso) => new Date(iso).toLocaleDateString();
+
+  return html`<${Card} title="New API key" note="For your own apps, like a home page widget: it plays your libraries and sees what your devices play. It can't change anything.">
+    <${Row} title="Name" sub="Which app it is for">
+      <input type="text" maxlength="80" placeholder="Home page" value=${label} onInput=${(e) => setLabel(e.currentTarget.value)} />
+    </${Row}>
+    <${Row} title="Create"><${Btn} kind="primary" icon="add" onClick=${make}>Create key</${Btn}></${Row}>
+    ${made ? html`<${Row} title="Copy it now" sub="It is not shown again">
+      <code style="user-select:all;overflow-wrap:anywhere">${made.key}</code>
+      <${Btn} icon="content_copy" onClick=${() => navigator.clipboard?.writeText(made.key).then(() => P.toast('Key copied', 'success'))}>Copy</${Btn}>
+    </${Row}>` : null}
+  </${Card}>
+  <${Card} title="Keys">
+    ${keys === null ? html`<${Row} title="Loading…" />` : keys.length === 0 ? html`<${Row} title="No API keys" />`
+      : keys.map((k) => html`<${Row} key=${k.id} title=${k.label || 'Unnamed key'}
+          sub=${`made ${day(k.createdAt)} · ${k.lastUsedAt ? `last used ${day(k.lastUsedAt)}` : 'never used'}`}>
+          <${Btn} icon="delete_outline" onClick=${() => revoke(k)}>Revoke</${Btn}>
+        </${Row}>`)}
+  </${Card}>`;
+}
+
 function Server() {
   const s = server();
   const info = useStore(app, (x) => x.server);
@@ -195,7 +246,7 @@ function Server() {
 
 export function Settings({ args }) {
   const tab = TABS.find((t) => t[0] === args[0]) ? args[0] : 'playback';
-  const body = { playback: Playback, interface: Interface, transcoding: Transcoding, library: Library, server: Server }[tab];
+  const body = { playback: Playback, interface: Interface, transcoding: Transcoding, library: Library, keys: ApiKeys, server: Server }[tab];
   return html`<div class="screen">
     <${Header} title="Settings" />
     <div class="settings">

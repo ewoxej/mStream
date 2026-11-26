@@ -51,6 +51,8 @@ The server analyses how your music sounds (embeddings, BPM, key) and uses it:
   with a sound device, see [docker/README.md](docker/README.md)).
 - **Guests**: a link or a QR code lets someone without an account control one device — see what plays, search,
   queue, skip, set the volume. Links last an hour, 12 hours, a week, or until revoked.
+- **API keys**: Settings → API keys makes a read-only key for your own app (a home page widget): it plays your
+  library and follows the device you listened on last (`x-api-key` header, `GET /api/v1/devices/now`).
 
 | | |
 |---|---|

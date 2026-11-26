@@ -38,6 +38,7 @@ import * as discoveryCollectionApi from './api/discovery-collection.js';
 import * as discoveryDownloadsApi from './api/discovery-downloads.js';
 import * as discoveryOwnedApi from './api/discovery-owned.js';
 import * as guestApi from './api/guest.js';
+import * as apiKeysApi from './api/api-keys.js';
 import * as devicesApi from './api/devices.js';
 import * as sharedApi from './api/shared.js';
 import * as scrobblerApi from './api/scrobbler.js';
@@ -595,6 +596,7 @@ export async function serveIt(configFile, { relisten = null } = {}) {
   tagsApi.setup(mstream);
   syncApi.setup(mstream);
   statsApi.setup(mstream);
+  apiKeysApi.setup(mstream);
   guestApi.setup(mstream);
   devicesApi.setup(mstream);
   startRetentionSweep();

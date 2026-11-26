@@ -22,6 +22,15 @@ export const MAX_QUEUE = 20000;
 // is that path. Guests (api/guest.js) send them; so may devices.
 export const COMMANDS = ['play', 'pause', 'playPause', 'next', 'previous', 'seek', 'goTo', 'setVolume', 'setShuffle', 'setRepeat', 'takeover', 'enqueue', 'remove'];
 
+// The device a user is listening on: one playing now, else the one that
+// played last (with a queue to show). Takes the hub's list(); null when
+// nothing has played.
+export function currentDevice(list) {
+  const lastFirst = (a, b) => String(b.lastPlayedAt || '').localeCompare(String(a.lastPlayedAt || ''));
+  const played = list.filter((d) => d.lastPlayedAt && d.queueLength > 0).sort(lastFirst);
+  return played.find((d) => d.playing) || played[0] || null;
+}
+
 export function createHub(now = () => Date.now()) {
   const users = new Map();   // userKey → Map(deviceId → device)
 

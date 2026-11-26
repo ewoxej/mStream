@@ -271,6 +271,10 @@ function maybePickUp() {
 
 // ── Guest links (api/guest.js) ──────────────────────────────────────────
 
+// Personal API keys for one's own apps (src/api/api-keys.js).
+export const listApiKeys = () => api('GET', 'api/v1/api-keys').then((r) => r.keys);
+export const createApiKey = (label) => api('POST', 'api/v1/api-keys', { label });
+export const revokeApiKey = (id) => api('DELETE', `api/v1/api-keys/${encodeURIComponent(id)}`);
 export const listGuests = () => api('GET', 'api/v1/devices/guests').then((r) => r.links);
 export const createGuest = (device, duration, label) => api('POST', 'api/v1/devices/guests', { device, duration, label });
 export const revokeGuest = (id) => api('DELETE', `api/v1/devices/guests/${encodeURIComponent(id)}`);

@@ -6,6 +6,7 @@ import * as config from '../state/config.js';
 import * as db from '../db/manager.js';
 import * as shared from '../api/shared.js';
 import * as guest from './guest.js';
+import * as apiKeys from './api-keys.js';
 import * as federationAuth from './federation-auth.js';
 import * as federationGuest from '../state/federation-guest.js';
 import WebError from '../util/web-error.js';
@@ -68,6 +69,14 @@ export function setup(mstream) {
     const fedKey = req.headers['x-federation-key'];
     if (typeof fedKey === 'string' && fedKey.length > 0) {
       req.user = federationAuth.authenticateFederationKey(fedKey, req);
+      return next();
+    }
+
+    // A personal API key (the Zenelo fork, api/api-keys.js): its own header,
+    // read-only. Before public mode for the same reason as above.
+    const apiKey = req.headers['x-api-key'];
+    if (typeof apiKey === 'string' && apiKey.length > 0) {
+      req.user = apiKeys.authenticate(apiKey, req);
       return next();
     }
 
